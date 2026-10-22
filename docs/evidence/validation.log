@@ -1,0 +1,141 @@
+lld-link /subsystem:efi_application /entry:efi_main /nodefaultlib /machine:arm64 /timestamp:0 /out:build/BOOTAA64.EFI build/boot.obj
+llvm-objcopy -O binary build/kernel.elf build/KERNEL.BIN
+python3 scripts/mkiso.py
+xorriso 1.5.6 : RockRidge filesystem manipulator, libburnia project.
+
+xorriso : NOTE : Environment variable SOURCE_DATE_EPOCH encountered with value 1767225600
+063435ae209643c00c184d799415433bd7d880521b6b37e35b8b3a926119eb2b  /src/build/CHOS-ARM64.iso
+python3 scripts/mkiso.py
+xorriso 1.5.6 : RockRidge filesystem manipulator, libburnia project.
+
+xorriso : NOTE : Environment variable SOURCE_DATE_EPOCH encountered with value 1767225600
+063435ae209643c00c184d799415433bd7d880521b6b37e35b8b3a926119eb2b  /src/build/CHOS-ARM64.iso
+{
+  "passed": true,
+  "ram_mib": 512,
+  "command": [
+    "qemu-system-aarch64",
+    "-machine",
+    "virt",
+    "-cpu",
+    "cortex-a72",
+    "-accel",
+    "tcg",
+    "-m",
+    "512",
+    "-smp",
+    "1",
+    "-bios",
+    "/usr/share/qemu-efi-aarch64/QEMU_EFI.fd",
+    "-device",
+    "ramfb",
+    "-device",
+    "virtio-scsi-pci",
+    "-drive",
+    "if=none,id=cd,media=cdrom,readonly=on,file=/src/build/CHOS-ARM64.iso",
+    "-device",
+    "scsi-cd,drive=cd",
+    "-boot",
+    "order=d",
+    "-display",
+    "none",
+    "-serial",
+    "file:/src/build/boot-512.serial.log",
+    "-qmp",
+    "unix:/tmp/chos-42.sock,server=on,wait=off",
+    "-no-reboot",
+    "-net",
+    "none"
+  ],
+  "test": "boot-512",
+  "elapsed_seconds": 5.639
+}
+{
+  "passed": true,
+  "ram_mib": 1024,
+  "command": [
+    "qemu-system-aarch64",
+    "-machine",
+    "virt",
+    "-cpu",
+    "cortex-a72",
+    "-accel",
+    "tcg",
+    "-m",
+    "1024",
+    "-smp",
+    "1",
+    "-bios",
+    "/usr/share/qemu-efi-aarch64/QEMU_EFI.fd",
+    "-device",
+    "ramfb",
+    "-device",
+    "virtio-scsi-pci",
+    "-drive",
+    "if=none,id=cd,media=cdrom,readonly=on,file=/src/build/CHOS-ARM64.iso",
+    "-device",
+    "scsi-cd,drive=cd",
+    "-boot",
+    "order=d",
+    "-display",
+    "none",
+    "-serial",
+    "file:/src/build/boot-1024.serial.log",
+    "-qmp",
+    "unix:/tmp/chos-48.sock,server=on,wait=off",
+    "-no-reboot",
+    "-net",
+    "none"
+  ],
+  "test": "boot-1024",
+  "elapsed_seconds": 5.639
+}
+xorriso 1.5.6 : RockRidge filesystem manipulator, libburnia project.
+
+154892bae32121c3e3e6fe0b486de50c320495f9da975c8a7ea98513f2637ffd  /src/build/CHOS-missing-kernel.iso
+{
+  "passed": true,
+  "ram_mib": 512,
+  "command": [
+    "qemu-system-aarch64",
+    "-machine",
+    "virt",
+    "-cpu",
+    "cortex-a72",
+    "-accel",
+    "tcg",
+    "-m",
+    "512",
+    "-smp",
+    "1",
+    "-bios",
+    "/usr/share/qemu-efi-aarch64/QEMU_EFI.fd",
+    "-device",
+    "ramfb",
+    "-device",
+    "virtio-scsi-pci",
+    "-drive",
+    "if=none,id=cd,media=cdrom,readonly=on,file=/src/build/CHOS-missing-kernel.iso",
+    "-device",
+    "scsi-cd,drive=cd",
+    "-boot",
+    "order=d",
+    "-display",
+    "none",
+    "-serial",
+    "file:/src/build/missing-kernel.serial.log",
+    "-qmp",
+    "unix:/tmp/chos-62.sock,server=on,wait=off",
+    "-no-reboot",
+    "-net",
+    "none"
+  ],
+  "test": "missing-kernel",
+  "elapsed_seconds": 5.604
+}
+python3 scripts/mkiso.py
+xorriso 1.5.6 : RockRidge filesystem manipulator, libburnia project.
+
+xorriso : NOTE : Environment variable SOURCE_DATE_EPOCH encountered with value 1767225600
+063435ae209643c00c184d799415433bd7d880521b6b37e35b8b3a926119eb2b  /src/build/CHOS-ARM64.iso
+All three QEMU tests and ISO repeatability check passed.

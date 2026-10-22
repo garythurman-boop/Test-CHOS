@@ -1,0 +1,69 @@
+#!/usr/bin/env python3
+"""Create a deterministic FAT EFI El Torito image; never opens host block devices."""
+import datetime
+import os
+from pathlib import Path
+import shutil
+import subprocess
+
+ROOT = Path(__file__).resolve().parents[1]
+BUILD = ROOT / 'build'
+
+def run(*args, **kwargs):
+    subprocess.run(list(map(str, args)), check=True, **kwargs)
+
+def main():
+    epoch = int(os.environ.get('SOURCE_DATE_EPOCH', '1767225600'))
+    stamp = datetime.datetime.fromtimestamp(epoch, datetime.timezone.utc).strftime('%Y%m%d%H%M%S00')
+    stage = BUILD / 'iso-root'
+    if stage.exists():
+        shutil.rmtree(stage)
+    (stage / 'boot').mkdir(parents=True)
+    image = stage / 'boot' / 'efi.img'
+    with image.open('wb') as f:
+        f.truncate(16 * 1024 * 1024)
+    run('mformat', '-i', image, '-v', 'CHOS_EFI', '-N', '43484f53', '::')
+    run('mmd', '-i', image, '::/EFI', '::/EFI/BOOT', '::/CHOS')
+    inputs = [(BUILD / 'BOOTAA64.EFI', '::/EFI/BOOT/BOOTAA64.EFI'),
+              (BUILD / 'KERNEL.BIN', '::/CHOS/KERNEL.BIN')]
+    if os.environ.get('CHOS_TEST_MISSING_KERNEL'):
+        inputs = inputs[:1]
+    for source, target in inputs:
+        run('mcopy', '-i', image, source, target)
+    # FAT directory timestamps created by mmd/mformat are normalized separately.
+    data = bytearray(image.read_bytes())
+    bps = int.from_bytes(data[11:13], 'little')
+    reserved = int.from_bytes(data[14:16], 'little')
+    fats = data[16]
+    fat_sectors = int.from_bytes(data[22:24], 'little')
+    root_entries = int.from_bytes(data[17:19], 'little')
+    # Our fixed tiny image is FAT12/16; scan root and all allocated data clusters.
+    root_offset = (reserved + fats * fat_sectors) * bps
+    root_bytes = root_entries * 32
+    cluster_bytes = data[13] * bps
+    date = ((max(1980, min(2107, datetime.datetime.fromtimestamp(epoch, datetime.timezone.utc).year))-1980)<<9) | (1<<5) | 1
+    def directory(offset, length):
+        for pos in range(offset, offset+length, 32):
+            if data[pos] == 0:
+                break
+            if data[pos] == 0xe5 or data[pos+11] == 0x0f:
+                continue
+            data[pos+13] = 0
+            for field in (14,22):
+                data[pos+field:pos+field+2] = b'\0\0'
+            for field in (16,18,24):
+                data[pos+field:pos+field+2] = date.to_bytes(2,'little')
+            if data[pos+11] & 0x10 and data[pos] != 46:
+                cluster = int.from_bytes(data[pos+26:pos+28], 'little')
+                directory(root_offset+root_bytes+(cluster-2)*cluster_bytes, cluster_bytes)
+    directory(root_offset,root_bytes)
+    image.write_bytes(data)
+    output = BUILD / ('CHOS-missing-kernel.iso' if os.environ.get('CHOS_TEST_MISSING_KERNEL') else 'CHOS-ARM64.iso')
+    run('xorriso', '-as', 'mkisofs', '-quiet', '-V', 'CHOS_ARM64',
+        '--modification-date='+stamp, '--set_all_file_dates', stamp,
+        '-c', 'boot/boot.cat', '-e', 'boot/efi.img', '-no-emul-boot',
+        '-o', output, stage)
+    run('sha256sum', output)
+
+if __name__ == '__main__':
+    main()
