@@ -3,6 +3,8 @@
 No -kernel, host firmware callbacks, or guest OS is used to start CHOS.
 """
 import argparse
+import fcntl
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -14,7 +16,7 @@ import time
 
 ROOT = Path(__file__).resolve().parents[1]
 BUILD = ROOT / 'build'
-SIGNATURE = [0x43c0de,0x6b45a1,0xf3ba20,0x18ad72,0xe14567,0x2998ef,0xcddc39,0x804020]
+SIGNATURE = [0x32aabc,0x6b45a1,0xf3ba20,0x18ad72,0xe14567,0x2998ef,0xcddc39,0x804020]
 # Independent expected glyphs for the CHOS banner.
 CHOS = [[14,17,16,16,16,17,14], [17,17,17,31,17,17,17],
         [14,17,17,17,17,17,14], [15,16,16,14,1,1,30]]
@@ -62,20 +64,39 @@ def completed(path):
                     return False
     return True
 
+def platform_rejected(path):
+    pixel=read_ppm(path)
+    if pixel(40,408)!=0xff0000:
+        return False
+    # Exact ACPI diagnostic prefix, rather than accepting any kernel panic.
+    glyphs=[[14,17,17,31,17,17,17],CHOS[0],[30,17,17,30,16,16,16],[14,4,4,4,4,4,14]]
+    for index,glyph in enumerate(glyphs):
+        for row,bits in enumerate(glyph):
+            for col in range(5):
+                expected=0xffffff if bits&(16>>col) else 0x300808
+                if pixel(32+index*12+col*2,132+row*2)!=expected:
+                    return False
+    return True
+
 def main():
     parser=argparse.ArgumentParser()
     parser.add_argument('--iso',type=Path,default=BUILD/'CHOS-ARM64.iso')
     parser.add_argument('--ram',type=int,default=512)
     parser.add_argument('--expect-missing-kernel',action='store_true')
+    parser.add_argument('--gic-version',choices=['2','3'],default='2')
+    parser.add_argument('--expect-platform-reject',action='store_true')
     parser.add_argument('--timeout',type=int,default=120)
     args=parser.parse_args()
-    name='missing-kernel' if args.expect_missing_kernel else f'boot-{args.ram}'
+    lock=(BUILD/'boot-test.lock').open('w')
+    fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
+    name=('platform-reject' if args.expect_platform_reject else
+          ('missing-kernel' if args.expect_missing_kernel else f'boot-{args.ram}'))
     qmp_path=Path('/tmp') / f'chos-{os.getpid()}.sock'
     serial=BUILD/f'{name}.serial.log'
     screen=BUILD/f'{name}.ppm'
     screen.unlink(missing_ok=True)
     firmware=os.environ.get('CHOS_UEFI_FIRMWARE','/usr/share/qemu-efi-aarch64/QEMU_EFI.fd')
-    command=['qemu-system-aarch64','-machine','virt','-cpu','cortex-a72',
+    command=['qemu-system-aarch64','-machine',f'virt,gic-version={args.gic_version}','-cpu','cortex-a72',
              '-accel','tcg','-m',str(args.ram),'-smp','1','-bios',firmware,
              '-device','ramfb','-device','virtio-scsi-pci',
              '-drive',f'if=none,id=cd,media=cdrom,readonly=on,file={args.iso.resolve()}',
@@ -83,7 +104,7 @@ def main():
              '-display','none','-serial',f'file:{serial}',
              '-qmp',f'unix:{qmp_path},server=on,wait=off','-no-reboot','-net','none']
     started=time.monotonic()
-    outcome={'passed':False,'ram_mib':args.ram,'command':command,'test':name}
+    outcome={'passed':False,'ram_mib':args.ram,'command':command,'test':name,'iso_sha256':hashlib.sha256(args.iso.read_bytes()).hexdigest()}
     with (BUILD/f'{name}.qemu.log').open('w') as log:
         proc=subprocess.Popen(command,stdout=log,stderr=subprocess.STDOUT)
         sock=socket.socket(socket.AF_UNIX,socket.SOCK_STREAM)
@@ -120,14 +141,31 @@ def main():
                         break
                 else:
                     qmp('screendump',{'filename':str(screen)})
-                    if completed(screen):
+                    if args.expect_platform_reject:
+                        if platform_rejected(screen):
+                            outcome['passed']=True
+                            break
+                    elif read_ppm(screen)(40,408)==0xff0000:
+                        save_png(screen)
+                        raise RuntimeError('CHOS panic; inspect screenshot')
+                    if not args.expect_platform_reject and completed(screen):
                         outcome['passed']=True
                         break
                 time.sleep(.5)
             if not outcome['passed']:
+                debug=qmp('human-monitor-command',{'command-line':'info registers'})
+                (BUILD/f'{name}.registers.log').write_text(debug)
                 raise RuntimeError('Boot acceptance timed out; inspect screenshot and logs')
             if not args.expect_missing_kernel:
                 save_png(screen)
+            outcome['milestone']='2A'
+            outcome['result_kind']=('expected_rejection' if args.expect_platform_reject or args.expect_missing_kernel else 'functional_boot')
+            if outcome['result_kind']=='functional_boot':
+                outcome['kernel_checks']=['BRK exception return','physical page integrity and double-free rejection',
+                    'heap allocate/free','null translation fault','stack guard translation fault',
+                    'read-only code permission fault','NX heap instruction fault','ACPI GICv2/GTDT discovery',
+                    'timer-driven non-yielding worker preemption','register context canaries',
+                    'strict priority and round-robin selection','thread exit and continued scheduling']
             outcome['elapsed_seconds']=round(time.monotonic()-started,3)
             print(json.dumps(outcome,indent=2))
         finally:

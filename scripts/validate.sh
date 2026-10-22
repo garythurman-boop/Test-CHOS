@@ -2,6 +2,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 mkdir -p build
+make test-memory
 make iso
 sha256sum build/CHOS-ARM64.iso > build/hash-1
 make iso
@@ -12,9 +13,10 @@ llvm-readobj --file-headers build/BOOTAA64.EFI > build/efi-inspection.log
 llvm-readelf -h -r build/kernel.elf > build/kernel-inspection.log
 python3 tests/boot.py --ram 512
 python3 tests/boot.py --ram 1024
+python3 tests/boot.py --gic-version 3 --expect-platform-reject
 CHOS_TEST_MISSING_KERNEL=1 python3 scripts/mkiso.py
 python3 tests/boot.py --iso build/CHOS-missing-kernel.iso --expect-missing-kernel
 # Leave the staging image consistent with the distribution ISO.
 make iso
 sha256sum build/CHOS-ARM64.iso > build/SHA256SUMS
-printf 'All three QEMU tests and ISO repeatability check passed.\n'
+printf 'All four QEMU tests and two host test programs and ISO repeatability check passed.\n'

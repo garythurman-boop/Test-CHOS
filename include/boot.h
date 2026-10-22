@@ -8,5 +8,6 @@ struct chos_boot_info {
     uint32_t width, height, stride, pixel_format;
     uint64_t memory_map, memory_map_size, descriptor_size;
     uint32_t descriptor_version, reserved;
+    uint64_t rsdp;
 };
 #endif

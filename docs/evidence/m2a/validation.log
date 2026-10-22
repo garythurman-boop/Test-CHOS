@@ -1,0 +1,229 @@
+clang -std=c11 -Wall -Wextra -Werror -Iinclude tests/memory.c kernel/memory/physical.c kernel/memory/heap.c -o build/test-memory
+./build/test-memory
+PASS: PMM reserved ranges, fragmentation, exhaustion, overflow, stride, >4GiB; heap alignment, integrity, invalid/double free and coalescing
+clang -std=c11 -Wall -Wextra -Werror -Iinclude tests/acpi.c kernel/arch/arm64/acpi.c -o build/test-acpi
+./build/test-acpi
+PASS: ACPI discovery, checksums, MPIDR selection, malformed entries, IRQ ranges, out-of-map pointers, reserved/MMIO exclusion and oversized RSDP
+mkdir -p build/kernel/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -c kernel/main.c -o build/kernel/main.o
+ld.lld -T kernel/arch/arm64/kernel.ld --no-undefined -o build/kernel.elf build/kernel/main.o build/kernel/console.o build/kernel/arch/arm64/acpi.o build/kernel/memory/physical.o build/kernel/memory/heap.o build/kernel/memory/virtual.o build/kernel/interrupts/exception.o build/kernel/scheduler/scheduler.o build/drivers/interrupts/gicv2_timer.o build/kernel/arch/arm64/entry.o build/kernel/arch/arm64/vectors.o build/kernel/arch/arm64/mmu.o build/kernel/arch/arm64/test_worker.o
+llvm-objcopy -O binary build/kernel.elf build/KERNEL.BIN
+python3 scripts/mkiso.py
+xorriso 1.5.6 : RockRidge filesystem manipulator, libburnia project.
+
+xorriso : NOTE : Environment variable SOURCE_DATE_EPOCH encountered with value 1767225600
+991f7b26534ce8711435345e8256d9182556a1c8c5af4fe2699cda937de82d16  /src/build/CHOS-ARM64.iso
+python3 scripts/mkiso.py
+xorriso 1.5.6 : RockRidge filesystem manipulator, libburnia project.
+
+xorriso : NOTE : Environment variable SOURCE_DATE_EPOCH encountered with value 1767225600
+991f7b26534ce8711435345e8256d9182556a1c8c5af4fe2699cda937de82d16  /src/build/CHOS-ARM64.iso
+{
+  "passed": true,
+  "ram_mib": 512,
+  "command": [
+    "qemu-system-aarch64",
+    "-machine",
+    "virt,gic-version=2",
+    "-cpu",
+    "cortex-a72",
+    "-accel",
+    "tcg",
+    "-m",
+    "512",
+    "-smp",
+    "1",
+    "-bios",
+    "/usr/share/qemu-efi-aarch64/QEMU_EFI.fd",
+    "-device",
+    "ramfb",
+    "-device",
+    "virtio-scsi-pci",
+    "-drive",
+    "if=none,id=cd,media=cdrom,readonly=on,file=/src/build/CHOS-ARM64.iso",
+    "-device",
+    "scsi-cd,drive=cd",
+    "-boot",
+    "order=d",
+    "-display",
+    "none",
+    "-serial",
+    "file:/src/build/boot-512.serial.log",
+    "-qmp",
+    "unix:/tmp/chos-57.sock,server=on,wait=off",
+    "-no-reboot",
+    "-net",
+    "none"
+  ],
+  "test": "boot-512",
+  "iso_sha256": "991f7b26534ce8711435345e8256d9182556a1c8c5af4fe2699cda937de82d16",
+  "milestone": "2A",
+  "result_kind": "functional_boot",
+  "kernel_checks": [
+    "BRK exception return",
+    "physical page integrity and double-free rejection",
+    "heap allocate/free",
+    "null translation fault",
+    "stack guard translation fault",
+    "read-only code permission fault",
+    "NX heap instruction fault",
+    "ACPI GICv2/GTDT discovery",
+    "timer-driven non-yielding worker preemption",
+    "register context canaries",
+    "strict priority and round-robin selection",
+    "thread exit and continued scheduling"
+  ],
+  "elapsed_seconds": 6.679
+}
+{
+  "passed": true,
+  "ram_mib": 1024,
+  "command": [
+    "qemu-system-aarch64",
+    "-machine",
+    "virt,gic-version=2",
+    "-cpu",
+    "cortex-a72",
+    "-accel",
+    "tcg",
+    "-m",
+    "1024",
+    "-smp",
+    "1",
+    "-bios",
+    "/usr/share/qemu-efi-aarch64/QEMU_EFI.fd",
+    "-device",
+    "ramfb",
+    "-device",
+    "virtio-scsi-pci",
+    "-drive",
+    "if=none,id=cd,media=cdrom,readonly=on,file=/src/build/CHOS-ARM64.iso",
+    "-device",
+    "scsi-cd,drive=cd",
+    "-boot",
+    "order=d",
+    "-display",
+    "none",
+    "-serial",
+    "file:/src/build/boot-1024.serial.log",
+    "-qmp",
+    "unix:/tmp/chos-63.sock,server=on,wait=off",
+    "-no-reboot",
+    "-net",
+    "none"
+  ],
+  "test": "boot-1024",
+  "iso_sha256": "991f7b26534ce8711435345e8256d9182556a1c8c5af4fe2699cda937de82d16",
+  "milestone": "2A",
+  "result_kind": "functional_boot",
+  "kernel_checks": [
+    "BRK exception return",
+    "physical page integrity and double-free rejection",
+    "heap allocate/free",
+    "null translation fault",
+    "stack guard translation fault",
+    "read-only code permission fault",
+    "NX heap instruction fault",
+    "ACPI GICv2/GTDT discovery",
+    "timer-driven non-yielding worker preemption",
+    "register context canaries",
+    "strict priority and round-robin selection",
+    "thread exit and continued scheduling"
+  ],
+  "elapsed_seconds": 6.686
+}
+{
+  "passed": true,
+  "ram_mib": 512,
+  "command": [
+    "qemu-system-aarch64",
+    "-machine",
+    "virt,gic-version=3",
+    "-cpu",
+    "cortex-a72",
+    "-accel",
+    "tcg",
+    "-m",
+    "512",
+    "-smp",
+    "1",
+    "-bios",
+    "/usr/share/qemu-efi-aarch64/QEMU_EFI.fd",
+    "-device",
+    "ramfb",
+    "-device",
+    "virtio-scsi-pci",
+    "-drive",
+    "if=none,id=cd,media=cdrom,readonly=on,file=/src/build/CHOS-ARM64.iso",
+    "-device",
+    "scsi-cd,drive=cd",
+    "-boot",
+    "order=d",
+    "-display",
+    "none",
+    "-serial",
+    "file:/src/build/platform-reject.serial.log",
+    "-qmp",
+    "unix:/tmp/chos-69.sock,server=on,wait=off",
+    "-no-reboot",
+    "-net",
+    "none"
+  ],
+  "test": "platform-reject",
+  "iso_sha256": "991f7b26534ce8711435345e8256d9182556a1c8c5af4fe2699cda937de82d16",
+  "milestone": "2A",
+  "result_kind": "expected_rejection",
+  "elapsed_seconds": 6.18
+}
+xorriso 1.5.6 : RockRidge filesystem manipulator, libburnia project.
+
+1e9fb6fe9a12eba977aa36135680e9766ff6381617e56d0fdad62ed98f0c9d8a  /src/build/CHOS-missing-kernel.iso
+{
+  "passed": true,
+  "ram_mib": 512,
+  "command": [
+    "qemu-system-aarch64",
+    "-machine",
+    "virt,gic-version=2",
+    "-cpu",
+    "cortex-a72",
+    "-accel",
+    "tcg",
+    "-m",
+    "512",
+    "-smp",
+    "1",
+    "-bios",
+    "/usr/share/qemu-efi-aarch64/QEMU_EFI.fd",
+    "-device",
+    "ramfb",
+    "-device",
+    "virtio-scsi-pci",
+    "-drive",
+    "if=none,id=cd,media=cdrom,readonly=on,file=/src/build/CHOS-missing-kernel.iso",
+    "-device",
+    "scsi-cd,drive=cd",
+    "-boot",
+    "order=d",
+    "-display",
+    "none",
+    "-serial",
+    "file:/src/build/missing-kernel.serial.log",
+    "-qmp",
+    "unix:/tmp/chos-83.sock,server=on,wait=off",
+    "-no-reboot",
+    "-net",
+    "none"
+  ],
+  "test": "missing-kernel",
+  "iso_sha256": "1e9fb6fe9a12eba977aa36135680e9766ff6381617e56d0fdad62ed98f0c9d8a",
+  "milestone": "2A",
+  "result_kind": "expected_rejection",
+  "elapsed_seconds": 6.122
+}
+python3 scripts/mkiso.py
+xorriso 1.5.6 : RockRidge filesystem manipulator, libburnia project.
+
+xorriso : NOTE : Environment variable SOURCE_DATE_EPOCH encountered with value 1767225600
+991f7b26534ce8711435345e8256d9182556a1c8c5af4fe2699cda937de82d16  /src/build/CHOS-ARM64.iso
+All four QEMU tests and two host test programs and ISO repeatability check passed.

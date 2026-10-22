@@ -1,0 +1,2 @@
+PASS: PMM reserved ranges, fragmentation, exhaustion, overflow, stride, >4GiB; heap alignment, integrity, invalid/double free and coalescing
+PASS: ACPI discovery, checksums, MPIDR selection, malformed entries, IRQ ranges, out-of-map pointers, reserved/MMIO exclusion and oversized RSDP

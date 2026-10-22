@@ -1,3 +1,21 @@
+# CHOS development milestone 2A
+
+Adds original exception vectors and fault reporting, bitmap physical allocator,
+64 KiB heap, kernel-owned page tables with RO/NX/guard protections, bounded ACPI
+parsing, GICv2 and physical timer interrupts, and preemptive priority kernel threads.
+Tests exercise actual faults, context preservation, non-yielding workers, priorities
+and thread exit. Four QEMU cases and two host test programs pass; details and
+limitations are in milestone-2a.md. Full milestone 2 remains unfinished.
+
+Diagnosed and corrected absolute GOT references in the flat image, live block
+splitting that unmapped page-table storage, and GIC Group-1 acknowledgement.
+The image now explicitly rejects unsupported GICv3 instead of guessing hardware.
+
+User mode, ELF loading, public syscalls, IPC, process reaping and later OS features
+remain outstanding. This is not CHOS 0.1 and does not establish Fusion compatibility.
+
+---
+
 # CHOS development milestone 1
 
 First original ARM64 kernel and native UEFI boot image. Includes minimal UEFI ABI,

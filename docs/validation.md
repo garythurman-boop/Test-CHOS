@@ -1,5 +1,8 @@
 # Milestone 1 validation — 2026-10-22
 
+**Historical report for commit fec1183 (M1).** Current M2A results are in
+[milestone-2a.md](milestone-2a.md); building the current checkout produces M2A.
+
 Executed in this cloud workspace using the repository Docker toolchain.
 
 | Acceptance criterion | Result |

@@ -50,6 +50,7 @@ struct system_table {
     uint64_t configuration_count;
     void *configuration_table;
 };
+struct configuration_entry { struct guid guid; void *table; };
 struct loaded_image {
     uint32_t revision;
     handle parent;

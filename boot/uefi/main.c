@@ -1,5 +1,6 @@
 #include "efi.h"
 #include "boot.h"
+static const struct guid acpi_guid={0x8868e871,0xe4f1,0x11d3,{0xbc,0x22,0,0x80,0xc7,0x3c,0x88,0x81}};
 static struct guid loaded_guid={0x5b1b31a1,0x9562,0x11d2,{0x8e,0x3f,0,0xa0,0xc9,0x69,0x72,0x3b}};
 static struct guid fs_guid={0x964e5b22,0x6459,0x11d2,{0x8e,0x39,0,0xa0,0xc9,0x69,0x72,0x3b}};
 static struct guid info_guid={0x09576e92,0x6d3f,0x11d2,{0x8e,0x39,0,0xa0,0xc9,0x69,0x72,0x3b}};
@@ -43,6 +44,14 @@ status efi_main(handle image,struct system_table *st) {
     if (EFI_ERROR(s)) return fail(st,(char16 *)u"CHOS: boot information allocation failed\r\n",s);
     for (uint64_t i=0;i<sizeof(*bi);i++) ((uint8_t *)bi)[i]=0;
     bi->magic=CHOS_BOOT_MAGIC;
+    if(st->configuration_count>1024) return fail(st,(char16 *)u"CHOS: invalid configuration table count\r\n",EFI_INVALID_PARAMETER);
+    const struct configuration_entry *entries=st->configuration_table;
+    for(uint64_t i=0;i<st->configuration_count;i++) {
+        unsigned equal=1;
+        for(unsigned j=0;j<sizeof(struct guid);j++)
+            if(((const uint8_t *)&entries[i].guid)[j]!=((const uint8_t *)&acpi_guid)[j]) equal=0;
+        if(equal) bi->rsdp=(uint64_t)(uintptr_t)entries[i].table;
+    }
     struct gop *gop=0;
     s=bs->locate_protocol(&gop_guid,0,(void **)&gop);
     if (EFI_ERROR(s)||!gop||!gop->mode||!gop->mode->info)

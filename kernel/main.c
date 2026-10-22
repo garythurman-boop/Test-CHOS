@@ -1,62 +1,36 @@
 #include "boot.h"
-/* Original compact 5x7 uppercase diagnostic font, row-major, five low bits. */
-static const uint8_t font[36][7]={
- {14,17,17,31,17,17,17},{30,17,17,30,17,17,30},{14,17,16,16,16,17,14},
- {30,17,17,17,17,17,30},{31,16,16,30,16,16,31},{31,16,16,30,16,16,16},
- {14,17,16,23,17,17,15},{17,17,17,31,17,17,17},{14,4,4,4,4,4,14},
- {7,2,2,2,18,18,12},{17,18,20,24,20,18,17},{16,16,16,16,16,16,31},
- {17,27,21,21,17,17,17},{17,25,21,19,17,17,17},{14,17,17,17,17,17,14},
- {30,17,17,30,16,16,16},{14,17,17,17,21,18,13},{30,17,17,30,20,18,17},
- {15,16,16,14,1,1,30},{31,4,4,4,4,4,4},{17,17,17,17,17,17,14},
- {17,17,17,17,17,10,4},{17,17,17,21,21,27,17},{17,17,10,4,10,17,17},
- {17,17,10,4,4,4,4},{31,1,2,4,8,16,31},
- {14,17,19,21,25,17,14},{4,12,4,4,4,4,14},{14,17,1,2,4,8,31},
- {30,1,1,14,1,1,30},{2,6,10,18,31,2,2},{31,16,16,30,1,1,30},
- {14,16,16,30,17,17,14},{31,1,2,4,8,8,8},{14,17,17,14,17,17,14},
- {14,17,17,15,1,1,14}
-};
-static struct chos_boot_info *boot;
-static uint32_t color(uint32_t rgb) {
-    return boot->pixel_format==1?rgb:((rgb&255)<<16)|(rgb&0xff00)|((rgb>>16)&255);
-}
-static void rect(unsigned x,unsigned y,unsigned w,unsigned h,uint32_t rgb) {
-    volatile uint32_t *fb=(void *)(uintptr_t)boot->framebuffer;
-    uint32_t c=color(rgb);
-    for (unsigned j=y;j<y+h && j<boot->height;j++)
-        for (unsigned i=x;i<x+w && i<boot->width;i++) fb[(uint64_t)j*boot->stride+i]=c;
-}
-static void text(unsigned x,unsigned y,const char *s,uint32_t rgb) {
-    for (;*s;s++,x+=12) {
-        int index=*s>='A'&&*s<='Z'?*s-'A':(*s>='0'&&*s<='9'?26+*s-'0':-1);
-        if (index<0) continue;
-        for (unsigned row=0;row<7;row++)
-            for (unsigned col=0;col<5;col++)
-                if (font[index][row]&(16>>col)) rect(x+col*2,y+row*2,2,2,rgb);
-    }
-}
-static void number(unsigned x,unsigned y,uint64_t n) {
-    char buf[21]; unsigned i=20; buf[i]=0;
-    do { buf[--i]=(char)('0'+n%10); n/=10; } while(n);
-    text(x,y,buf+i,0xffffff);
-}
+#include "console.h"
+#include "memory.h"
+#include "exception.h"
+#include "mmu.h"
+#include "platform.h"
+#include "scheduler.h"
+#include "timer.h"
+static struct pmm physical;
+static struct heap heap;
+static struct worker_state workers[3];
+static volatile uint64_t high_ran;
+static void high_thread(void *unused) { (void)unused; high_ran++; }
 void kernel_main(struct chos_boot_info *info) {
     if (!info || info->magic!=CHOS_BOOT_MAGIC) for (;;) __asm__ volatile("wfe");
-    boot=info;
-    rect(0,0,boot->width,boot->height,0x071b36);
-    rect(0,0,boot->width,72,0x164a82);
-    text(32,24,"CHOS",0xffffff);
-    text(32,100,"ORIGINAL ARM64 KERNEL",0xffffff);
-    text(32,132,"FIRMWARE BOOT SERVICES EXITED",0x8edbff);
+    struct chos_boot_info *boot=info;
+    console_init(info);
+    exception_init();
+    console_rect(0,0,boot->width,boot->height,0x071b36);
+    console_rect(0,0,boot->width,72,0x164a82);
+    console_text(32,24,"CHOS",0xffffff);
+    console_text(32,100,"ORIGINAL ARM64 KERNEL",0xffffff);
+    console_text(32,132,"FIRMWARE BOOT SERVICES EXITED",0x8edbff);
     uint64_t el,freq;
     __asm__ volatile("mrs %0, CurrentEL":"=r"(el));
     __asm__ volatile("mrs %0, cntfrq_el0":"=r"(freq));
-    text(32,172,"EXCEPTION LEVEL",0xffffff); number(260,172,el>>2);
-    text(32,200,"TIMER FREQUENCY HZ",0xffffff); number(300,200,freq);
+    console_text(32,172,"EXCEPTION LEVEL",0xffffff); console_number(260,172,el>>2);
+    console_text(32,200,"TIMER FREQUENCY HZ",0xffffff); console_number(300,200,freq);
     /* UEFI descriptor prefix: type, padding, physical, virtual, pages, attributes.
      * Iterate with the firmware-provided descriptor stride, never sizeof(prefix). */
     if (boot->descriptor_size<40 || boot->descriptor_size>boot->memory_map_size ||
         boot->memory_map_size%boot->descriptor_size) {
-        text(32,244,"INVALID MEMORY MAP",0xff7070);
+        console_text(32,244,"INVALID MEMORY MAP",0xff7070);
         for (;;) __asm__ volatile("wfe");
     }
     uint64_t pages=0,count=boot->memory_map_size/boot->descriptor_size;
@@ -64,14 +38,64 @@ void kernel_main(struct chos_boot_info *info) {
         const uint8_t *d=(void *)(uintptr_t)(boot->memory_map+i*boot->descriptor_size);
         if (*(const uint32_t *)d==7) pages+=*(const uint64_t *)(d+24);
     }
-    text(32,228,"CONVENTIONAL RAM MIB",0xffffff); number(300,228,pages/256);
-    text(32,256,"MEMORY DESCRIPTORS",0xffffff); number(300,256,count);
-    text(32,308,"MILESTONE 1 BOOT COMPLETE",0x8effb0);
-    text(32,344,"NO DESKTOP OR INSTALLER YET",0xffffff);
-    /* Test completion signature is painted only after boot-info/map validation. */
-    static const uint32_t signature[8]={0x43c0de,0x6b45a1,0xf3ba20,0x18ad72,
+    console_text(32,228,"CONVENTIONAL RAM MIB",0xffffff); console_number(300,228,pages/256);
+    console_text(32,256,"MEMORY DESCRIPTORS",0xffffff); console_number(300,256,count);
+    if(!exception_test_break()) panic("BREAKPOINT TEST FAILED");
+    if(!pmm_init(&physical,(void *)(uintptr_t)info->memory_map,info->memory_map_size,info->descriptor_size)) panic("MEMORY MAP REJECTED");
+    uint64_t page=pmm_alloc(&physical,1);
+    if(!page) panic("PAGE ALLOCATION FAILED");
+    volatile uint64_t *check=(void *)(uintptr_t)page;
+    for(unsigned i=0;i<PAGE_SIZE/8;i++) check[i]=0x43484f5300000000ULL+i;
+    for(unsigned i=0;i<PAGE_SIZE/8;i++) if(check[i]!=0x43484f5300000000ULL+i) panic("PAGE INTEGRITY FAILED");
+    if(!pmm_free(&physical,page,1) || pmm_free(&physical,page,1)) panic("PAGE FREE FAILED");
+    uint64_t arena=pmm_alloc(&physical,16);
+    if(!arena || !heap_init(&heap,(void *)(uintptr_t)arena,16*PAGE_SIZE)) panic("HEAP INIT FAILED");
+    void *a=heap_alloc(&heap,17),*b=heap_alloc(&heap,4096);
+    if(!a || !b || !heap_free(&heap,a) || !heap_free(&heap,b)) panic("HEAP TEST FAILED");
+    uint64_t mpidr; __asm__ volatile("mrs %0, mpidr_el1":"=r"(mpidr));
+    struct platform platform;
+    if(!platform_discover(boot,mpidr,&platform)) panic("ACPI GIC2 TIMER DISCOVERY FAILED");
+    if(!mmu_init(&physical,boot,platform.gic_distributor,platform.gic_cpu)) panic("MMU INIT FAILED");
+    if(!exception_test_read(0)) panic("NULL GUARD TEST FAILED");
+    if(!exception_test_read((uintptr_t)__text_start+512*1024)) panic("STACK GUARD TEST FAILED");
+    if(!exception_test_write((uintptr_t)__text_start)) panic("READONLY TEXT TEST FAILED");
+    if(!exception_test_execute(arena)) panic("NX HEAP TEST FAILED");
+    console_rect(0,160,boot->width,boot->height-160,0x071b36);
+    console_text(32,172,"EXCEPTIONS AND MEMORY TESTS PASS",0x8effb0);
+    console_text(32,200,"ACPI GIC2 TIMER DISCOVERED",0x8edbff);
+    console_text(32,228,"PREEMPTION TEST RUNNING",0xffffff);
+    scheduler_init();
+    int a_id=thread_create(&physical,arch_test_worker,&workers[0],1);
+    int b_id=thread_create(&physical,arch_test_worker,&workers[1],1);
+    int low_id=thread_create(&physical,arch_test_worker,&workers[2],0);
+    int high_id=thread_create(&physical,high_thread,0,2);
+    if(a_id<0 || b_id<0 || low_id<0 || high_id<0) panic("THREAD CREATION FAILED");
+    if(!timer_init(&platform)) panic("TIMER INIT FAILED");
+    __asm__ volatile("msr daifclr, #2":::"memory");
+    while(timer_ticks()<30) __asm__ volatile("wfi");
+    if(!workers[0].progress || !workers[1].progress || workers[2].progress ||
+       high_ran!=1 || !thread_dead((unsigned)high_id) || scheduler_switches()<10)
+        panic("PREEMPTION OR PRIORITY FAILED");
+    workers[0].stop=workers[1].stop=1;
+    while(!thread_dead((unsigned)a_id) || !thread_dead((unsigned)b_id)) __asm__ volatile("wfi");
+    thread_priority(0);
+    uint64_t deadline=timer_ticks()+10;
+    while(timer_ticks()<deadline) __asm__ volatile("wfi");
+    if(!workers[2].progress) panic("LOW PRIORITY DID NOT RUN");
+    workers[2].stop=1;
+    while(!thread_dead((unsigned)low_id)) __asm__ volatile("wfi");
+    thread_priority(1);
+    console_rect(0,220,boot->width,boot->height-220,0x071b36);
+    console_text(32,228,"PREEMPTION PRIORITY EXIT PASS",0x8effb0);
+    console_text(32,256,"TIMER TICKS",0xffffff); console_number(240,256,timer_ticks());
+    console_text(32,284,"CONTEXT SWITCHES",0xffffff); console_number(240,284,scheduler_switches());
+    console_text(32,316,"MILESTONE 2A CORE TESTS PASS",0x8effb0);
+    console_text(32,352,"NO USER PROCESSES OR DESKTOP YET",0xffffff);
+    static const uint32_t signature[8]={0x32aabc,0x6b45a1,0xf3ba20,0x18ad72,
                                         0xe14567,0x2998ef,0xcddc39,0x804020};
-    for (unsigned i=0;i<8;i++) rect(32+i*16,400,16,16,signature[i]);
+    for(unsigned i=0;i<8;i++) console_rect(32+i*16,400,16,16,signature[i]);
+    console_text(32,436,"ALLOCATED PHYSICAL PAGES",0xffffff); console_number(360,436,physical.used);
+    console_text(32,464,"MANAGED PHYSICAL PAGES",0xffffff); console_number(360,464,physical.total);
     __asm__ volatile("dsb sy":::"memory");
-    for (;;) __asm__ volatile("wfe");
+    for(;;) __asm__ volatile("wfi");
 }
