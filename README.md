@@ -14,6 +14,14 @@ This is not yet a usable desktop OS or installation image. User processes, ELF
 loading, public syscalls, IPC, persistent filesystem, input and VMware validation
 remain unfinished. The kernel runs self-tests and then waits with timer IRQs active.
 
+## Download milestone images
+
+The [Milestone 2A testing ISO](artifacts/milestone-2a/CHOS-ARM64.iso) is committed
+under artifacts/milestone-2a. Use GitHub's **Download raw file** button, then verify
+it with [SHA256SUMS](artifacts/milestone-2a/SHA256SUMS). Read the
+[image limitations](artifacts/milestone-2a/README.md) before testing. This is a
+kernel-development ISO, not an installer; Fusion compatibility remains unverified.
+
 ## Build and test
 
 Requirements: Docker Engine with bind mounts supported. On a Linux development
