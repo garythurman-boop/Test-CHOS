@@ -81,3 +81,25 @@ bool platform_discover(const struct chos_boot_info *b,uint64_t mpidr,struct plat
            out->gic_distributor<(1ULL<<39)-0x10000 && out->gic_cpu<(1ULL<<39)-0x2000 &&
            out->timer_irq>=16 && out->timer_irq<=31 && !(out->timer_flags&2);
 }
+
+bool platform_pcie(const struct chos_boot_info *b,uint64_t *base) {
+    if(!memory(b,b->rsdp,36)) return false;
+    const uint8_t *r=(void *)(uintptr_t)b->rsdp;
+    const uint8_t *x=table(b,u64(r+24));
+    if(!x || !same(x,"XSDT",4)) return false;
+    uint32_t length=u32(x+4);
+    if((length-36)%8) return false;
+    for(uint32_t i=36;i<length;i+=8) {
+        const uint8_t *t=table(b,u64(x+i));
+        if(!t || !same(t,"MCFG",4)) continue;
+        uint32_t n=u32(t+4);
+        if(n<60 || (n-44)%16) return false;
+        for(uint32_t j=44;j<n;j+=16) {
+            if(t[j+8] || t[j+9] || t[j+10] || t[j+11]<t[j+10]) continue;
+            uint64_t address=u64(t+j);
+            if(!address || address%0x100000 || address>=(1ULL<<39)-0x100000) return false;
+            *base=address; return true;
+        }
+    }
+    return false;
+}

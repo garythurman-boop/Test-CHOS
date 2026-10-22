@@ -1,6 +1,7 @@
 #include "exception.h"
 #include "console.h"
 #include "scheduler.h"
+#include "process.h"
 extern void arch_break_test(void);
 extern uint64_t arch_read_test(uint64_t);
 extern void arch_write_test(uint64_t);
@@ -21,6 +22,9 @@ void exception_init(void) {
     uint64_t el;
     __asm__ volatile("mrs %0, CurrentEL":"=r"(el));
     if(el!=4) panic("EL1 REQUIRED AT THIS STAGE");
+    uint64_t fp; __asm__ volatile("mrs %0, cpacr_el1":"=r"(fp));
+    fp=(fp&~(3ULL<<20))|(1ULL<<20); /* trap EL0 FP/SIMD until contexts are saved */
+    __asm__ volatile("msr cpacr_el1, %0; isb"::"r"(fp):"memory");
     __asm__ volatile("msr vbar_el1, %0; isb"::"r"(vectors):"memory");
 }
 static bool probe(uint64_t pc,uint64_t far,uint64_t ec) {
@@ -41,6 +45,10 @@ bool exception_test_execute(uint64_t address) { return probe(address,address,0x2
 struct exception_frame *exception_dispatch(struct exception_frame *f) {
     if(f->vector==5 || f->vector==9) return irq_dispatch(f);
     uint64_t ec=f->esr>>26;
+    if(f->vector==8 && process_current()) {
+        if(ec==0x15 && (f->esr&0xffff)==0) return syscall_dispatch(f);
+        return process_exit(f,-128-(int64_t)ec,ec,f->far);
+    }
     if(f->vector==4 && ec==0x15) return scheduler_trap(f);
     if(f->vector==4 && f->elr==expected_pc && expected_pc && ec==expected_class &&
        ((ec==0x3c && (f->esr&0xffff)==0x4348) ||

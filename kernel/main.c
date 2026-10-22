@@ -6,6 +6,7 @@
 #include "platform.h"
 #include "scheduler.h"
 #include "timer.h"
+#include "process.h"
 static struct pmm physical;
 static struct heap heap;
 static struct worker_state workers[3];
@@ -85,13 +86,63 @@ void kernel_main(struct chos_boot_info *info) {
     workers[2].stop=1;
     while(!thread_dead((unsigned)low_id)) __asm__ volatile("wfi");
     thread_priority(1);
-    console_rect(0,220,boot->width,boot->height-220,0x071b36);
-    console_text(32,228,"PREEMPTION PRIORITY EXIT PASS",0x8effb0);
+    __asm__ volatile("msr daifset, #2":::"memory");
+    if(!thread_reap(&physical,(unsigned)a_id) || !thread_reap(&physical,(unsigned)b_id) ||
+       !thread_reap(&physical,(unsigned)low_id) || !thread_reap(&physical,(unsigned)high_id)) panic("KERNEL THREAD REAP FAILED");
+    uint32_t baseline=physical.used;
+    process_init(&physical);
+    extern const uint8_t init_elf[],init_elf_end[];
+    size_t image_size=(size_t)(init_elf_end-init_elf);
+    int solo=process_create(init_elf,image_size,6,0);
+    if(solo!=1) panic("ELF PROCESS LOAD FAILED");
+    __asm__ volatile("msr daifclr, #2":::"memory");
+    deadline=timer_ticks()+200;
+    while(!process_find(1)->exited) {
+        if(timer_ticks()>deadline) panic("USER SYSCALL TIMEOUT");
+        __asm__ volatile("wfi");
+    }
+    if(process_find(1)->status!=43) panic("USER SYSCALL TEST FAILED");
+    __asm__ volatile("msr daifset, #2":::"memory");
+    if(!process_reap(1) || physical.used!=baseline) panic("SOLO PROCESS REAP LEAK");
+    int first=process_create(init_elf,image_size,1,3),second=process_create(init_elf,image_size,2,2);
+    if(first!=2 || second!=3) panic("IPC PROCESS LOAD FAILED");
+    __asm__ volatile("msr daifclr, #2":::"memory");
+    deadline=timer_ticks()+200;
+    while(!process_find(2)->exited || !process_find(3)->exited) {
+        if(timer_ticks()>deadline) panic("USER IPC TIMEOUT");
+        __asm__ volatile("wfi");
+    }
+    if(process_find(2)->status!=41 || process_find(3)->status!=42) panic("USER IPC TEST FAILED");
+    __asm__ volatile("msr daifset, #2":::"memory");
+    if(!process_reap(2) || !process_reap(3) || physical.used!=baseline) panic("PROCESS REAP LEAK");
+    const uint64_t fault_roles[]={3,4,5,7};
+    for(unsigned test=0;test<4;test++) {
+        uint64_t role=fault_roles[test];
+        int pid=process_create(init_elf,image_size,role,(uintptr_t)&physical);
+        if(pid<0) panic("FAULT PROCESS LOAD FAILED");
+        __asm__ volatile("msr daifclr, #2":::"memory");
+        deadline=timer_ticks()+100;
+        while(!process_find((uint64_t)pid)->exited) {
+            if(timer_ticks()>deadline) panic("USER FAULT TIMEOUT");
+            __asm__ volatile("wfi");
+        }
+        struct process *p=process_find((uint64_t)pid);
+        uint64_t expected=role==7?7:(role==5?0x20:0x24);
+        uint64_t expected_address=role==3?(uintptr_t)&physical:(role==4?USER_BASE:USER_STACK_TOP-4096);
+        if(p->fault_class!=expected || (role!=7 && p->fault_address!=expected_address)) panic("USER ISOLATION FAILED");
+        __asm__ volatile("msr daifset, #2":::"memory");
+        if(!process_reap((uint64_t)pid) || physical.used!=baseline) panic("FAULT PROCESS LEAK");
+    }
+    __asm__ volatile("msr daifclr, #2":::"memory");
+    console_rect(0,150,boot->width,boot->height-150,0x071b36);
+    console_text(32,172,"MEMORY PREEMPTION AND REAP PASS",0x8effb0);
+    console_text(32,200,"EL0 ELF SYSCALLS AND IPC PASS",0x8effb0);
+    console_text(32,228,"USER ISOLATION FAULT TESTS PASS",0x8effb0);
     console_text(32,256,"TIMER TICKS",0xffffff); console_number(240,256,timer_ticks());
     console_text(32,284,"CONTEXT SWITCHES",0xffffff); console_number(240,284,scheduler_switches());
-    console_text(32,316,"MILESTONE 2A CORE TESTS PASS",0x8effb0);
-    console_text(32,352,"NO USER PROCESSES OR DESKTOP YET",0xffffff);
-    static const uint32_t signature[8]={0x32aabc,0x6b45a1,0xf3ba20,0x18ad72,
+    console_text(32,316,"MILESTONE 2 CORE TESTS PASS",0x8effb0);
+    console_text(32,352,"NO DESKTOP OR INSTALLER YET",0xffffff);
+    static const uint32_t signature[8]={0x32bbcd,0x6b45a1,0xf3ba20,0x18ad72,
                                         0xe14567,0x2998ef,0xcddc39,0x804020};
     for(unsigned i=0;i<8;i++) console_rect(32+i*16,400,16,16,signature[i]);
     console_text(32,436,"ALLOCATED PHYSICAL PAGES",0xffffff); console_number(360,436,physical.used);

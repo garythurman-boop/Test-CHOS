@@ -1,4 +1,5 @@
 #include "mmu.h"
+#include "console.h"
 #define VALID 1ULL
 #define TABLE 3ULL
 #define AF (1ULL<<10)
@@ -11,6 +12,7 @@
 static uint64_t *pool,*root;
 static unsigned tables;
 static bool active;
+static const struct chos_boot_info *boot_memory;
 static void clean_tables(void);
 static uint64_t *new_table(void) {
     if(tables==TABLE_PAGES) return 0;
@@ -72,6 +74,7 @@ bool mmu_guard(uint64_t address) {
 }
 extern void arch_mmu_switch(uint64_t,uint64_t,uint64_t);
 bool mmu_init(struct pmm *physical,const struct chos_boot_info *boot,uint64_t gicd,uint64_t gicc) {
+    boot_memory=boot;
     uint64_t base=pmm_alloc(physical,TABLE_PAGES);
     if(!base) return false;
     pool=(void *)(uintptr_t)base; tables=0; active=false;
@@ -98,5 +101,92 @@ bool mmu_init(struct pmm *physical,const struct chos_boot_info *boot,uint64_t gi
     /* Attr0=normal WB/WA, Attr1=Device-nGnRE. EL1 only, TTBR1 disabled. */
     arch_mmu_switch((uintptr_t)root,tcr,0x04ff);
     active=true;
+    return true;
+}
+
+#include "process.h"
+static void sync_space(struct address_space *s) {
+    for(unsigned i=0;i<s->count;i++) {
+        uint64_t ctr; __asm__ volatile("mrs %0, ctr_el0":"=r"(ctr));
+        uint64_t line=4ULL<<((ctr>>16)&15);
+        for(uint64_t a=s->tables[i];a<s->tables[i]+PAGE_SIZE;a+=line)
+            __asm__ volatile("dc cvac, %0"::"r"(a):"memory");
+    }
+    __asm__ volatile("dsb ish; tlbi vmalle1; dsb ish; isb":::"memory");
+}
+bool mmu_restore(uint64_t address) {
+    uint64_t *l2=descend(root,(address>>30)&511,21);
+    if(!l2) return false;
+    uint64_t *l3=descend(l2,(address>>21)&511,12);
+    if(!l3 || address%PAGE_SIZE) return false;
+    l3[(address>>12)&511]=address|AF|SH_INNER|PXN|UXN|TABLE;
+    clean_tables(); __asm__ volatile("tlbi vmalle1; dsb ish; isb":::"memory");
+    return true;
+}
+uint64_t mmu_kernel_root(void) { return (uintptr_t)root; }
+void mmu_activate(uint64_t address) {
+    __asm__ volatile("dsb ish; msr ttbr0_el1, %0; isb; tlbi vmalle1; dsb ish; isb"::"r"(address):"memory");
+}
+static uint64_t *space_table(struct pmm *p,struct address_space *s) {
+    if(s->count==16) return 0;
+    uint64_t page=pmm_alloc(p,1);
+    if(!page) return 0;
+    s->tables[s->count++]=page;
+    uint64_t *t=(void *)(uintptr_t)page;
+    for(unsigned i=0;i<512;i++) t[i]=0;
+    return t;
+}
+bool mmu_space_create(struct pmm *p,struct address_space *s) {
+    *s=(struct address_space){0};
+    /* Reserve one 1 GiB root slot for private user mappings, absent in kernel. */
+    if(root[USER_BASE>>30]) return false;
+    uint64_t *r=space_table(p,s);
+    if(!r) return false;
+    for(unsigned i=0;i<512;i++) r[i]=root[i];
+    s->root=(uintptr_t)r;
+    return true;
+}
+void mmu_space_destroy(struct pmm *p,struct address_space *s) {
+    for(unsigned i=0;i<s->count;i++) if(!pmm_free(p,s->tables[i],1)) panic("SPACE TABLE FREE FAILED");
+    *s=(struct address_space){0};
+}
+static uint64_t *user_pte(struct pmm *p,struct address_space *s,uint64_t va,bool create) {
+    if(va<USER_BASE || va>=USER_STACK_TOP || va%PAGE_SIZE || !s->root) return 0;
+    uint64_t *t=(void *)(uintptr_t)s->root;
+    for(unsigned shift=30;shift>=21;shift-=9) {
+        unsigned index=(va>>shift)&511;
+        if(!(t[index]&VALID)) {
+            if(!create) return 0;
+            uint64_t *next=space_table(p,s);
+            if(!next) return 0;
+            t[index]=(uintptr_t)next|TABLE;
+        }
+        if((t[index]&3)!=TABLE) return 0;
+        t=(void *)(uintptr_t)(t[index]&ADDRESS);
+    }
+    return &t[(va>>12)&511];
+}
+bool mmu_user_map(struct pmm *p,struct address_space *s,uint64_t va,uint64_t pa,bool writable,bool executable) {
+    if(pa%PAGE_SIZE || (writable&&executable)) return false;
+    uint64_t *pte=user_pte(p,s,va,true);
+    if(!pte || (*pte&VALID)) return false;
+    *pte=pa|AF|SH_INNER|PXN|(writable?(1ULL<<6):(3ULL<<6))|(executable?0:UXN)|TABLE;
+    sync_space(s);
+    return true;
+}
+bool mmu_user_unmap(struct address_space *s,uint64_t va) {
+    uint64_t *pte=user_pte(0,s,va,false);
+    if(!pte || !(*pte&VALID)) return false;
+    *pte=0; sync_space(s); return true;
+}
+
+bool mmu_device(uint64_t address,uint64_t size) {
+    if(address%PAGE_SIZE || !size || size%PAGE_SIZE || address>=(1ULL<<39) || size>(1ULL<<39)-address) return false;
+    for(uint64_t off=0;off<boot_memory->memory_map_size;off+=boot_memory->descriptor_size) {
+        const struct memory_descriptor *d=(void *)(uintptr_t)(boot_memory->memory_map+off);
+        if(d->type>=1 && d->type<=10 && address<d->physical+d->pages*PAGE_SIZE && d->physical<address+size) return false;
+    }
+    if(!map(address,size,AF|(1ULL<<2)|PXN|UXN)) return false;
+    clean_tables(); __asm__ volatile("tlbi vmalle1; dsb ish; isb":::"memory");
     return true;
 }

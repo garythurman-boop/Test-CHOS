@@ -16,7 +16,7 @@ import time
 
 ROOT = Path(__file__).resolve().parents[1]
 BUILD = ROOT / 'build'
-SIGNATURE = [0x32aabc,0x6b45a1,0xf3ba20,0x18ad72,0xe14567,0x2998ef,0xcddc39,0x804020]
+SIGNATURE = [0x32bbcd,0x6b45a1,0xf3ba20,0x18ad72,0xe14567,0x2998ef,0xcddc39,0x804020]
 # Independent expected glyphs for the CHOS banner.
 CHOS = [[14,17,16,16,16,17,14], [17,17,17,31,17,17,17],
         [14,17,17,17,17,17,14], [15,16,16,14,1,1,30]]
@@ -158,14 +158,16 @@ def main():
                 raise RuntimeError('Boot acceptance timed out; inspect screenshot and logs')
             if not args.expect_missing_kernel:
                 save_png(screen)
-            outcome['milestone']='2A'
+            outcome['milestone']='2'
             outcome['result_kind']=('expected_rejection' if args.expect_platform_reject or args.expect_missing_kernel else 'functional_boot')
             if outcome['result_kind']=='functional_boot':
                 outcome['kernel_checks']=['BRK exception return','physical page integrity and double-free rejection',
                     'heap allocate/free','null translation fault','stack guard translation fault',
                     'read-only code permission fault','NX heap instruction fault','ACPI GICv2/GTDT discovery',
                     'timer-driven non-yielding worker preemption','register context canaries',
-                    'strict priority and round-robin selection','thread exit and continued scheduling']
+                    'strict priority and round-robin selection','thread exit and continued scheduling','EL0 static ELF execution and syscalls',
+                    'per-process private mappings and IPC','invalid user buffer rejection',
+                    'kernel/text/NX-stack violation termination','deferred process and thread reclamation']
             outcome['elapsed_seconds']=round(time.monotonic()-started,3)
             print(json.dumps(outcome,indent=2))
         finally:

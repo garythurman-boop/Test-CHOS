@@ -2,7 +2,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 mkdir -p build
-make test-memory
+make test-memory test-elf
 make iso
 sha256sum build/CHOS-ARM64.iso > build/hash-1
 make iso
@@ -19,4 +19,4 @@ python3 tests/boot.py --iso build/CHOS-missing-kernel.iso --expect-missing-kerne
 # Leave the staging image consistent with the distribution ISO.
 make iso
 sha256sum build/CHOS-ARM64.iso > build/SHA256SUMS
-printf 'All four QEMU tests and two host test programs and ISO repeatability check passed.\n'
+printf 'All four QEMU tests and three host test programs and ISO repeatability check passed.\n'
