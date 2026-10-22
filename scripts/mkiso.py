@@ -28,6 +28,10 @@ def main():
               (BUILD / 'KERNEL.BIN', '::/CHOS/KERNEL.BIN')]
     if os.environ.get('CHOS_TEST_MISSING_KERNEL'):
         inputs = inputs[:1]
+    if os.environ.get('CHOS_TEST_STORAGE'):
+        config=BUILD/'storage-test.cfg'
+        config.write_text('CHOS STORAGE TEST V1')
+        inputs.append((config,'::/CHOS/TEST.CFG'))
     for source, target in inputs:
         run('mcopy', '-i', image, source, target)
     # FAT directory timestamps created by mmd/mformat are normalized separately.
@@ -58,7 +62,7 @@ def main():
                 directory(root_offset+root_bytes+(cluster-2)*cluster_bytes, cluster_bytes)
     directory(root_offset,root_bytes)
     image.write_bytes(data)
-    output = BUILD / ('CHOS-missing-kernel.iso' if os.environ.get('CHOS_TEST_MISSING_KERNEL') else 'CHOS-ARM64.iso')
+    output = BUILD / ('CHOS-STORAGE-TEST.iso' if os.environ.get('CHOS_TEST_STORAGE') else 'CHOS-missing-kernel.iso' if os.environ.get('CHOS_TEST_MISSING_KERNEL') else 'CHOS-ARM64.iso')
     run('xorriso', '-as', 'mkisofs', '-quiet', '-V', 'CHOS_ARM64',
         '--modification-date='+stamp, '--set_all_file_dates', stamp,
         '-c', 'boot/boot.cat', '-e', 'boot/efi.img', '-no-emul-boot',

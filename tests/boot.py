@@ -51,9 +51,11 @@ def save_png(ppm):
          chunk(b'IDAT',zlib.compress(raw))+chunk(b'IEND',b''))
     ppm.with_suffix('.png').write_bytes(png)
 
-def completed(path):
+def completed(path,phase=0):
     pixel = read_ppm(path)
-    for i,rgb in enumerate(SIGNATURE):
+    expected_signature=list(SIGNATURE)
+    if phase: expected_signature[0]={1:0x33ccdd,2:0x33ddee,3:0x33eeff}[phase]
+    for i,rgb in enumerate(expected_signature):
         if pixel(40+i*16,408) != rgb:
             return False
     for index,glyph in enumerate(CHOS):
@@ -64,12 +66,13 @@ def completed(path):
                     return False
     return True
 
-def platform_rejected(path):
+def platform_rejected(path,disk=False):
     pixel=read_ppm(path)
     if pixel(40,408)!=0xff0000:
         return False
     # Exact ACPI diagnostic prefix, rather than accepting any kernel panic.
     glyphs=[[14,17,17,31,17,17,17],CHOS[0],[30,17,17,30,16,16,16],[14,4,4,4,4,4,14]]
+    if disk: glyphs=[CHOS[3],[31,4,4,4,4,4,4],CHOS[2],[30,17,17,30,20,18,17]]
     for index,glyph in enumerate(glyphs):
         for row,bits in enumerate(glyph):
             for col in range(5):
@@ -85,12 +88,22 @@ def main():
     parser.add_argument('--expect-missing-kernel',action='store_true')
     parser.add_argument('--gic-version',choices=['2','3'],default='2')
     parser.add_argument('--expect-platform-reject',action='store_true')
+    parser.add_argument('--label')
+    parser.add_argument('--expect-disk-reject',action='store_true')
+    parser.add_argument('--disk',type=Path)
+    parser.add_argument('--storage-phase',type=int,choices=[1,2,3])
+    parser.add_argument('--disk-serial',default='CHOS-TEST-0001')
     parser.add_argument('--timeout',type=int,default=120)
     args=parser.parse_args()
     lock=(BUILD/'boot-test.lock').open('w')
     fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
     name=('platform-reject' if args.expect_platform_reject else
           ('missing-kernel' if args.expect_missing_kernel else f'boot-{args.ram}'))
+    if args.expect_disk_reject: name='disk-reject'
+    if args.label:
+        if not args.label.replace('-','').isalnum(): parser.error('invalid label')
+        name=args.label
+    if args.storage_phase: name=f'storage-{args.storage_phase}'
     qmp_path=Path('/tmp') / f'chos-{os.getpid()}.sock'
     serial=BUILD/f'{name}.serial.log'
     screen=BUILD/f'{name}.ppm'
@@ -103,6 +116,9 @@ def main():
              '-device','scsi-cd,drive=cd','-boot','order=d',
              '-display','none','-serial',f'file:{serial}',
              '-qmp',f'unix:{qmp_path},server=on,wait=off','-no-reboot','-net','none']
+    if args.disk:
+        command+=['-drive',f'if=none,id=nvme0,format=raw,cache=writeback,file={args.disk.resolve()}',
+                  '-device',f'nvme,drive=nvme0,serial={args.disk_serial}']
     started=time.monotonic()
     outcome={'passed':False,'ram_mib':args.ram,'command':command,'test':name,'iso_sha256':hashlib.sha256(args.iso.read_bytes()).hexdigest()}
     with (BUILD/f'{name}.qemu.log').open('w') as log:
@@ -141,14 +157,16 @@ def main():
                         break
                 else:
                     qmp('screendump',{'filename':str(screen)})
-                    if args.expect_platform_reject:
-                        if platform_rejected(screen):
+                    if args.expect_platform_reject or args.expect_disk_reject:
+                        if platform_rejected(screen,args.expect_disk_reject):
                             outcome['passed']=True
                             break
                     elif read_ppm(screen)(40,408)==0xff0000:
                         save_png(screen)
+                        debug=qmp('human-monitor-command',{'command-line':'info pci'})
+                        (BUILD/f'{name}.pci.log').write_text(debug)
                         raise RuntimeError('CHOS panic; inspect screenshot')
-                    if not args.expect_platform_reject and completed(screen):
+                    if not args.expect_platform_reject and not args.expect_disk_reject and completed(screen,args.storage_phase or 0):
                         outcome['passed']=True
                         break
                 time.sleep(.5)
@@ -158,8 +176,9 @@ def main():
                 raise RuntimeError('Boot acceptance timed out; inspect screenshot and logs')
             if not args.expect_missing_kernel:
                 save_png(screen)
-            outcome['milestone']='2'
-            outcome['result_kind']=('expected_rejection' if args.expect_platform_reject or args.expect_missing_kernel else 'functional_boot')
+            outcome['milestone']='3A'
+            if args.storage_phase: outcome['storage_phase']=args.storage_phase
+            outcome['result_kind']=('expected_rejection' if args.expect_platform_reject or args.expect_missing_kernel or args.expect_disk_reject else 'functional_boot')
             if outcome['result_kind']=='functional_boot':
                 outcome['kernel_checks']=['BRK exception return','physical page integrity and double-free rejection',
                     'heap allocate/free','null translation fault','stack guard translation fault',
@@ -168,6 +187,11 @@ def main():
                     'strict priority and round-robin selection','thread exit and continued scheduling','EL0 static ELF execution and syscalls',
                     'per-process private mappings and IPC','invalid user buffer rejection',
                     'kernel/text/NX-stack violation termination','deferred process and thread reclamation']
+            if args.storage_phase:
+                outcome['storage_checks']={1:['NVMe block read/write/flush','CHFS format/create/read/rename','EL0 file-handle and invalid-buffer tests'],2:['cold boot generation 1 integrity','persistent delete/rewrite','EL0 file persistence'],3:['cold boot generation 2 integrity','EL0 file persistence','read-only verification boot']}[args.storage_phase]
+            if args.disk:
+                pci=qmp('human-monitor-command',{'command-line':'info pci'})
+                (BUILD/f'{name}.pci.log').write_text(pci)
             outcome['elapsed_seconds']=round(time.monotonic()-started,3)
             print(json.dumps(outcome,indent=2))
         finally:

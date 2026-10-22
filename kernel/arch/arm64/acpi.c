@@ -85,10 +85,13 @@ bool platform_discover(const struct chos_boot_info *b,uint64_t mpidr,struct plat
 bool platform_pcie(const struct chos_boot_info *b,uint64_t *base) {
     if(!memory(b,b->rsdp,36)) return false;
     const uint8_t *r=(void *)(uintptr_t)b->rsdp;
+    uint32_t rsdp_len=u32(r+20);
+    if(!same(r,"RSD PTR ",8) || r[15]<2 || !checksum(r,20) || rsdp_len<36 || rsdp_len>4096 ||
+       !memory(b,b->rsdp,rsdp_len) || !checksum(r,rsdp_len)) return false;
     const uint8_t *x=table(b,u64(r+24));
     if(!x || !same(x,"XSDT",4)) return false;
     uint32_t length=u32(x+4);
-    if((length-36)%8) return false;
+    if((length-36)%8 || (length-36)/8>1024) return false;
     for(uint32_t i=36;i<length;i+=8) {
         const uint8_t *t=table(b,u64(x+i));
         if(!t || !same(t,"MCFG",4)) continue;

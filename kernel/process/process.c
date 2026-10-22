@@ -69,7 +69,7 @@ bool process_reap(uint64_t pid) {
     if(!p || !p->exited || scheduler_pid() || !thread_reap(physical,(unsigned)p->thread)) return false;
     release(p); return true;
 }
-bool user_copy(struct process *p,uint64_t address,void *buffer,size_t length,bool to_user) {
+bool user_validate(struct process *p,uint64_t address,size_t length,bool to_user) {
     if(length>4096 || address<USER_BASE || address>=USER_STACK_TOP || length>USER_STACK_TOP-address) return false;
     /* Validate the entire span before any copy, including across region boundaries. */
     for(size_t offset=0;offset<length;) {
@@ -83,6 +83,10 @@ bool user_copy(struct process *p,uint64_t address,void *buffer,size_t length,boo
         if(n>length-offset) n=length-offset;
         offset+=(size_t)n;
     }
+    return true;
+}
+bool user_copy(struct process *p,uint64_t address,void *buffer,size_t length,bool to_user) {
+    if(!user_validate(p,address,length,to_user)) return false;
     for(size_t i=0;i<length;i++) {
         for(unsigned j=0;j<PROCESS_REGIONS;j++) {
             struct user_region *r=&p->regions[j];

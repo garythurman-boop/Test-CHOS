@@ -49,3 +49,27 @@ reaps them. The reaper releases user regions, private tables and guarded kernel
 stacks. Current limits are four live process records, eight thread slots and
 sixteen regions/tables per process. All management operations run with IRQs masked;
 SMP and hostile-device DMA isolation are outside this milestone.
+
+## File extension at checkpoint 3A
+
+Only available with the test-mounted CHFS volume; otherwise returns -19 ENODEV.
+NUL-terminated paths are limited to 59 bytes; full spans are checked before use.
+
+| x8 | Operation | Arguments / result |
+|---|---|---|
+| 10 | Open | x0 path, x1 flags: read=1/write=2/create=4/truncate=8; returns fd 3..10 |
+| 11 | Read | x0 fd, x1 writable buffer, x2 length <=4096; returns count |
+| 12 | Write | x0 fd, x1 readable buffer, x2 length <=4096; returns count |
+| 13 | Close | x0 fd; returns zero |
+| 14 | Mkdir | x0 path; returns zero |
+| 15 | Unlink/remove empty directory | x0 path; returns zero |
+| 16 | Rename file | x0 old path, x1 new path; returns zero |
+| 17 | Seek absolute | x0 fd, x1 offset <=32768; returns offset |
+| 18 | File size | x0 fd; returns bytes |
+| 19 | List metadata slot | x0 index 0..39, x1 writable chos_dirent[1]; returns zero or -2 for empty |
+
+Additional errors: -2 missing path/slot; -5 I/O or filesystem update failure;
+-9 bad handle/access mode; -19 unmounted; -24 no free handles; -36 path too long.
+Read/write reject invalid buffers before changing offsets. Directory entries are
+{char path[60]; uint32 size,kind}; kind 1=file, 2=directory. Paths are absolute,
+case-sensitive and ASCII. There is no per-user file access control yet.

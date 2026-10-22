@@ -7,6 +7,8 @@
 #include "scheduler.h"
 #include "timer.h"
 #include "process.h"
+#include "storage.h"
+#include "vfs.h"
 static struct pmm physical;
 static struct heap heap;
 static struct worker_state workers[3];
@@ -134,16 +136,48 @@ void kernel_main(struct chos_boot_info *info) {
         if(!process_reap((uint64_t)pid) || physical.used!=baseline) panic("FAULT PROCESS LEAK");
     }
     __asm__ volatile("msr daifclr, #2":::"memory");
+    struct block_device disk; bool test_identity=false;
+    bool disk_ready=nvme_init(&physical,boot,&disk,&test_identity);
+    unsigned storage_phase=0;
+    if(boot->reserved&1) {
+        if(!disk_ready) { console_text(32,520,"BAR ADDRESS",0xffffff); console_number(240,520,nvme_bar()); panic(nvme_error()); }
+        extern unsigned storage_test(struct block_device,bool);
+        __asm__ volatile("msr daifset, #2":::"memory");
+        storage_phase=storage_test(disk,test_identity);
+        if(storage_phase==1) {
+            extern struct chfs *storage_volume(void);
+            vfs_mount(storage_volume()); uint32_t file_baseline=physical.used;
+            int pid=process_create(init_elf,image_size,8,0);
+            if(pid<0) panic("NATIVE FILE TEST LOAD FAILED");
+            __asm__ volatile("msr daifclr, #2":::"memory");
+            deadline=timer_ticks()+500;
+            while(!process_find((uint64_t)pid)->exited) {
+                if(timer_ticks()>deadline) panic("NATIVE FILE TEST TIMEOUT");
+                __asm__ volatile("wfi");
+            }
+            if(process_find((uint64_t)pid)->status!=44) panic("NATIVE FILE SYSCALL TEST FAILED");
+            __asm__ volatile("msr daifset, #2":::"memory");
+            if(!process_reap((uint64_t)pid) || physical.used!=file_baseline) panic("NATIVE FILE PROCESS LEAK");
+        }
+        __asm__ volatile("msr daifclr, #2":::"memory");
+    }
     console_rect(0,150,boot->width,boot->height-150,0x071b36);
     console_text(32,172,"MEMORY PREEMPTION AND REAP PASS",0x8effb0);
     console_text(32,200,"EL0 ELF SYSCALLS AND IPC PASS",0x8effb0);
     console_text(32,228,"USER ISOLATION FAULT TESTS PASS",0x8effb0);
     console_text(32,256,"TIMER TICKS",0xffffff); console_number(240,256,timer_ticks());
     console_text(32,284,"CONTEXT SWITCHES",0xffffff); console_number(240,284,scheduler_switches());
-    console_text(32,316,"MILESTONE 2 CORE TESTS PASS",0x8effb0);
+    console_text(32,316,"CORE TESTS PASS STORAGE OPTIONAL",0x8effb0);
     console_text(32,352,"NO DESKTOP OR INSTALLER YET",0xffffff);
-    static const uint32_t signature[8]={0x32bbcd,0x6b45a1,0xf3ba20,0x18ad72,
+    uint32_t signature[8]={0x32bbcd,0x6b45a1,0xf3ba20,0x18ad72,
                                         0xe14567,0x2998ef,0xcddc39,0x804020};
+    if(!storage_phase) console_text(32,380,disk_ready?"NVME DETECTED DISK WRITES DISABLED":"NVME NOT PRESENT OPTIONAL",0x8edbff);
+    if(storage_phase) {
+        signature[0]=storage_phase==1?0x33ccdd:(storage_phase==2?0x33ddee:0x33eeff);
+        console_rect(0,300,boot->width,84,0x071b36);
+        console_text(32,316,"NVME CHFS PERSISTENCE TEST PASS",0x8effb0);
+        console_text(32,352,"STORAGE TEST PHASE",0xffffff); console_number(300,352,storage_phase);
+    }
     for(unsigned i=0;i<8;i++) console_rect(32+i*16,400,16,16,signature[i]);
     console_text(32,436,"ALLOCATED PHYSICAL PAGES",0xffffff); console_number(360,436,physical.used);
     console_text(32,464,"MANAGED PHYSICAL PAGES",0xffffff); console_number(360,464,physical.total);

@@ -35,9 +35,11 @@ static uint64_t *descend(uint64_t *parent,unsigned index,unsigned shift) {
     return next;
 }
 static bool map(uint64_t address,uint64_t size,uint64_t flags) {
-    if(address%PAGE_SIZE || size%PAGE_SIZE || address>=(1ULL<<39) || size>(1ULL<<39)-address) return false;
+    if(address%PAGE_SIZE || size%PAGE_SIZE || address>=(1ULL<<48) || size>(1ULL<<48)-address) return false;
     while(size) {
-        uint64_t *l2=descend(root,(address>>30)&511,21);
+        uint64_t *l1=descend(root,(address>>39)&511,30);
+    if(!l1) return false;
+    uint64_t *l2=descend(l1,(address>>30)&511,21);
         if(!l2) return false;
         unsigned index=(address>>21)&511;
         if((flags&(1ULL<<2)) && !(address&((1ULL<<21)-1)) && size>=(1ULL<<21) && !(l2[index]&VALID)) {
@@ -60,8 +62,10 @@ static void clean_tables(void) {
     __asm__ volatile("dsb sy":::"memory");
 }
 bool mmu_guard(uint64_t address) {
-    if(!root || address%PAGE_SIZE || address>=(1ULL<<39)) return false;
-    uint64_t *l2=descend(root,(address>>30)&511,21);
+    if(!root || address%PAGE_SIZE || address>=(1ULL<<48)) return false;
+    uint64_t *l1=descend(root,(address>>39)&511,30);
+    if(!l1) return false;
+    uint64_t *l2=descend(l1,(address>>30)&511,21);
     if(!l2) return false;
     uint64_t *l3=descend(l2,(address>>21)&511,12);
     if(!l3) return false;
@@ -97,7 +101,7 @@ bool mmu_init(struct pmm *physical,const struct chos_boot_info *boot,uint64_t gi
     uint64_t features; __asm__ volatile("mrs %0, id_aa64mmfr0_el1":"=r"(features));
     uint64_t ips=features&15;
     if(ips>5) ips=5; /* use at most 48-bit physical addresses, 4 KiB granule */
-    uint64_t tcr=25ULL|(1ULL<<8)|(1ULL<<10)|(3ULL<<12)|(1ULL<<23)|(ips<<32);
+    uint64_t tcr=16ULL|(1ULL<<8)|(1ULL<<10)|(3ULL<<12)|(1ULL<<23)|(ips<<32);
     /* Attr0=normal WB/WA, Attr1=Device-nGnRE. EL1 only, TTBR1 disabled. */
     arch_mmu_switch((uintptr_t)root,tcr,0x04ff);
     active=true;
@@ -115,7 +119,9 @@ static void sync_space(struct address_space *s) {
     __asm__ volatile("dsb ish; tlbi vmalle1; dsb ish; isb":::"memory");
 }
 bool mmu_restore(uint64_t address) {
-    uint64_t *l2=descend(root,(address>>30)&511,21);
+    uint64_t *l1=descend(root,(address>>39)&511,30);
+    if(!l1) return false;
+    uint64_t *l2=descend(l1,(address>>30)&511,21);
     if(!l2) return false;
     uint64_t *l3=descend(l2,(address>>21)&511,12);
     if(!l3 || address%PAGE_SIZE) return false;
@@ -139,10 +145,16 @@ static uint64_t *space_table(struct pmm *p,struct address_space *s) {
 bool mmu_space_create(struct pmm *p,struct address_space *s) {
     *s=(struct address_space){0};
     /* Reserve one 1 GiB root slot for private user mappings, absent in kernel. */
-    if(root[USER_BASE>>30]) return false;
+    if((root[0]&3)!=TABLE) return false;
+    uint64_t *kernel_l1=(void *)(uintptr_t)(root[0]&ADDRESS);
+    if(kernel_l1[USER_BASE>>30]) return false;
     uint64_t *r=space_table(p,s);
     if(!r) return false;
     for(unsigned i=0;i<512;i++) r[i]=root[i];
+    uint64_t *private_l1=space_table(p,s);
+    if(!private_l1) { mmu_space_destroy(p,s); return false; }
+    for(unsigned i=0;i<512;i++) private_l1[i]=kernel_l1[i];
+    r[0]=(uintptr_t)private_l1|TABLE;
     s->root=(uintptr_t)r;
     return true;
 }
@@ -153,7 +165,7 @@ void mmu_space_destroy(struct pmm *p,struct address_space *s) {
 static uint64_t *user_pte(struct pmm *p,struct address_space *s,uint64_t va,bool create) {
     if(va<USER_BASE || va>=USER_STACK_TOP || va%PAGE_SIZE || !s->root) return 0;
     uint64_t *t=(void *)(uintptr_t)s->root;
-    for(unsigned shift=30;shift>=21;shift-=9) {
+    for(unsigned shift=39;shift>=21;shift-=9) {
         unsigned index=(va>>shift)&511;
         if(!(t[index]&VALID)) {
             if(!create) return 0;
@@ -181,7 +193,7 @@ bool mmu_user_unmap(struct address_space *s,uint64_t va) {
 }
 
 bool mmu_device(uint64_t address,uint64_t size) {
-    if(address%PAGE_SIZE || !size || size%PAGE_SIZE || address>=(1ULL<<39) || size>(1ULL<<39)-address) return false;
+    if(address%PAGE_SIZE || !size || size%PAGE_SIZE || address>=(1ULL<<48) || size>(1ULL<<48)-address) return false;
     for(uint64_t off=0;off<boot_memory->memory_map_size;off+=boot_memory->descriptor_size) {
         const struct memory_descriptor *d=(void *)(uintptr_t)(boot_memory->memory_map+off);
         if(d->type>=1 && d->type<=10 && address<d->physical+d->pages*PAGE_SIZE && d->physical<address+size) return false;

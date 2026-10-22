@@ -37,13 +37,23 @@ status efi_main(handle image,struct system_table *st) {
     uint64_t read_size=file_size;
     s=kernel->read(kernel,&read_size,(void *)(uintptr_t)base);
     kernel->close(kernel);
+    uint32_t test_flags=0;
+    struct file *config=0;
+    if(!EFI_ERROR(root->open(root,&config,(char16 *)u"\\CHOS\\TEST.CFG",1,0))) {
+        char content[32]; uint64_t bytes=sizeof(content);
+        status config_status=config->read(config,&bytes,content); config->close(config);
+        const char expected[]="CHOS STORAGE TEST V1";
+        unsigned equal=!EFI_ERROR(config_status) && bytes==sizeof(expected)-1;
+        for(unsigned i=0;equal && i<sizeof(expected)-1;i++) if(content[i]!=expected[i]) equal=0;
+        if(equal) test_flags=1;
+    }
     root->close(root);
     if (EFI_ERROR(s)||read_size!=file_size) return fail(st,(char16 *)u"CHOS: incomplete kernel read\r\n",EFI_INVALID_PARAMETER);
     struct chos_boot_info *bi=0;
     s=bs->allocate_pool(2,sizeof(*bi),(void **)&bi);
     if (EFI_ERROR(s)) return fail(st,(char16 *)u"CHOS: boot information allocation failed\r\n",s);
     for (uint64_t i=0;i<sizeof(*bi);i++) ((uint8_t *)bi)[i]=0;
-    bi->magic=CHOS_BOOT_MAGIC;
+    bi->magic=CHOS_BOOT_MAGIC; bi->reserved=test_flags;
     if(st->configuration_count>1024) return fail(st,(char16 *)u"CHOS: invalid configuration table count\r\n",EFI_INVALID_PARAMETER);
     const struct configuration_entry *entries=st->configuration_table;
     for(uint64_t i=0;i<st->configuration_count;i++) {
