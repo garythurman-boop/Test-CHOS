@@ -3,8 +3,8 @@
 **Not verified. No Fusion/Apple Silicon host is attached to this workspace.**
 This project has booted only on QEMU's ARM virt machine. Current core requires
 EL1 entry, ACPI 2.x, GICv2 and a GTDT timer; GICv3 is explicitly rejected. These
-requirements must be checked on Fusion before claiming compatibility. Current images contain real kernel/process/file/input tests,
-not a graphical installer. Do not attach valuable disks or expect installation.
+requirements must be checked on Fusion before claiming compatibility. Current images contain real kernel/process/file/input tests followed by a native
+desktop and applications, not a graphical installer. Do not attach valuable disks or expect installation.
 
 ## Evidence and open questions
 
@@ -51,7 +51,7 @@ x86 VMware device assumptions:
    for M1; it cannot be installed to by this milestone.
 3. Start the VM, select optical media in firmware if necessary, and record whether
    the EFI catalog is found, BOOTAA64.EFI executes, kernel load succeeds and
-   the core-tests completion and input feedback appears (or record the explicit unsupported-platform error). Capture an actual screenshot and firmware
+   core-test completion followed by the desktop appears (or record the explicit unsupported-platform error). Capture an actual screenshot and firmware
    logs. Record resolution, pixel format, EL and displayed memory count.
 4. If optical boot fails, inspect the ISO catalog and firmware boot options. Try
    manually selecting EFI/BOOT/BOOTAA64.EFI from the firmware file browser, if the

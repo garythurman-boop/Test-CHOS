@@ -174,7 +174,7 @@ void kernel_main(struct chos_boot_info *info) {
     console_text(32,256,"TIMER TICKS",0xffffff); console_number(240,256,timer_ticks());
     console_text(32,284,"CONTEXT SWITCHES",0xffffff); console_number(240,284,scheduler_switches());
     console_text(32,316,"CORE TESTS PASS STORAGE OPTIONAL",0x8effb0);
-    console_text(32,352,"NO DESKTOP OR INSTALLER YET",0xffffff);
+    console_text(32,352,"STARTING DESKTOP AFTER CORE TESTS",0xffffff);
     uint32_t signature[8]={0x32bbcd,0x6b45a1,0xf3ba20,0x18ad72,
                                         0xe14567,0x2998ef,0xcddc39,0x804020};
     if(!storage_phase) console_text(32,380,disk_ready?"NVME DETECTED DISK WRITES DISABLED":"NVME NOT PRESENT OPTIONAL",0x8edbff);

@@ -1,3 +1,19 @@
+# CHOS desktop/application development sequence
+
+Adds an original software window manager/compositor, owned native graphics/events,
+blocking application waits, taskbar/launcher, clock and six functional EL0 apps.
+Notepad supports safe whole-file saves; Explorer/Terminal perform real CHFS file
+operations on an explicitly volatile RAM volume. Control Panel changes the actual
+theme; Task Manager reads real instrumentation. Confirmed restart/shutdown uses
+ACPI-discovered PSCI and is verified by QMP guest power events.
+
+Twelve QEMU cases, six portable host programs (both ELF inputs), sanitizer checks,
+ISO repeatability and independent cold storage integrity passed. See milestone-5.md.
+No installer/installed boot, desktop disk persistence, Fusion validation or CHOS 0.1
+release is claimed. RAM files disappear on restart/shutdown.
+
+---
+
 # CHOS milestones 2 core and 3 development sequence
 
 Milestone 2 adds isolated static ELF processes, public syscalls, IPC, memory-fault

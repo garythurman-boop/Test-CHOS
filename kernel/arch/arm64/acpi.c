@@ -106,3 +106,18 @@ bool platform_pcie(const struct chos_boot_info *b,uint64_t *base) {
     }
     return false;
 }
+
+/* ACPI FADT ARM_BOOT_ARCH specifies PSCI compliance and its call conduit. */
+bool platform_psci(const struct chos_boot_info *b,bool *hvc) {
+    if(!memory(b,b->rsdp,36))return false;
+    const uint8_t *r=(void *)(uintptr_t)b->rsdp;uint32_t n=u32(r+20);
+    if(!same(r,"RSD PTR ",8) || r[15]<2 || !checksum(r,20) || n<36 || n>4096 || !memory(b,b->rsdp,n) || !checksum(r,n))return false;
+    const uint8_t *x=table(b,u64(r+24));if(!x || !same(x,"XSDT",4))return false;
+    n=u32(x+4);if((n-36)%8 || (n-36)/8>1024)return false;
+    for(uint32_t i=36;i<n;i+=8) {
+        const uint8_t *t=table(b,u64(x+i));if(!t || !same(t,"FACP",4))continue;
+        if(u32(t+4)<132 || t[8]<5 || !(t[129]&1))return false;
+        *hvc=(t[129]&2)!=0;return true;
+    }
+    return false;
+}

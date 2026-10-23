@@ -16,7 +16,7 @@ struct wm_window {
 struct wm {
     struct wm_window windows[WM_WINDOWS]; unsigned order[WM_WINDOWS],count;
     uint32_t next_id,focus; int width,height,mouse_x,mouse_y,drag,dx,dy;
-    bool resize,menu,alt,ctrl,shift,dirty; unsigned launch,theme;
+    bool resize,menu,applications,alt,ctrl,shift,dirty,logout; unsigned launch,theme,confirm,power,selection;
 };
 void wm_init(struct wm *,int,int);
 int wm_create(struct wm *,uint64_t,const char *,int,int);
@@ -26,6 +26,7 @@ void wm_mouse(struct wm *,int,int,int);
 void wm_key(struct wm *,unsigned,int);
 bool wm_event(struct wm *,uint64_t,uint32_t,struct chos_event *,bool consume);
 void wm_focus(struct wm *,uint32_t);
+int wm_task_width(const struct wm *);
 struct surface { uint32_t *pixels; int width,height,stride; int x,y,w,h; };
 void gfx_clip(struct surface *,int,int,int,int);
 void gfx_rect(struct surface *,int,int,int,int,uint32_t);

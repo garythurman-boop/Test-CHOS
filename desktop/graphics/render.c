@@ -28,8 +28,10 @@ void gfx_text(struct surface *s,int x,int y,const char *text,uint32_t color) {
         if(pen>INT_MAX-10) break;
         if(pen+10<s->x || pen>=s->x+s->w) continue;
         for(unsigned row=0;row<7;row++) {
+            int64_t row_y=(int64_t)y+row*2;
+            if(row_y<INT_MIN || row_y>INT_MAX-1)continue;
             uint8_t bits=font_row((unsigned char)text[n],row);
-            for(unsigned col=0;col<5;col++) if(bits&(16>>col)) gfx_rect(s,(int)pen+(int)col*2,y+(int)row*2,2,2,color);
+            for(unsigned col=0;col<5;col++) if(bits&(16>>col)) gfx_rect(s,(int)pen+(int)col*2,(int)row_y,2,2,color);
         }
     }
 }

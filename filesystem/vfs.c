@@ -15,6 +15,12 @@ int64_t file_syscall(struct process *p,struct exception_frame *f) {
     if(!volume || !volume->mounted) return -19;
     unsigned number=(unsigned)f->x[8];
     uint64_t a=f->x[0],b=f->x[1],c=f->x[2];
+    if(number==SYS_REPLACE) {
+        char path[60];int error=path_copy(p,a,path);if(error)return error;
+        if(c>4096)return -22;
+        if(!user_copy(p,b,input,(size_t)c,false))return -14;
+        return chfs_write(volume,path,input,(size_t)c)?0:-5;
+    }
     if(number==SYS_OPEN || number==SYS_MKDIR || number==SYS_UNLINK || number==SYS_RENAME) {
         char path[60],other[60]; int error=path_copy(p,a,path);
         if(error) return error;

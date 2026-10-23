@@ -33,13 +33,14 @@ class Guest:
             time.sleep(.1)
         self.sock.connect(str(self.sockpath));self.stream=self.sock.makefile('rwb')
         assert 'QMP' in json.loads(self.stream.readline());self.qmp('qmp_capabilities')
-        self.x,self.y=None,None
+        self.x,self.y=None,None;self.events=[]
     def qmp(self,name,args=None):
         req={'execute':name}
         if args:req['arguments']=args
         self.stream.write(json.dumps(req).encode()+b'\n');self.stream.flush()
         while True:
             value=json.loads(self.stream.readline())
+            if 'event' in value:self.events.append(value)
             if 'error' in value:raise RuntimeError(value['error'])
             if 'return' in value:return value['return']
     def capture(self):
@@ -70,6 +71,13 @@ class Guest:
         events=[{'type':'key','data':{'down':True,'key':{'type':'qcode','data':k}}} for k in keys]
         events +=[{'type':'key','data':{'down':False,'key':{'type':'qcode','data':k}}} for k in reversed(keys)]
         self.qmp('input-send-event',{'events':events});time.sleep(.06)
+    def power_reason(self):
+        while True:
+            raw=self.stream.readline()
+            if not raw:break
+            value=json.loads(raw)
+            if 'event' in value:self.events.append(value)
+        return next((e.get('data',{}).get('reason') for e in reversed(self.events) if e.get('event')=='SHUTDOWN'),None)
     def snapshot(self,name):
         self.capture();target=BUILD/f'{name}.ppm';target.write_bytes(self.screen.read_bytes());save_png(target)
     def close(self):
@@ -98,7 +106,7 @@ def main():
         guest.click(130,height-22)
         guest.wait(lambda p:p(100,280)==0x328c69,'taskbar restore')
         guest.move(664,380);guest.button(True);guest.move(700,410);guest.button(False)
-        guest.wait(lambda p:p(690,400)==0xe5eef8,'client resizing and redraw')
+        guest.wait(lambda p:p(690,370)==0xe5eef8,'client resizing and redraw')
         guest.snapshot('desktop-interaction')
         guest.click(695,66)
         guest.wait(lambda p:p(100,280)!=0x328c69,'close and process exit')

@@ -71,8 +71,23 @@ static void maximize(struct wm *m,struct wm_window *w) {
     w->maximized=!w->maximized; m->dirty=true;
     post(w,(struct chos_event){.type=EVENT_RESIZE,.width=w->w-8,.height=w->h-36});
 }
+static void menu_activate(struct wm *m,unsigned item) {
+    if(m->applications) {if(item<6)m->launch=item+1;m->applications=false;m->menu=false;return;}
+    if(item==0){m->applications=true;m->selection=0;return;}
+    static const unsigned apps[12]={0,1,1,4,4,1,3,6,0,0,0,0};
+    if(item<12)m->launch=apps[item];
+    if(item==8)m->confirm=3;
+    if(item==9)m->confirm=1;
+    if(item==10)m->confirm=2;
+    m->menu=false;
+}
+int wm_task_width(const struct wm *m) {
+    int width=m->count?(m->width-280)/(int)m->count:110;
+    return width>110?110:width;
+}
 void wm_mouse(struct wm *m,int x,int y,int button) {
     m->mouse_x=x; m->mouse_y=y; m->dirty=true;
+    if(m->confirm)return;
     if(button==0) { m->drag=-1; return; }
     if(button<0) {
         if(m->drag<0) return;
@@ -96,8 +111,9 @@ void wm_mouse(struct wm *m,int x,int y,int button) {
         return;
     }
     if(y>=m->height-44) {
-        if(x<100) { m->menu=!m->menu; return; }
-        unsigned n=(unsigned)(x-108)/110;
+        if(x<100) { m->menu=!m->menu;m->applications=false;m->selection=0;return; }
+        if(x<108 || x>=m->width-160)return;
+        unsigned n=(unsigned)(x-108)/(unsigned)wm_task_width(m);
         /* Taskbar order is stable by slot; stacking is independent. */
         for(unsigned i=0;i<WM_WINDOWS;i++) if(m->windows[i].owner) {
             if(!n--) { wm_focus(m,m->windows[i].id); break; }
@@ -108,8 +124,7 @@ void wm_mouse(struct wm *m,int x,int y,int button) {
         int top=m->height-44-12*25-40;
         if(inside(x,y,8,top,260,340) && y>=top+40) {
             unsigned item=(unsigned)(y-top-40)/25;
-            static const unsigned apps[12]={1,1,1,4,4,1,3,6,0,0,0,0};
-            if(item<12) m->launch=apps[item];
+            menu_activate(m,item);return;
         }
         m->menu=false; return;
     }
@@ -118,7 +133,7 @@ void wm_mouse(struct wm *m,int x,int y,int button) {
         if(w->minimized || w->closing || !inside(x,y,w->x,w->y,w->w,w->h)) continue;
         wm_focus(m,w->id);
         if(y<w->y+30) {
-            if(x>=w->x+w->w-28) { w->closing=true;post(w,(struct chos_event){.type=EVENT_CLOSE});next_focus(m); }
+            if(x>=w->x+w->w-28) { post(w,(struct chos_event){.type=EVENT_CLOSE}); }
             else if(x>=w->x+w->w-54) maximize(m,w);
             else if(x>=w->x+w->w-80) { w->minimized=true;next_focus(m); }
             else if(!w->maximized) { m->drag=(int)slot;m->resize=false;m->dx=x-w->x;m->dy=y-w->y; }
@@ -134,7 +149,20 @@ void wm_key(struct wm *m,unsigned code,int value) {
     if(code==29 || code==97) { m->ctrl=value!=0; return; }
     if(code==42 || code==54) { m->shift=value!=0; return; }
     if(!value) return;
-    if(code==125) { m->menu=!m->menu;m->dirty=true;return; }
+    if(m->confirm) {
+        if(code==21){if(m->confirm==3)m->logout=true;else m->power=m->confirm;m->confirm=0;m->dirty=true;}
+        if(code==49 || code==1){m->confirm=0;m->dirty=true;}
+        return;
+    }
+    if(code==125) { m->menu=!m->menu;m->applications=false;m->selection=0;m->dirty=true;return; }
+    if(m->menu && (code==103 || code==108 || code==28 || code==1)) {
+        unsigned count=m->applications?6:12;
+        if(code==103)m->selection=(m->selection+count-1)%count;
+        if(code==108)m->selection=(m->selection+1)%count;
+        if(code==28)menu_activate(m,m->selection);
+        if(code==1){m->menu=false;m->applications=false;}
+        m->dirty=true;return;
+    }
     if(m->alt && code==15 && m->count) {
         for(unsigned i=0;i<m->count;i++) {
             struct wm_window *w=&m->windows[m->order[i]];
@@ -151,6 +179,7 @@ void wm_key(struct wm *m,unsigned code,int value) {
     case 57:key=' ';break;case 28:key=13;break;case 14:key=8;break;case 15:key=9;break;case 1:key=27;break;
     case 53:key=m->shift?'?':'/';break;case 52:key=m->shift?'>':'.';break;case 51:key=m->shift?'<':',';break;
     case 12:key=m->shift?'_':'-';break;case 13:key=m->shift?'+':'=';break;case 39:key=m->shift?':':';';break;
+    case 26:key=m->shift?'{':'[';break;case 27:key=m->shift?'}':']';break;case 41:key=m->shift?'~':'`';break;
     case 40:key=m->shift?'"':'\'';break;case 43:key=m->shift?'|':'\\';break;
     case 103:key=KEY_UP;break;case 108:key=KEY_DOWN;break;case 105:key=KEY_LEFT;break;case 106:key=KEY_RIGHT;break;
     }

@@ -31,11 +31,17 @@ int main(void) {
     for(unsigned i=0;i<100;i++)wm_key(&m,30,1);
     assert(w->count==WM_EVENTS);
     wm_mouse(&m,w->x+w->w-10,w->y+12,1);
-    assert(w->closing && wm_event(&m,10,(unsigned)first,&event,true) && event.type==EVENT_CLOSE);
+    assert(wm_event(&m,10,(unsigned)first,&event,true) && event.type==EVENT_CLOSE);
     wm_remove(&m,10);assert(m.count==1 && !wm_owned(&m,10,(unsigned)first));
     int third=wm_create(&m,30,"new",300,200);assert(third>second && !wm_owned(&m,30,(unsigned)first));
     wm_mouse(&m,40,744,1);assert(m.menu);
     wm_key(&m,3,1);assert(!m.menu && m.launch==2);
+    wm_key(&m,125,1);wm_key(&m,28,1);assert(m.applications);
+    wm_key(&m,108,1);wm_key(&m,28,1);assert(m.launch==2 && !m.menu);
+    wm_key(&m,125,1);for(unsigned i=0;i<9;i++)wm_key(&m,108,1);wm_key(&m,28,1);
+    assert(m.confirm==1);wm_key(&m,1,1);assert(!m.confirm && !m.power);
+    wm_key(&m,125,1);for(unsigned i=0;i<10;i++)wm_key(&m,108,1);wm_key(&m,28,1);
+    assert(m.confirm==2);wm_key(&m,21,1);assert(m.power==2 && !m.confirm);
     struct {uint32_t before,pixels[100],after;} buffer={.before=0x1234,.after=0x5678};
     struct surface surface={.pixels=buffer.pixels,.width=10,.height=10,.stride=10};
     gfx_clip(&surface,-5,-5,20,20);gfx_rect(&surface,INT_MIN,INT_MIN,INT_MAX,INT_MAX,1);

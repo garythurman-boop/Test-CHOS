@@ -73,3 +73,26 @@ Additional errors: -2 missing path/slot; -5 I/O or filesystem update failure;
 Read/write reject invalid buffers before changing offsets. Directory entries are
 {char path[60]; uint32 size,kind}; kind 1=file, 2=directory. Paths are absolute,
 case-sensitive and ASCII. There is no per-user file access control yet.
+
+## Desktop extension (development ABI)
+
+20 WINDOW copies `chos_window` (48-byte title, signed width/height) and returns
+an owned, non-reused positive handle. One window per process, eight windows total.
+21 DRAW takes handle + `chos_draw` pointer; CLEAR resets staging, RECT/TEXT append
+bounded commands (128/frame, 79-byte text). Coordinates are clipped to the client.
+22 PRESENT swaps staging/visible command lists. 23 EVENT takes handle + writable
+`chos_event`; validates before dequeue. Empty waits block and return -11 after an
+event wake or one-second timeout; retry to receive. RESIZE gives client dimensions,
+KEY gives ASCII/navigation plus KEY_CTRL, CLICK gives client coordinates, CLOSE
+requests voluntary exit (an editor may confirm/cancel).
+
+24 INFO copies real `chos_info` counters/dimensions. 25 LAUNCH selects built-in
+app 1–6; returns PID or negative error. 26 THEME selects session colors 0/1.
+27 REPLACE takes absolute path, data pointer, length <=4096: validate all input,
+then commit one CHFS whole-file replacement atomically. 28 POWER takes 1 reset or
+2 shutdown via ACPI-declared PSCI, otherwise reports unsupported. 29 TASK takes
+process slot 0–7 plus writable `chos_task` and reports PID/app ID/timer samples.
+
+All structures are in include/abi.h. The extension returns -19 before desktop
+startup. Public file replacement works on the mounted acceptance/desktop volume.
+Counters describe managed conventional RAM, not the entire physical footprint.

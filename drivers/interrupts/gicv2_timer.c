@@ -42,7 +42,7 @@ struct exception_frame *irq_dispatch(struct exception_frame *frame) {
     if(id!=timer_irq) panic("UNEXPECTED HARDWARE IRQ");
     uint64_t now; __asm__ volatile("mrs %0, cntpct_el0":"=r"(now));
     __asm__ volatile("msr cntp_cval_el0, %0; isb"::"r"(now+interval):"memory");
-    ticks++;
+    ticks++;scheduler_account();
     __asm__ volatile("dsb sy":::"memory");
     *reg(cpu_interface,0x10)=ack;
     return scheduler_tick(frame);

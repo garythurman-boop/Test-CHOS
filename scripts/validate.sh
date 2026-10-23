@@ -14,6 +14,8 @@ llvm-readelf -h -r build/kernel.elf > build/kernel-inspection.log
 python3 tests/boot.py --ram 512
 python3 tests/boot.py --ram 1024
 python3 tests/desktop.py
+python3 tests/applications.py
+python3 tests/restart.py
 python3 tests/boot.py --gic-version 3 --expect-platform-reject
 CHOS_TEST_MISSING_KERNEL=1 python3 scripts/mkiso.py
 python3 tests/boot.py --iso build/CHOS-missing-kernel.iso --expect-missing-kernel
@@ -27,4 +29,4 @@ sha256sum build/CHOS-STORAGE-TEST.iso > build/storage-hash-2
 cmp build/storage-hash-1 build/storage-hash-2
 python3 tests/storage.py
 make iso
-printf 'Ten QEMU cases, six host programs, both ISO repeatability checks and independent disk verification passed.\n'
+printf 'Twelve QEMU cases, six host programs (both ELF payloads checked), both ISO repeatability checks and independent disk verification passed.\n'

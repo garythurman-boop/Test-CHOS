@@ -4,6 +4,7 @@
 #include "timer.h"
 #include "input.h"
 #include "console.h"
+#include "platform.h"
 static struct wm model;
 static struct pmm *physical;
 static struct chos_boot_info *boot;
@@ -22,7 +23,9 @@ bool desktop_active(void) { return active; }
 int desktop_launch(unsigned app) {
     if(!active || app<1 || app>6) return -22;
     extern const unsigned char desktop_elf[],desktop_elf_end[];
-    return process_create(desktop_elf,(size_t)(desktop_elf_end-desktop_elf),app,0);
+    int pid=process_create(desktop_elf,(size_t)(desktop_elf_end-desktop_elf),app,0);
+    if(pid>0)process_find((uint64_t)pid)->application=app;
+    return pid;
 }
 void desktop_process_exit(uint64_t pid) {
     if(!active) return;
@@ -53,6 +56,13 @@ int64_t desktop_syscall(struct process *p,struct exception_frame *f) {
         struct chos_info info={.ticks=timer_ticks(),.total_pages=physical->total,.used_pages=physical->used,.switches=scheduler_switches(),.width=(uint32_t)screen.width,.height=(uint32_t)screen.height,.theme=model.theme};
         for(unsigned i=0;i<PROCESS_MAX;i++) { struct process *q=process_at(i);if(q && !q->exited) info.processes++; }
         return user_copy(p,a,&info,sizeof(info),true)?0:-14;
+    }
+    if(op==SYS_POWER)return a>2?-22:platform_power(boot,(unsigned)a);
+    if(op==SYS_TASK) {
+        if(a>=PROCESS_MAX)return -22;
+        struct process *q=process_at((unsigned)a);if(!q || q->exited)return -2;
+        struct chos_task task={.pid=q->pid,.ticks=scheduler_samples(q->pid),.application=q->application,.state=1};
+        return user_copy(p,b,&task,sizeof(task),true)?0:-14;
     }
     if(op==SYS_LAUNCH) return a>6?-22:desktop_launch((unsigned)a);
     if(op==SYS_THEME) { if(a>1) return -22;model.theme=(unsigned)a;model.dirty=true;return 0; }
@@ -112,7 +122,7 @@ static void render(void) {
         rect(0,y,screen.width,1,base+(shade<<16)+(shade<<8)+shade);
     }
     text(screen.width-248,34,"CHOS Desktop",0x80bee8);
-    text(screen.width-248,56,"Original ARM64 system",0x80bee8);
+    text(screen.width-248,56,"RAM volume - volatile",0x80bee8);
     static const char names[6][16]={"Explorer","Notepad","Terminal","Control Panel","Task Manager","About CHOS"};
     for(unsigned i=0;i<6;i++) {
         int y=60+(int)i*66;rect(34,y,28,28,0x7bb6df);rect(38,y+4,20,20,0x245a9a);
@@ -122,12 +132,12 @@ static void render(void) {
     int task_y=screen.height-44;
     for(int y=0;y<44;y++) rect(0,task_y+y,screen.width,1,0x163965+(uint32_t)(44-y)*0x010202);
     rect(7,task_y+5,91,34,0x5b9dcc);rect(10,task_y+7,85,29,0x23649b);text(28,task_y+14,"CHOS",0xffffff);
-    unsigned n=0;
+    unsigned n=0;int button_width=wm_task_width(&model);
     for(unsigned i=0;i<WM_WINDOWS;i++) if(model.windows[i].owner) {
-        struct wm_window *w=&model.windows[i]; int x=108+(int)n++*110;
-        if(x>screen.width-200) break;
-        rect(x,task_y+7,104,29,w->id==model.focus?0x6996c0:0x2c5685);
-        gfx_clip(&screen,x+3,task_y+7,98,29);text(x+5,task_y+15,w->title,0xffffff);
+        struct wm_window *w=&model.windows[i]; int x=108+(int)n++*button_width;
+        if(x>=screen.width-160)break;
+        rect(x,task_y+7,button_width-6,29,w->id==model.focus?0x6996c0:0x2c5685);
+        gfx_clip(&screen,x+3,task_y+7,button_width-12,29);text(x+5,task_y+15,w->title,0xffffff);
         gfx_clip(&screen,0,0,screen.width,screen.height);
     }
     char timer[21];decimal(timer,timer_ticks()/100);
@@ -139,9 +149,21 @@ static void render(void) {
     } else { text(screen.width-142,task_y+8,"Uptime",0xcce4ff);text(screen.width-142,task_y+25,timer,0xffffff); }
     rect(screen.width-14,task_y+14,6,6,0x8dd9b3);
     if(model.menu) {
-        static const char items[12][18]={"Applications","Documents","Computer","Control Panel","Settings","Search","Run","Help","Log Off [later]","Restart [later]","Shut Down [later]","Close menu"};
+        static const char items[12][18]={"Applications","Documents","Computer","Control Panel","Settings","Search","Run","Help","Log Off","Restart","Shut Down","Close menu"};
         int top=task_y-340;rect(8,top,260,340,0xe2eefa);rect(8,top,260,34,0x286caf);text(24,top+9,"CHOS",0xffffff);
-        for(unsigned i=0;i<12;i++) text(22,top+44+(int)i*25,items[i],0x183b64);
+        unsigned count=model.applications?6:12;
+        for(unsigned i=0;i<count;i++) {
+            if(i==model.selection)rect(12,top+40+(int)i*25,252,24,0xadcfe9);
+            text(22,top+44+(int)i*25,model.applications?names[i]:items[i],0x183b64);
+        }
+    }
+    if(model.confirm) {
+        int x=(screen.width-540)/2,y=(screen.height-150)/2;
+        rect(x,y,540,150,0xc9deee);rect(x,y,540,32,0x286caf);
+        text(x+14,y+9,model.confirm==1?"Restart CHOS":(model.confirm==2?"Shut down CHOS":"End graphical session"),0xffffff);
+        text(x+14,y+52,"Unsaved edits will be lost.",0x183b64);
+        text(x+14,y+80,model.confirm==3?"Applications close. No account security.":"RAM files are lost on restart/shutdown.",0x183b64);
+        text(x+14,y+114,"Y confirms. N or Escape cancels.",0x183b64);
     }
     static const uint8_t arrow[10]={0x80,0xc0,0xe0,0xf0,0xf8,0xfc,0xe0,0xb0,0x18,0x18};
     for(unsigned y=0;y<10;y++) for(unsigned x=0;x<8;x++) if(arrow[y]&(0x80>>x)) rect(model.mouse_x+(int)x,model.mouse_y+(int)y,1,1,0xffffff);
@@ -161,6 +183,8 @@ void desktop_start(struct pmm *p,struct chos_boot_info *b) {
     wm_init(&model,screen.width,screen.height);
     model.mouse_x=input_get()->x;model.mouse_y=input_get()->y;
     struct input_event event;while(input_next(&event)) {} /* discard diagnostic input */
+    extern bool ram_volume_start(struct pmm *);
+    if(!ram_volume_start(p))panic("RAM VOLUME START FAILED");
     active=true;
     if(desktop_launch(6)<0) panic("DESKTOP CLIENT LOAD FAILED");
     render();
@@ -177,12 +201,20 @@ void desktop_step(void) {
         } else if(event.type==1 && event.code==272) wm_mouse(&model,model.mouse_x,model.mouse_y,event.value?1:0);
         else if(event.type==1 && event.code<256) wm_key(&model,event.code,event.value);
     }
-    if(model.launch) { (void)desktop_launch(model.launch);model.launch=0; }
+    if(model.power){(void)platform_power(boot,model.power);model.power=0;model.dirty=true;}
+    if(model.logout) {
+        for(unsigned i=0;i<PROCESS_MAX;i++) {
+            struct process *p=process_at(i);
+            if(p && !p->exited && scheduler_cancel(p->pid)){desktop_process_exit(p->pid);p->exited=true;p->status=0;}
+        }
+        model.logout=false;model.launch=6;
+    }
     for(unsigned i=0;i<PROCESS_MAX;i++) {
         struct process *p=process_at(i);if(!p)continue;
         if(p->exited) { if(!process_reap(p->pid)) panic("DESKTOP REAP FAILED");continue; }
         for(unsigned j=0;j<WM_WINDOWS;j++) if(model.windows[j].owner==p->pid && model.windows[j].count) scheduler_wake(p->pid);
     }
+    if(model.launch) { (void)desktop_launch(model.launch);model.launch=0; }
     uint64_t second=timer_ticks()/100;
     if(second!=last_second) { last_second=second;model.dirty=true; }
     if(model.dirty) render();

@@ -46,6 +46,15 @@ int user_main(uint64_t role,uint64_t peer) {
         for(unsigned i=0;i<40;i++) if(call(SYS_LIST,i,(uintptr_t)&entry)==0 && entry.size==8192 && entry.kind==1) found=true;
         int64_t temporary=call(SYS_OPEN,(uintptr_t)"/user/tmp",7);
         CHECK(temporary>=3 && file_call(SYS_FWRITE,(uint64_t)temporary,(uintptr_t)data,1)==1);
+        CHECK(call(SYS_CLOSE,(uint64_t)temporary,0)==0);
+        CHECK(file_call(SYS_REPLACE,(uintptr_t)"/user/tmp",0,3)==-14);
+        temporary=call(SYS_OPEN,(uintptr_t)"/user/tmp",1);
+        CHECK(temporary>=3 && call(SYS_SIZE,(uint64_t)temporary,0)==1);
+        CHECK(call(SYS_CLOSE,(uint64_t)temporary,0)==0);
+        CHECK(file_call(SYS_REPLACE,(uintptr_t)"/user/tmp",(uintptr_t)data,4097)==-22);
+        CHECK(file_call(SYS_REPLACE,(uintptr_t)"/user/tmp",(uintptr_t)data,3)==0);
+        temporary=call(SYS_OPEN,(uintptr_t)"/user/tmp",1);
+        CHECK(temporary>=3 && call(SYS_SIZE,(uint64_t)temporary,0)==3);
         CHECK(call(SYS_CLOSE,(uint64_t)temporary,0)==0 && call(SYS_UNLINK,(uintptr_t)"/user/tmp",0)==0);
         CHECK(call(SYS_OPEN,(uintptr_t)"/user/tmp",1)==-2);
         CHECK(found && call(SYS_FREE,(uintptr_t)data,0)==0);

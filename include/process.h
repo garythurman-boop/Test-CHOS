@@ -9,7 +9,7 @@ struct user_region { uint64_t va,physical; unsigned pages,flags,kind; };
 struct message { uint64_t sender,value; };
 struct file_handle { char path[60]; uint32_t offset,flags; bool used; };
 struct process {
-    uint64_t pid; int thread; bool exited; int64_t status;
+    uint64_t pid; unsigned application; int thread; bool exited; int64_t status;
     uint64_t fault_class,fault_address;
     struct address_space space;
     struct user_region regions[PROCESS_REGIONS];

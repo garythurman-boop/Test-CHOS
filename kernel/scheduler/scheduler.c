@@ -3,7 +3,7 @@
 #include "console.h"
 #include "timer.h"
 #define MAX_THREADS 12
-struct thread { struct exception_frame *frame; uint64_t stack,root,pid; unsigned priority,state; uint64_t deadline; };
+struct thread { struct exception_frame *frame; uint64_t stack,root,pid; unsigned priority,state; uint64_t deadline,samples; };
 static struct thread threads[MAX_THREADS];
 static unsigned current;
 static uint64_t switches;
@@ -85,4 +85,14 @@ struct exception_frame *scheduler_wait(struct exception_frame *f,uint64_t deadli
 }
 void scheduler_wake(uint64_t pid) {
     for(unsigned i=1;i<MAX_THREADS;i++) if(threads[i].pid==pid && threads[i].state==3) threads[i].state=1;
+}
+
+void scheduler_account(void) { threads[current].samples++; }
+uint64_t scheduler_samples(uint64_t pid) {
+    for(unsigned i=1;i<MAX_THREADS;i++)if(threads[i].pid==pid)return threads[i].samples;
+    return 0;
+}
+bool scheduler_cancel(uint64_t pid) {
+    for(unsigned i=1;i<MAX_THREADS;i++)if(i!=current && threads[i].pid==pid && threads[i].state){threads[i].state=2;return true;}
+    return false;
 }

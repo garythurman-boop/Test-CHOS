@@ -113,3 +113,18 @@ Milestone 4 requires an original window/compositor protocol, per-application eve
 routing and bounded graphics access, followed by launcher/taskbar and native apps.
 GPT/ESP, FAT and installation remain separate later work. No existing OS kernel,
 filesystem, GUI framework or input stack is linked into CHOS.
+
+## Desktop and native apps
+
+The kernel window service retains bounded drawing commands and owns the single
+GOP backbuffer. Ownership checks precede any draw/event access. Staging prevents
+partially submitted frames appearing. The original WM model is portable C and
+host tested; hardware input and the renderer are separate. IRQ exclusion serializes
+single-CPU compositor/process mutations. Native app event waits sleep, with a
+one-second refresh deadline; bootstrap supervision reaps dead processes off-stack.
+
+Six built-ins share one static ELF selected by entry role, but each launch gets
+private mappings/state. Original user libraries wrap file/window/info APIs. The
+normal live session explicitly formats only newly allocated RAM as CHFS; no real
+block device is passed into that path. Persistent NVMe acceptance remains opt-in
+and separate. Whole-file REPLACE avoids truncate-before-save data loss.

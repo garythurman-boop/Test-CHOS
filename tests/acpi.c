@@ -42,5 +42,12 @@ int main(void) {
     w64(x+44,(uintptr_t)g); w64(x+52,(uintptr_t)mcfg); sum(x,60,9);
     d.type=11; assert(!platform_discover(&b,0x102,&p)); d.type=9;
     w32(r+20,8192); sum(r,36,32); assert(!platform_discover(&b,0x102,&p));
+    w32(r+20,36);sum(r,36,32);
+    unsigned char *fadt=data+1024;memcpy(fadt,"FACP",4);w32(fadt+4,132);fadt[8]=5;fadt[129]=3;sum(fadt,132,9);
+    w32(x+4,68);w64(x+60,(uintptr_t)fadt);sum(x,68,9);
+    bool hvc=false;assert(platform_psci(&b,&hvc) && hvc);
+    fadt[129]=1;sum(fadt,132,9);assert(platform_psci(&b,&hvc) && !hvc);
+    fadt[129]=0;sum(fadt,132,9);assert(!platform_psci(&b,&hvc));
+    fadt[129]=3;sum(fadt,132,9);fadt[9]++;assert(!platform_psci(&b,&hvc));
     puts("PASS: ACPI discovery, checksums, MPIDR selection, malformed entries, IRQ ranges, out-of-map pointers, reserved/MMIO exclusion and oversized RSDP");
 }

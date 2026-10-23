@@ -1,39 +1,34 @@
-#include "abi.h"
-#include <stddef.h>
-static int64_t call(unsigned number,uint64_t a,uint64_t b) {
-    register uint64_t x0 __asm__("x0")=a,x1 __asm__("x1")=b,x8 __asm__("x8")=number;
-    __asm__ volatile("svc #0":"+r"(x0):"r"(x1),"r"(x8):"memory");return (int64_t)x0;
-}
-static int window;
-static void draw(unsigned op,int x,int y,int w,int h,const char *text,uint32_t color) {
-    struct chos_draw d={.op=op,.x=x,.y=y,.w=w,.h=h,.color=color};
-    if(text) for(unsigned i=0;i<79 && text[i];i++)d.text[i]=text[i];
-    (void)call(SYS_DRAW,(uint64_t)window,(uintptr_t)&d);
-}
+#include "app.h"
 int user_main(uint64_t role,uint64_t unused) {
-    (void)role;(void)unused;
-    struct chos_window spec={.title="About CHOS",.width=600,.height=330};
-    if(call(SYS_WINDOW,0,0)!=-14)return 90;
+    (void)unused;if(role<1 || role>6)return 1;app_role=(unsigned)role;
+    static const char titles[6][48]={"Explorer","Notepad","Terminal","Control Panel","Task Manager","About CHOS"};
+    struct chos_window spec={.width=role==6?600:720,.height=role==6?330:460};
+    copy(spec.title,titles[role-1],sizeof(spec.title));
+    if(api(SYS_WINDOW,0,0,0)!=-14)return 90;
     struct chos_window invalid={.width=1,.height=1};
-    if(call(SYS_WINDOW,(uintptr_t)&invalid,0)!=-22)return 91;
-    window=(int)call(SYS_WINDOW,(uintptr_t)&spec,0);if(window<0)return 1;
-    if(call(SYS_DRAW,0,0)!=-9 || call(SYS_DRAW,(uint64_t)window,0)!=-14 || call(SYS_EVENT,(uint64_t)window,0)!=-14)return 92;
+    if(api(SYS_WINDOW,(uintptr_t)&invalid,0,0)!=-22)return 91;
+    app_window=(int)api(SYS_WINDOW,(uintptr_t)&spec,0,0);if(app_window<0)return 2;
+    if(api(SYS_DRAW,0,0,0)!=-9 || api(SYS_DRAW,(uint64_t)app_window,0,0)!=-14 || api(SYS_EVENT,(uint64_t)app_window,0,0)!=-14)return 92;
     struct chos_draw invalid_draw={.op=500};
-    if(call(SYS_DRAW,(uint64_t)window,(uintptr_t)&invalid_draw)!=-22)return 93;
-    unsigned pressed=0;
+    if(api(SYS_DRAW,(uint64_t)app_window,(uintptr_t)&invalid_draw,0)!=-22)return 93;
+    if(role==1)explorer_init();if(role==2)notepad_init();if(role==3)terminal_init();
+    bool dirty=true;
     for(;;) {
-        draw(DRAW_CLEAR,0,0,0,0,0,0xe5eef8);
-        draw(DRAW_TEXT,20,22,0,0,"CHOS Desktop",0x15487c);
-        draw(DRAW_TEXT,20,54,0,0,"Original ARM64 operating system",0x15487c);
-        draw(DRAW_TEXT,20,86,0,0,"Native EL0 window client",0x15487c);
-        draw(DRAW_TEXT,20,118,0,0,"Move, resize, minimize or maximize.",0x15487c);
-        draw(DRAW_TEXT,20,150,0,0,"Press a key to change the swatch.",0x15487c);
-        draw(DRAW_RECT,20,184,80,32,0,pressed?0x328c69:0x326bb0);
-        if(call(SYS_PRESENT,(uint64_t)window,0))return 2;
-        struct chos_event event;
-        if(call(SYS_EVENT,(uint64_t)window,(uintptr_t)&event)==0) {
-            if(event.type==EVENT_CLOSE)return 0;
-            if(event.type==EVENT_KEY)pressed++;
+        if(dirty) {
+            switch(role){case 1:explorer_paint();break;case 2:notepad_paint();break;case 3:terminal_paint();break;case 4:settings_paint();break;case 5:task_paint();break;case 6:about_paint();break;}
+            present();dirty=false;
         }
+        struct chos_event event;int64_t result=api(SYS_EVENT,(uint64_t)app_window,(uintptr_t)&event,0);
+        if(result==-11){if(role==5)dirty=true;continue;}
+        if(result<0)return 3;
+        if(event.type==EVENT_CLOSE){if(role!=2 || notepad_close())return 0;dirty=true;}
+        if(event.type==EVENT_RESIZE){app_width=event.width;app_height=event.height;}
+        if(event.type==EVENT_KEY) {
+            switch(role){case 1:explorer_key(event.code);break;case 2:notepad_key(event.code);break;case 3:terminal_key(event.code);break;case 4:settings_key(event.code);break;case 5:task_key(event.code);break;case 6:about_key(event.code);break;}
+        }
+        if(event.type==EVENT_CLICK && !prompting) {
+            if(role==1)explorer_click(event.x,event.y);if(role==2)notepad_click(event.x,event.y);if(role==4)settings_click(event.x,event.y);
+        }
+        dirty=true;
     }
 }

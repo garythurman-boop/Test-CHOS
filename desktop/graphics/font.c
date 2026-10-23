@@ -31,7 +31,6 @@ uint8_t font_row(unsigned c,unsigned row) {
     if(c>='A' && c<='Z') return font[c-'A'][row];
     if(c>='0' && c<='9') return font[26+c-'0'][row];
     if(c>='a' && c<='z') return lower[c-'a'][row];
-    uint64_t bits=0;
     switch(c) {
     case '.':return row==6?4:0;case ',':return row==5?4:(row==6?8:0);
     case ':':return row==2 || row==5?4:0;case ';':return row==2 || row==5?4:(row==6?8:0);
@@ -39,7 +38,7 @@ uint8_t font_row(unsigned c,unsigned row) {
     case '/':return (uint8_t)(1u<<(row<5?row:4));
     case '\\':return (uint8_t)(16u>>(row<5?row:4));
     case '!':return row<4 || row==6?4:0;
-    case '?':bits=0x38044402004ULL;break;
+    case '?':{static const uint8_t q[7]={14,17,1,2,4,0,4};return q[row];}
     case '+':return row==3?31:(row>0 && row<6?4:0);
     case '=':return row==2 || row==4?31:0;
     case '(':return row==0 || row==6?2:(row==1 || row==5?4:8);
@@ -51,7 +50,14 @@ uint8_t font_row(unsigned c,unsigned row) {
     case '\'':return row<2?4:0;case '"':return row<2?10:0;
     case '#':return row==2 || row==4?31:10;
     case '%':return row<2?17:(row==3?4:(row>4?17:0));
+    case '@':{static const uint8_t a[7]={14,17,23,21,23,16,14};return a[row];}
+    case '$':{static const uint8_t a[7]={4,15,20,14,5,30,4};return a[row];}
+    case '^':return row==0?4:(row==1?10:(row==2?17:0));
+    case '&':{static const uint8_t a[7]={12,18,20,8,21,18,13};return a[row];}
+    case '~':return row==2?9:(row==3?22:0);
+    case '`':return row==0?8:(row==1?4:0);
+    case '{':return row==0 || row==6?6:(row==3?8:4);
+    case '}':return row==0 || row==6?12:(row==3?2:4);
     default:return 0;
     }
-    return (uint8_t)((bits>>(row*5))&31);
 }
