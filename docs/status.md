@@ -5,21 +5,21 @@
 | 1: original UEFI loader/kernel, bootable ISO | Verified under QEMU UEFI |
 | 2: memory, exceptions, timer, threads, processes, syscalls/IPC | Core implemented and tested; public ABI remains deliberately small |
 | 3: display/input/storage/persistent file operations | Implemented for QEMU GOP + Virtio PCI input + NVMe; Fusion devices unverified/unsupported where listed |
-| 4: CHOS Desktop, window manager, taskbar/Start menu | Not implemented |
+| 4: CHOS Desktop, window manager, taskbar/Start menu | Core implemented/tested; see milestone-4.md for remaining launcher/session details |
 | 5: native Explorer/Notepad/Terminal/Control Panel/Task Manager | Not implemented; acceptance ELF programs are not these applications |
 | 6: graphical installer, GPT/ESP and installed boot | Not implemented |
 | 7: VMware Fusion validation | Not run; no Apple Silicon/Fusion host available |
 | 8: release CHOS 0.1 | Not ready |
 
-Current boot images run genuine kernel and EL0 self-tests, then provide basic
-framebuffer input feedback. They do not display a decorative desktop or installer.
-See milestone-3.md for exact acceptance outcomes and downloadable artifacts.
+Current normal images run kernel/EL0 self-tests, then start the original desktop
+with a native EL0 window client. No installer is implemented. See milestone-4.md
+for the tested desktop core checkpoint and artifacts.
 
 ## Limits
 
 - One CPU, EL1 entry, ACPI 2.x and GICv2/GTDT required. No EL2 transition, GICv3,
   DT-only discovery, SMP or full interrupt-controller coverage.
-- Four live process records, eight threads, static AArch64 ELF subset, no dynamic
+- Eight live process records, twelve threads, static AArch64 ELF subset, no dynamic
   linker/public spawn/wait, no signal model. FP/SIMD traps at EL0; general registers
   only. User mappings are private; all processes currently share one filesystem
   authority, with no per-user file permissions or authentication.
@@ -28,7 +28,7 @@ See milestone-3.md for exact acceptance outcomes and downloadable artifacts.
   512 MiB/1 GiB configurations were tested; larger RAM may exhaust table storage.
   No demand paging/swapping. Single-CPU management calls require IRQ exclusion.
 - Strict priorities can starve low-priority threads. Completed contexts are reaped
-  only after switching away; there is no autonomous process supervisor/reaper yet.
+  only after switching away; the desktop supervisor reaps exited application contexts.
 - Polling NVMe: one controller/namespace on PCI segment/bus 0, 4 KiB PRP transfers,
   512/4096-byte sectors, fixed queues and 2 s timeouts. No hotplug/IOMMU isolation,
   advanced recovery, queue concurrency or Fusion driver validation. Partial failed

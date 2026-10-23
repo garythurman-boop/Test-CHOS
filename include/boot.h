@@ -9,5 +9,7 @@ struct chos_boot_info {
     uint64_t memory_map, memory_map_size, descriptor_size;
     uint32_t descriptor_version, reserved;
     uint64_t rsdp;
+    uint64_t clock_seconds,clock_counter;
+    uint32_t clock_valid,clock_reserved;
 };
 #endif

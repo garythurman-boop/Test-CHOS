@@ -12,7 +12,7 @@ build/boot.obj: boot/uefi/main.c boot/uefi/efi.h include/boot.h | build
 	$(CC) $(CFLAGS) --target=aarch64-pc-windows-msvc -c $< -o $@
 build/BOOTAA64.EFI: build/boot.obj
 	lld-link /subsystem:efi_application /entry:efi_main /nodefaultlib /machine:arm64 /timestamp:0 /out:$@ $<
-KSOURCES := drivers/input/virtio.c drivers/input/events.c filesystem/vfs.c filesystem/chfs.c drivers/storage/nvme.c kernel/storage_test.c kernel/runtime.c kernel/main.c kernel/console.c kernel/process/elf.c kernel/process/process.c kernel/syscall/syscall.c kernel/arch/arm64/acpi.c kernel/memory/physical.c kernel/memory/heap.c kernel/memory/virtual.c kernel/interrupts/exception.c kernel/scheduler/scheduler.c drivers/interrupts/gicv2_timer.c
+KSOURCES := desktop/desktop.c desktop/window-manager/model.c desktop/graphics/render.c desktop/graphics/font.c drivers/input/virtio.c drivers/input/events.c filesystem/vfs.c filesystem/chfs.c drivers/storage/nvme.c kernel/storage_test.c kernel/runtime.c kernel/main.c kernel/console.c kernel/process/elf.c kernel/process/process.c kernel/syscall/syscall.c kernel/arch/arm64/acpi.c kernel/memory/physical.c kernel/memory/heap.c kernel/memory/virtual.c kernel/interrupts/exception.c kernel/scheduler/scheduler.c drivers/interrupts/gicv2_timer.c
 KASM := kernel/arch/arm64/entry.S kernel/arch/arm64/vectors.S kernel/arch/arm64/mmu.S kernel/arch/arm64/test_worker.S kernel/process/image.S
 KOBJECTS := $(patsubst %.c,build/%.o,$(KSOURCES)) $(patsubst %.S,build/%.o,$(KASM))
 build/%.o: %.c $(wildcard include/*.h) Makefile
@@ -45,7 +45,7 @@ build/user-entry.o: userspace/init/entry.S | build
 	$(CC) --target=aarch64-none-elf -c $< -o $@
 build/init.elf: build/user-main.o build/user-entry.o userspace/init/user.ld
 	ld.lld -T userspace/init/user.ld -z max-page-size=4096 --no-undefined -o $@ build/user-entry.o build/user-main.o
-build/kernel/process/image.o: build/init.elf
+build/kernel/process/image.o: build/init.elf build/desktop.elf
 .PHONY: test-elf
 test-elf: build/init.elf
 	$(CC) -std=c11 -Wall -Wextra -Werror -Iinclude tests/elf.c kernel/process/elf.c -o build/test-elf
@@ -60,3 +60,13 @@ test-filesystem: | build
 test-input: | build
 	$(CC) -std=c11 -Wall -Wextra -Werror -Iinclude tests/input.c drivers/input/events.c -o build/test-input
 	./build/test-input
+
+build/desktop-main.o: applications/desktop/main.c include/abi.h Makefile | build
+	$(CC) $(CFLAGS) --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -mno-outline-atomics -c $< -o $@
+build/desktop.elf: build/desktop-main.o build/user-entry.o userspace/init/user.ld
+	ld.lld -T userspace/init/user.ld -z max-page-size=4096 --no-undefined -o $@ build/user-entry.o build/desktop-main.o
+
+.PHONY: test-desktop
+test-desktop: | build
+	$(CC) -std=c11 -Wall -Wextra -Werror -Iinclude tests/desktop.c desktop/window-manager/model.c desktop/graphics/render.c desktop/graphics/font.c -o build/test-desktop
+	./build/test-desktop

@@ -54,6 +54,12 @@ status efi_main(handle image,struct system_table *st) {
     if (EFI_ERROR(s)) return fail(st,(char16 *)u"CHOS: boot information allocation failed\r\n",s);
     for (uint64_t i=0;i<sizeof(*bi);i++) ((uint8_t *)bi)[i]=0;
     bi->magic=CHOS_BOOT_MAGIC; bi->reserved=test_flags;
+    struct efi_time time;
+    if(st->runtime_services && !EFI_ERROR(st->runtime_services->get_time(&time,0)) && time.hour<24 && time.minute<60 && time.second<60) {
+        bi->clock_seconds=(uint64_t)time.hour*3600+(uint64_t)time.minute*60+time.second;
+        __asm__ volatile("mrs %0, cntpct_el0":"=r"(bi->clock_counter));
+        bi->clock_valid=1;
+    }
     if(st->configuration_count>1024) return fail(st,(char16 *)u"CHOS: invalid configuration table count\r\n",EFI_INVALID_PARAMETER);
     const struct configuration_entry *entries=st->configuration_table;
     for(uint64_t i=0;i<st->configuration_count;i++) {

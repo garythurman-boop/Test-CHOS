@@ -2,7 +2,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 mkdir -p build
-make test-memory test-elf test-filesystem test-input
+make test-memory test-elf test-filesystem test-input test-desktop
 make iso
 sha256sum build/CHOS-ARM64.iso > build/hash-1
 make iso
@@ -13,6 +13,7 @@ llvm-readobj --file-headers build/BOOTAA64.EFI > build/efi-inspection.log
 llvm-readelf -h -r build/kernel.elf > build/kernel-inspection.log
 python3 tests/boot.py --ram 512
 python3 tests/boot.py --ram 1024
+python3 tests/desktop.py
 python3 tests/boot.py --gic-version 3 --expect-platform-reject
 CHOS_TEST_MISSING_KERNEL=1 python3 scripts/mkiso.py
 python3 tests/boot.py --iso build/CHOS-missing-kernel.iso --expect-missing-kernel
@@ -26,4 +27,4 @@ sha256sum build/CHOS-STORAGE-TEST.iso > build/storage-hash-2
 cmp build/storage-hash-1 build/storage-hash-2
 python3 tests/storage.py
 make iso
-printf 'Nine QEMU cases, five host programs, both ISO repeatability checks and independent disk verification passed.\n'
+printf 'Ten QEMU cases, six host programs, both ISO repeatability checks and independent disk verification passed.\n'

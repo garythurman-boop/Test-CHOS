@@ -3,10 +3,16 @@
 #include "timer.h"
 #include "console.h"
 #include "vfs.h"
+#include "desktop.h"
 struct exception_frame *syscall_dispatch(struct exception_frame *f) {
     struct process *p=process_current();
     if(!p || (f->spsr&15)!=0) panic("INVALID USER SYSCALL CONTEXT");
     if(f->x[8]>=SYS_OPEN && f->x[8]<=SYS_LIST) { f->x[0]=(uint64_t)file_syscall(p,f); return f; }
+    if(f->x[8]>=SYS_WINDOW && f->x[8]<=SYS_THEME) {
+        int64_t r=desktop_syscall(p,f); f->x[0]=(uint64_t)r;
+        if(f->x[8]==SYS_EVENT && r==-11) return scheduler_wait(f,timer_ticks()+100);
+        return f;
+    }
     int64_t result=-38;
     switch(f->x[8]) {
     case SYS_ABI: result=1; break;

@@ -1,8 +1,9 @@
 #include "scheduler.h"
 #include "mmu.h"
 #include "console.h"
-#define MAX_THREADS 8
-struct thread { struct exception_frame *frame; uint64_t stack,root,pid; unsigned priority,state; };
+#include "timer.h"
+#define MAX_THREADS 12
+struct thread { struct exception_frame *frame; uint64_t stack,root,pid; unsigned priority,state; uint64_t deadline; };
 static struct thread threads[MAX_THREADS];
 static unsigned current;
 static uint64_t switches;
@@ -27,7 +28,7 @@ int thread_create(struct pmm *p,void (*entry)(void *),void *argument,unsigned pr
     for(unsigned i=0;i<sizeof(*f)/8;i++) ((uint64_t *)f)[i]=0;
     f->x[0]=(uintptr_t)argument; f->x[30]=(uintptr_t)thread_exit;
     f->elr=(uintptr_t)entry; f->spsr=0x345;
-    threads[id]=(struct thread){f,stack,mmu_kernel_root(),0,priority,1};
+    threads[id]=(struct thread){.frame=f,.stack=stack,.root=mmu_kernel_root(),.priority=priority,.state=1};
     return (int)id;
 }
 int thread_user(struct pmm *p,uint64_t entry,uint64_t stack,uint64_t root_address,uint64_t pid,uint64_t role,uint64_t peer) {
@@ -54,6 +55,7 @@ void thread_priority(unsigned priority) {
 }
 uint64_t scheduler_switches(void) { return switches; }
 struct exception_frame *scheduler_tick(struct exception_frame *f) {
+    for(unsigned i=1;i<MAX_THREADS;i++) if(threads[i].state==3 && timer_ticks()>=threads[i].deadline) threads[i].state=1;
     threads[current].frame=f;
     unsigned best=MAX_THREADS;
     for(unsigned n=1;n<=MAX_THREADS;n++) {
@@ -74,4 +76,13 @@ struct exception_frame *scheduler_terminate(struct exception_frame *f) {
 struct exception_frame *scheduler_trap(struct exception_frame *f) {
     if((f->esr&0xffff)!=0x4348 || scheduler_pid()) panic("INVALID THREAD EXIT");
     return scheduler_terminate(f);
+}
+
+struct exception_frame *scheduler_wait(struct exception_frame *f,uint64_t deadline) {
+    if(!current || !threads[current].pid) panic("INVALID EVENT WAIT");
+    threads[current].state=3;threads[current].deadline=deadline;
+    return scheduler_tick(f);
+}
+void scheduler_wake(uint64_t pid) {
+    for(unsigned i=1;i<MAX_THREADS;i++) if(threads[i].pid==pid && threads[i].state==3) threads[i].state=1;
 }

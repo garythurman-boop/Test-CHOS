@@ -2,7 +2,7 @@
 #define CHOS_PROCESS_H
 #include "elf.h"
 #include "scheduler.h"
-#define PROCESS_MAX 4
+#define PROCESS_MAX 8
 #define PROCESS_REGIONS 16
 struct address_space { uint64_t root,tables[16]; unsigned count; };
 struct user_region { uint64_t va,physical; unsigned pages,flags,kind; };
@@ -20,6 +20,7 @@ void process_init(struct pmm *);
 int process_create(const void *,size_t,uint64_t role,uint64_t peer);
 struct process *process_find(uint64_t);
 struct process *process_current(void);
+struct process *process_at(unsigned);
 bool process_reap(uint64_t);
 bool user_validate(struct process *,uint64_t,size_t,bool writable);
 bool user_copy(struct process *,uint64_t,void *,size_t,bool to_user);

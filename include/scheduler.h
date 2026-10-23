@@ -7,6 +7,8 @@ int thread_create(struct pmm *,void (*entry)(void *),void *argument,unsigned pri
 int thread_user(struct pmm *,uint64_t entry,uint64_t stack,uint64_t root,uint64_t pid,uint64_t role,uint64_t peer);
 bool thread_reap(struct pmm *,unsigned id);
 uint64_t scheduler_pid(void);
+struct exception_frame *scheduler_wait(struct exception_frame *,uint64_t);
+void scheduler_wake(uint64_t);
 struct exception_frame *scheduler_terminate(struct exception_frame *);
 bool thread_dead(unsigned id);
 void thread_priority(unsigned priority);

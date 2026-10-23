@@ -36,6 +36,8 @@ struct boot_services {
     void *open_protocol_information,*protocols_per_handle,*locate_handle_buffer;
     status (*locate_protocol)(struct guid *,void *,void **);
 };
+struct efi_time { uint16_t year; uint8_t month,day,hour,minute,second,pad; uint32_t nanosecond; int16_t timezone; uint8_t daylight,pad2; };
+struct runtime_services { struct table_header header; status (*get_time)(struct efi_time *,void *); };
 struct system_table {
     struct table_header header;
     char16 *vendor;
@@ -45,7 +47,8 @@ struct system_table {
     handle console_out_handle;
     struct text_output *console_out;
     handle stderr_handle;
-    void *stderr_protocol,*runtime_services;
+    void *stderr_protocol;
+    struct runtime_services *runtime_services;
     struct boot_services *boot;
     uint64_t configuration_count;
     void *configuration_table;

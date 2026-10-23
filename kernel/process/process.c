@@ -1,6 +1,7 @@
 #include "process.h"
 #include "mmu.h"
 #include "console.h"
+#include "desktop.h"
 static struct process processes[PROCESS_MAX];
 static struct pmm *physical;
 static uint64_t next_pid;
@@ -12,6 +13,7 @@ struct process *process_find(uint64_t pid) {
     for(unsigned i=0;i<PROCESS_MAX;i++) if(pid && processes[i].pid==pid) return &processes[i];
     return 0;
 }
+struct process *process_at(unsigned i) { return i<PROCESS_MAX && processes[i].pid?&processes[i]:0; }
 struct process *process_current(void) { return process_find(scheduler_pid()); }
 static struct user_region *region_add(struct process *p,uint64_t va,unsigned pages,unsigned flags,unsigned kind) {
     unsigned id=0;
@@ -123,6 +125,7 @@ bool process_free(struct process *p,uint64_t va) {
 struct exception_frame *process_exit(struct exception_frame *f,int64_t code,uint64_t ec,uint64_t far) {
     struct process *p=process_current();
     if(!p) panic("NO CURRENT USER PROCESS");
+    desktop_process_exit(p->pid);
     p->exited=true; p->status=code; p->fault_class=ec; p->fault_address=far;
     return scheduler_terminate(f);
 }

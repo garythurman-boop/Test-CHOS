@@ -10,6 +10,7 @@
 #include "storage.h"
 #include "vfs.h"
 #include "input.h"
+#include "desktop.h"
 static struct pmm physical;
 static struct heap heap;
 static struct worker_state workers[3];
@@ -203,6 +204,19 @@ void kernel_main(struct chos_boot_info *info) {
             console_text(200,420,letter,0xffffff); last=state->last;
         }
         if(state->last=='A' && state->motion && state->clicks) console_rect(32,420,8,8,0x8effb0);
+        if(!storage_phase && timer_ticks()>700) {
+            /* Keep the diagnostic acceptance screen visible briefly; the normal
+             * image then starts the actual desktop. Storage fixtures remain
+             * diagnostic-only so later acceptance cannot mutate their disks. */
+            uint64_t start=timer_ticks();
+            while(timer_ticks()-start<150) __asm__ volatile("wfi");
+            __asm__ volatile("msr daifset, #2":::"memory");
+            desktop_start(&physical,boot);
+            for(;;) {
+                desktop_step();
+                __asm__ volatile("msr daifclr, #2; wfi; msr daifset, #2":::"memory");
+            }
+        }
         __asm__ volatile("dsb sy; wfi":::"memory");
     }
 }
