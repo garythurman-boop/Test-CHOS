@@ -1,4 +1,4 @@
-# ARM64 compatibility matrix — M7C checkpoint
+# ARM64 compatibility matrix — M7D checkpoint
 
 **No Fusion test has been performed.** No Apple Silicon/Fusion host is attached.
 “Tested” means the recorded QEMU AArch64 UEFI setup or portable host tests.
@@ -55,9 +55,17 @@ from SPCR. The independent bounded USB driver does not establish Fusion support.
 The QEMU probe compares firmware PCI IDs with independent QMP inventory and verifies
 an unconfirmed disk remains byte-identical. Full target ACPI tables and USB/HID
 reports still need firmware diagnostics; this snapshot is not a complete dump tool.
-See [manual checklist](fusion-validation.md) and [iteration report](milestone-7c.md).
+See [manual checklist](fusion-validation.md) and [iteration report](milestone-7d.md).
 
 M7C also tests a no-input VM with USB and unsupported storage inventory and an
 unchanged disposable disk, USB-only native editing/save/reopen/mouse/ring-wrap/
 disconnect, zero-port xHCI refusal, non-boot tablet rejection and OHCI inventory.
 See [USB subset](usb.md) and [input-free Fusion package instructions](fusion-first-boot.md).
+
+M7D changes bootstrap sizing/validation and diagnostic resilience, not Fusion
+hardware support. QEMU validates a versioned file/BSS allocation contract with an
+independent guarded stack, controlled large-file/BSS boots and installation,
+malformed/old-loader rejection, and no-disk diagnostics despite optional input
+negotiation failure. The existing polled xHCI driver is preserved. Actual Fusion
+PCI/USB/GIC/storage/display observations are still required before target corrections
+or destructive installation tests. [Kernel report](kernel-image.md).

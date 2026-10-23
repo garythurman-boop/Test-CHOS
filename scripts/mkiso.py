@@ -24,8 +24,14 @@ def main():
         shutil.rmtree(stage)
     (stage / 'boot').mkdir(parents=True)
     image = stage / 'boot' / 'efi.img'
+    # Leave FAT/directory headroom as the versioned kernel grows. These bounded
+    # volumes remain FAT12/16, matching the timestamp normalizer below.
+    required=(BUILD/'BOOTAA64.EFI').stat().st_size+(BUILD/'KERNEL.BIN').stat().st_size+1048576
+    volume_bytes=16*1048576
+    while volume_bytes<required:volume_bytes*=2
+    if volume_bytes>32*1048576:raise ValueError('EFI payload exceeds bounded FAT volume policy')
     with image.open('wb') as f:
-        f.truncate(16 * 1024 * 1024)
+        f.truncate(volume_bytes)
     run('mformat', '-i', image, '-v', 'CHOS_EFI', '-N', '43484f53', '::')
     run('mmd', '-i', image, '::/EFI', '::/EFI/BOOT', '::/CHOS')
     inputs = [(BUILD / 'BOOTAA64.EFI', '::/EFI/BOOT/BOOTAA64.EFI'),

@@ -73,7 +73,8 @@ struct file {
     status (*close)(struct file *);
     void *delete;
     status (*read)(struct file *,uint64_t *,void *);
-    void *write,*get_position,*set_position;
+    void *write,*get_position;
+    status (*set_position)(struct file *,uint64_t);
     status (*get_info)(struct file *,struct guid *,uint64_t *,void *);
 };
 struct filesystem { uint64_t revision; status (*open_volume)(struct filesystem *,struct file **); };

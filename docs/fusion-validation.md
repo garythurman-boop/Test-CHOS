@@ -8,7 +8,7 @@ successful installation record. Keep evidence per gate; stop at failed prerequis
    other ARM64 UEFI workflow. Do not select x86 or assume another version's UI.
 2. First run the [non-destructive diagnostic evaluation](fusion-first-boot.md), which
    requires no input or disk. For later installation download
-   [M7C normal ISO](../artifacts/milestone-7c/CHOS-ARM64.iso) using GitHub
+   [M7D normal ISO](../artifacts/milestone-7d/CHOS-ARM64.iso) using GitHub
    **Download raw file**; compare adjacent SHA256SUMS. Preserve M6D. Create a new
    disposable ARM64 VM, one CPU, 1 GiB RAM, Secure Boot off. Attach connected optical
    media and a disposable disk at least 1 GiB, selecting NVMe if actually available.

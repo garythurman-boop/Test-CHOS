@@ -46,7 +46,7 @@ void present(void) {
         ui_begin(&app_gui);
         ui_dialog(&app_gui,4,app_height-110,app_width-8,84,prompt_title);
         ui_textfield(&app_gui,UI_PROMPT_FIELD,12,app_height-78,app_width-24,prompt_value,sizeof(prompt_value));
-        ui_label(&app_gui,3,12,app_height-46,"Enter accepts. Escape cancels.",0x163b65);
+        ui_label(&app_gui,3,12,app_height-46,app_width<420?"Enter / Esc":"Enter accepts. Escape cancels.",0x163b65);
         ui_button(&app_gui,UI_PROMPT_ACCEPT,13,app_width-188,app_height-50,82,24,"OK",true);
         ui_button(&app_gui,UI_PROMPT_CANCEL,27,app_width-98,app_height-50,82,24,"Cancel",true);
     }

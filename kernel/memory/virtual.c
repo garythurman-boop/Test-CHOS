@@ -96,7 +96,7 @@ bool mmu_init(struct pmm *physical,const struct chos_boot_info *boot,uint64_t gi
     if(gicc && !map(gicc&~(PAGE_SIZE-1),0x2000,device_flags)) return false;
     if(!map((uintptr_t)__text_start,(uintptr_t)__text_end-(uintptr_t)__text_start,AF|SH_INNER|READONLY|UXN)) return false;
     if(!map((uintptr_t)__rodata_start,(uintptr_t)__rodata_end-(uintptr_t)__rodata_start,AF|SH_INNER|READONLY|PXN|UXN)) return false;
-    if(!mmu_guard(0) || !mmu_guard((uintptr_t)__text_start+512*1024)) return false;
+    if(!mmu_guard(0) || !mmu_guard(boot->stack_base) || !mmu_guard(boot->stack_base+boot->stack_bytes-PAGE_SIZE)) return false;
     clean_tables();
     uint64_t features; __asm__ volatile("mrs %0, id_aa64mmfr0_el1":"=r"(features));
     uint64_t ips=features&15;

@@ -1,6 +1,6 @@
 # CHOS acceptance evidence
 
-Current sequence: [M7C discovery/USB checkpoint](milestone-7c.md),
+Current sequence: [M7D bootstrap/diagnostic hardening](milestone-7d.md),
 [setup architecture](setup-environment.md). Earlier tables below retain their
 checkpoint-specific evidence; each new sequence reruns the earlier core coverage.
 
@@ -91,3 +91,16 @@ ring/DMA bounds, both ELF validators, two reproducible ISO variants and a clean
 tracked-source rebuild. Native USB interrupts are unimplemented and have no pass
 claim; existing GIC/timer interrupts remain a separate tested path. Actual Fusion
 boot/input/storage/install/reboot acceptance remains pending.
+
+## M7D additions
+
+Retain the earlier 50 cases. Add three no-disk/USB/mixed-loader cases and eight
+controlled large-image cases (two core boots, native install plus two disk-only
+boots, three malformed-header refusals): 61 real QEMU instances. Require 17 host
+programs, sanitized image/region validation, both real ELF payloads, repeatability
+and clean tracked-source reproduction. Test far growth pages with RO/NX faults,
+zeroed large BSS, both dynamic bootstrap guards and installed payload integrity.
+The no-disk case must show diagnostics despite actual optional-driver initialization
+failure. The mixed preserved-loader case must show an explicit boot version error.
+Actual Fusion remains a separate pending gate; installation there is not authorized
+by a QEMU pass alone and must follow prerequisite validation.

@@ -11,7 +11,8 @@
 | 7: VMware Fusion validation | M7C adds automatic diagnostics and bounded original polled xHCI boot-HID tested in QEMU; actual Fusion and broader USB/interrupt support remain open |
 | 8: CHOS 0.1 | Not ready |
 
-Current ISO/results: [M7C diagnostics and USB](milestone-7c.md).
+Current ISO/results: [M7D bootstrap/diagnostic hardening](milestone-7d.md).
+Preserved [M7C diagnostics and USB](milestone-7c.md).
 Preserved [M7A/7B boot and interrupts](milestone-7a-b.md).
 Preserved [M6D dedicated Setup iteration](milestone-6d-setup.md).
 [Setup flow and safety](setup-environment.md). Preserved [M6D widgets/settings checkpoint](milestone-6d.md). [Saved configuration](configuration.md), [native toolkit](gui-toolkit.md). Previous visual checkpoint: [milestone 6C](milestone-6c.md). [Royale visual architecture](royale.md). Previous installer core: [milestone 6B](milestone-6b.md). Earlier foundations: [milestone 6A](milestone-6a.md). Ordinary images
@@ -75,3 +76,9 @@ M7C adds a separate automatic noninteractive diagnostic ISO, read-only bounded
 report export, ACPI-SPCR PL011 logging, USB descriptor/HID/ring host tests and native
 USB-only QEMU interactions. Target Fusion remains untested. See [report](milestone-7c.md),
 [USB limits](usb.md) and [first-boot instructions](fusion-first-boot.md).
+
+M7D replaces the fixed half-megabyte bootstrap limit with a bounded versioned
+image and independent guarded stack. File/BSS sizing, far RO/NX, loader-version
+refusal, optional-driver failure without disk/input and remaining-device operation
+after unplug are covered by the expanded sequence. [Architecture](kernel-image.md).
+Actual Fusion evidence remains pending; no speculative target driver was added.

@@ -36,7 +36,7 @@ static const char *kind(const struct chos_pci_device *p){
     return "Other PCI device";
 }
 void diagnostic_inventory(const struct chos_boot_info *b){
-    diagnostic_log("CHOS diagnostic report v1; no disk writes");
+    diagnostic_log("CHOS diagnostic report v1; inventory read-only");
     diagnostic_log(b->firmware_vendor);
     diagnostic_value("Firmware revision: ",b->firmware_revision,true);
     diagnostic_value("UEFI revision: ",b->uefi_revision,true);

@@ -66,13 +66,14 @@ def completed(path,phase=0):
                     return False
     return True
 
-def platform_rejected(path,disk=False):
+def platform_rejected(path,disk=False,contract=False):
     pixel=read_ppm(path)
     if pixel(40,408)!=0xff0000:
         return False
     # Exact ACPI diagnostic prefix, rather than accepting any kernel panic.
     glyphs=[[14,17,17,31,17,17,17],CHOS[0],[30,17,17,30,16,16,16],[14,4,4,4,4,4,14]]
     if disk: glyphs=[CHOS[3],[31,4,4,4,4,4,4],CHOS[2],[30,17,17,30,20,18,17]]
+    if contract:glyphs=[[30,17,17,30,17,17,30],CHOS[2],CHOS[2],[31,4,4,4,4,4,4]]
     for index,glyph in enumerate(glyphs):
         for row,bits in enumerate(glyph):
             for col in range(5):
@@ -86,6 +87,8 @@ def main():
     parser.add_argument('--iso',type=Path,default=BUILD/'CHOS-ARM64.iso')
     parser.add_argument('--ram',type=int,default=512)
     parser.add_argument('--expect-missing-kernel',action='store_true')
+    parser.add_argument('--expect-invalid-kernel',action='store_true')
+    parser.add_argument('--expect-contract-reject',action='store_true')
     parser.add_argument('--gic-version',choices=['2','3'],default='2')
     parser.add_argument('--expect-platform-reject',action='store_true')
     parser.add_argument('--virtualization',action='store_true')
@@ -154,8 +157,9 @@ def main():
                     raise RuntimeError('QEMU exited before acceptance condition')
                 if serial.exists() and 'Synchronous Exception' in serial.read_text(errors='replace'):
                     raise RuntimeError('Guest exception; inspect serial log')
-                if args.expect_missing_kernel:
-                    if serial.exists() and 'CHOS: CHOS/KERNEL.BIN missing' in serial.read_text(errors='replace'):
+                if args.expect_missing_kernel or args.expect_invalid_kernel:
+                    expected='CHOS: invalid kernel image header' if args.expect_invalid_kernel else 'CHOS: CHOS/KERNEL.BIN missing'
+                    if serial.exists() and expected in serial.read_text(errors='replace'):
                         outcome['passed']=True
                         break
                 else:
@@ -166,8 +170,8 @@ def main():
                         events += [{'type':'rel','data':{'axis':'x','value':17}},{'type':'rel','data':{'axis':'y','value':9}}]
                         events += [{'type':'btn','data':{'down':down,'button':'left'}} for down in [True,False]]
                         qmp('input-send-event',{'events':events}); injected=True
-                    if args.expect_platform_reject or args.expect_disk_reject:
-                        if platform_rejected(screen,args.expect_disk_reject):
+                    if args.expect_platform_reject or args.expect_disk_reject or args.expect_contract_reject:
+                        if platform_rejected(screen,args.expect_disk_reject,args.expect_contract_reject):
                             outcome['passed']=True
                             break
                     elif read_ppm(screen)(40,408)==0xff0000:
@@ -175,7 +179,7 @@ def main():
                         debug=qmp('human-monitor-command',{'command-line':'info pci'})
                         (BUILD/f'{name}.pci.log').write_text(debug)
                         raise RuntimeError('CHOS panic; inspect screenshot')
-                    if not args.expect_platform_reject and not args.expect_disk_reject and completed(screen,args.storage_phase or 0) and pixel(36,424)==0x8effb0:
+                    if not args.expect_platform_reject and not args.expect_disk_reject and not args.expect_contract_reject and completed(screen,args.storage_phase or 0) and pixel(36,424)==0x8effb0:
                         outcome['passed']=True
                         break
                 time.sleep(.5)
@@ -183,13 +187,13 @@ def main():
                 debug=qmp('human-monitor-command',{'command-line':'info registers'})
                 (BUILD/f'{name}.registers.log').write_text(debug)
                 raise RuntimeError('Boot acceptance timed out; inspect screenshot and logs')
-            if not args.expect_missing_kernel:
+            if not (args.expect_missing_kernel or args.expect_invalid_kernel):
                 save_png(screen)
             outcome['milestone']='7B'
             outcome['gic_version']=int(args.gic_version)
             outcome['firmware_entry_el']=2 if 'CHOS: firmware entry EL2' in serial.read_text(errors='replace') else 1
             if args.storage_phase: outcome['storage_phase']=args.storage_phase
-            outcome['result_kind']=('expected_rejection' if args.expect_platform_reject or args.expect_missing_kernel or args.expect_disk_reject else 'functional_boot')
+            outcome['result_kind']=('expected_rejection' if args.expect_platform_reject or args.expect_missing_kernel or args.expect_invalid_kernel or args.expect_disk_reject or args.expect_contract_reject else 'functional_boot')
             if outcome['result_kind']=='functional_boot':
                 outcome['kernel_checks']=['BRK exception return','physical page integrity and double-free rejection',
                     'heap allocate/free','null translation fault','stack guard translation fault',

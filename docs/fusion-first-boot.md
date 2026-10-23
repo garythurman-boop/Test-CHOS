@@ -5,9 +5,9 @@ exact target Fusion version/build and its supported custom ARM64 workflow must b
 recorded. UI labels differ by version; the sequence below states required settings
 without claiming unverified release-specific screens.
 
-1. Download [CHOS-ARM64-M7C.iso](../artifacts/milestone-7c/CHOS-ARM64-M7C.iso)
+1. Download [CHOS-ARM64-M7D.iso](../artifacts/milestone-7d/CHOS-ARM64-M7D.iso)
    using GitHub **Download raw file**. Compare adjacent SHA256SUMS with
-   `shasum -a 256 CHOS-ARM64-M7C.iso`. This is the noninteractive diagnostic image.
+   `shasum -a 256 CHOS-ARM64-M7D.iso`. This is the noninteractive diagnostic image.
 2. Open Fusion on an Apple Silicon Mac. Create a **new custom/other ARM64 64-bit
    UEFI VM** using that release's supported workflow. Select an ARM64 guest, not
    an x86 compatibility type. If custom optical boot is unavailable, record the
@@ -63,8 +63,15 @@ The bounded 16 KiB native report is also available read-only through syscall 34
 in ordinary sessions; it is not a disk writer or a general memory dump.
 
 After discovery identifies supported input/storage/display, a separate normal
-[CHOS-ARM64.iso](../artifacts/milestone-7c/CHOS-ARM64.iso) contains the same kernel
+[CHOS-ARM64.iso](../artifacts/milestone-7d/CHOS-ARM64.iso) contains the same kernel
 and starts full-screen Setup. Use L/F3 for Live Desktop first. USB xHCI boot-HID
 passes QEMU tests only; Fusion might expose other controllers/protocols. Follow
 [full installation checklist](fusion-validation.md) only after those prerequisites
 are validated. Keep typed `ERASE` and the exact selected disposable disk review.
+
+M7D explicitly tests the recommended 1 GiB, one-CPU configuration with no disk,
+network or desktop, including an actual optional Virtio feature-negotiation failure.
+That failure is logged and automatic diagnostic pages remain available. The report
+now also shows declared kernel file/memory and bootstrap stack sizes. No actual
+Fusion result has arrived in this workspace. Capture every page or the last visible
+error, plus Apple SoC/macOS/exact Fusion version/build, for the next hardware step.

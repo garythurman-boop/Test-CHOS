@@ -4,7 +4,8 @@
 
 ARM64 UEFI loads EFI/BOOT/BOOTAA64.EFI from the ISO's El Torito FAT volume.
 The original loader opens CHOS/KERNEL.BIN on its own loaded-image device,
-checks size/read count, reserves and zeroes 1 MiB of EfiLoaderCode, and captures
+validates an original 64-byte versioned image header, allocates/zeros its declared
+file/BSS memory plus a separate guarded stack, and captures
 GOP and the ACPI 2.x RSDP from configuration tables. No third-party bootloader
 or existing OS kernel participates.
 
@@ -16,12 +17,15 @@ Earlier failures print diagnostics. Cleanup of earlier boot allocations remains
 incomplete; reboot firmware after failure.
 
 x0 carries include/boot.h boot information; x1 is the temporary stack top.
-The flat kernel is linked at zero and loaded at a page-aligned arbitrary address.
+The versioned flat kernel is linked at zero and loaded at a page-aligned arbitrary
+address; the loader enters at its validated offset 64.
 All C declarations have hidden visibility, including external assembly/linker
 symbols. The linker rejects a nonempty GOT, which would otherwise embed absolute
 addresses requiring an unavailable runtime relocator. Text/rodata are page aligned;
-image plus BSS must remain below 512 KiB. The upper half of the reservation contains
-the temporary stack, with a guard at the 512 KiB boundary.
+the shared policy currently permits 16 MiB file bytes and 64 MiB memory. A
+separate 64 KiB usable stack has lower/upper guard pages; no fixed-offset guard
+occupies the image. The private boot size/version is checked before extended fields.
+See [kernel image design](kernel-image.md) for the complete contract.
 
 Firmware may enter at EL1 or supported non-VHE EL2. The original transition
 converts firmware TTBR0/TCR/MAIR to EL1 while keeping identity mappings and cache

@@ -1,6 +1,12 @@
 .section .text.entry,"ax"
 .global _start
 _start:
+    b .Lcode
+    .word 0
+    .quad 0x31474d49534f4843
+    .word 1,64
+    .quad __file_end,__image_end,64,0,0
+.Lcode:
     msr daifset, #15
     msr spsel, #1
     mov sp, x1

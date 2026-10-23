@@ -2,6 +2,7 @@
 #include "boot.h"
 #include "display_mode.h"
 #include <stdbool.h>
+#include "kernel_image.h"
 static const struct guid acpi_guid={0x8868e871,0xe4f1,0x11d3,{0xbc,0x22,0,0x80,0xc7,0x3c,0x88,0x81}};
 static struct guid path_guid={0x09576e91,0x6d3f,0x11d2,{0x8e,0x39,0,0xa0,0xc9,0x69,0x72,0x3b}};
 static struct guid loaded_guid={0x5b1b31a1,0x9562,0x11d2,{0x8e,0x3f,0,0xa0,0xc9,0x69,0x72,0x3b}};
@@ -61,13 +62,22 @@ status efi_main(handle image,struct system_table *st) {
     _Alignas(8) uint8_t file_info[512];
     uint64_t info_size=sizeof(file_info);
     s=kernel->get_info(kernel,&info_guid,&info_size,file_info);
-    if (EFI_ERROR(s)) return fail(st,(char16 *)u"CHOS: kernel metadata failed\r\n",s);
+    if (EFI_ERROR(s) || info_size<16) return fail(st,(char16 *)u"CHOS: kernel metadata failed\r\n",s);
     uint64_t file_size=((uint64_t *)file_info)[1];
-    if (!file_size || file_size>512*1024) return fail(st,(char16 *)u"CHOS: invalid kernel size\r\n",EFI_INVALID_PARAMETER);
-    uint64_t base=0;
-    s=bs->allocate_pages(0,1,256,&base); /* EfiLoaderCode: executable image, zeroed BSS and temporary stack */
-    if (EFI_ERROR(s)) return fail(st,(char16 *)u"CHOS: kernel allocation failed\r\n",s);
-    for (uint64_t i=0;i<1024*1024;i++) ((volatile uint8_t *)(uintptr_t)base)[i]=0;
+    uint8_t header[CHOS_IMAGE_HEADER_BYTES];uint64_t header_bytes=sizeof(header);
+    if(file_size<sizeof(header) || file_size>CHOS_IMAGE_MAX_FILE || EFI_ERROR(kernel->read(kernel,&header_bytes,header)) || header_bytes!=sizeof(header))
+        return fail(st,(char16 *)u"CHOS: invalid kernel image header\r\n",EFI_INVALID_PARAMETER);
+    struct kernel_image_layout layout;
+    if(!kernel_image_validate(header,sizeof(header),file_size,&layout) || !kernel->set_position || EFI_ERROR(kernel->set_position(kernel,0)))
+        return fail(st,(char16 *)u"CHOS: invalid kernel image header\r\n",EFI_INVALID_PARAMETER);
+    uint64_t base=0,stack_base=0;
+    s=bs->allocate_pages(0,1,layout.memory_bytes/4096,&base);
+    if(EFI_ERROR(s))return fail(st,(char16 *)u"CHOS: kernel allocation failed\r\n",s);
+    s=bs->allocate_pages(0,2,CHOS_BOOT_STACK_ALLOCATION/4096,&stack_base);
+    if(EFI_ERROR(s) || !kernel_boot_regions(base,layout.memory_bytes,stack_base,CHOS_BOOT_STACK_ALLOCATION))
+        return fail(st,(char16 *)u"CHOS: bootstrap regions rejected\r\n",EFI_INVALID_PARAMETER);
+    for(uint64_t i=0;i<layout.memory_bytes;i++)((volatile uint8_t *)(uintptr_t)base)[i]=0;
+    for(uint64_t i=0;i<CHOS_BOOT_STACK_ALLOCATION;i++)((volatile uint8_t *)(uintptr_t)stack_base)[i]=0;
     uint64_t read_size=file_size;
     s=kernel->read(kernel,&read_size,(void *)(uintptr_t)base);
     kernel->close(kernel);
@@ -101,7 +111,8 @@ status efi_main(handle image,struct system_table *st) {
     s=bs->allocate_pool(2,sizeof(*bi),(void **)&bi);
     if (EFI_ERROR(s)) return fail(st,(char16 *)u"CHOS: boot information allocation failed\r\n",s);
     for (uint64_t i=0;i<sizeof(*bi);i++) ((uint8_t *)bi)[i]=0;
-    bi->magic=CHOS_BOOT_MAGIC; bi->reserved=test_flags;
+    bi->magic=CHOS_BOOT_MAGIC; bi->reserved=test_flags;bi->boot_contract=CHOS_BOOT_CONTRACT;
+    bi->kernel_base=base;bi->kernel_memory_bytes=layout.memory_bytes;bi->stack_base=stack_base;bi->stack_bytes=CHOS_BOOT_STACK_ALLOCATION;
     bi->firmware_revision=st->firmware_revision;bi->uefi_revision=st->header.revision;
     if(st->vendor)for(unsigned i=0;i<63 && st->vendor[i];i++)bi->firmware_vendor[i]=st->vendor[i]>=32 && st->vendor[i]<127?(char)st->vendor[i]:'?';
     char16 firmware[80];unsigned fw=0;
@@ -206,8 +217,8 @@ status efi_main(handle image,struct system_table *st) {
         s=bs->exit_boot_services(image,key);
         if (!EFI_ERROR(s)) {
             __asm__ volatile("msr daifset, #15":::"memory");
-            void (*entry)(struct chos_boot_info *,uint64_t)=(void *)(uintptr_t)base;
-            entry(bi,base+1024*1024);
+            void (*entry)(struct chos_boot_info *,uint64_t)=(void *)(uintptr_t)(base+layout.entry_offset);
+            entry(bi,stack_base+CHOS_BOOT_STACK_ALLOCATION-4096);
             for (;;) __asm__ volatile("wfe");
         }
         if (s!=EFI_INVALID_PARAMETER) break;

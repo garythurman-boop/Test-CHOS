@@ -1,4 +1,5 @@
 #include "install.h"
+#include "kernel_image.h"
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -40,7 +41,7 @@ int main(void) {
         assert(install_plan_make(device.blocks,sector,guid,&plan));
         memset(d,0,sizeof(*d));d->fail=-1;d->low=plan.esp_first*sector/4096;d->high=(plan.esp_last+1)*sector/4096-1;
         assert(!install_fat32_write(device,&plan,&payload,false,&workspace) && !d->reads && !d->writes);
-        struct install_payload bad=payload;bad.kernel_size=512*1024+1;
+        struct install_payload bad=payload;bad.kernel_size=CHOS_IMAGE_MAX_FILE+1;
         assert(!install_fat32_write(device,&plan,&bad,true,&workspace) && !d->writes);
         last_phase=reports=0;last_done=0;
         assert(install_fat32_observed(device,&plan,&payload,true,&workspace,report,0));

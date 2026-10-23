@@ -1,3 +1,4 @@
+#include "kernel_image.h"
 /* Minimal original FAT32 ESP writer: two mirrored FATs, four directories,
  * BOOTAA64.EFI and CHOS/KERNEL.BIN. This is not a runtime FAT filesystem driver. */
 #include "install.h"
@@ -9,7 +10,7 @@ static bool same(const uint8_t *p,const uint8_t *q,size_t n){for(size_t i=0;i<n;
 static void w16(uint8_t *p,uint16_t n){p[0]=(uint8_t)n;p[1]=(uint8_t)(n>>8);}
 static void w32(uint8_t *p,uint32_t n){for(unsigned i=0;i<4;i++)p[i]=(uint8_t)(n>>(8*i));}
 static bool layout(struct block_device d,const struct install_plan *p,const struct install_payload *files,struct layout *l) {
-    if(!p || !files || !files->loader || !files->kernel || !d.read || d.blocks!=p->blocks || !files->loader_size || !files->kernel_size || files->loader_size>512*1024 || files->kernel_size>512*1024)return false;
+    if(!p || !files || !files->loader || !files->kernel || !d.read || d.blocks!=p->blocks || !files->loader_size || !files->kernel_size || files->loader_size>512*1024 || files->kernel_size>CHOS_IMAGE_MAX_FILE)return false;
     struct install_plan expected;
     if(!install_plan_make(d.blocks,p->sector_bytes,p->disk_guid,&expected) || p->esp_first!=expected.esp_first || p->esp_last!=expected.esp_last || p->system_first!=expected.system_first || p->system_last!=expected.system_last)return false;
     uint32_t b=p->sector_bytes,total=(uint32_t)(p->esp_last-p->esp_first+1),scale=4096/b;

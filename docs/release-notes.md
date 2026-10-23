@@ -1,3 +1,15 @@
+# M7D bootstrap and diagnostic hardening checkpoint
+
+Versioned flat kernel metadata replaces the fixed 512 KiB bootstrap contract.
+UEFI allocates declared image/BSS memory and an independent 64 KiB guarded stack;
+old private boot contracts and malformed images are rejected. Native installation
+uses the shared larger-file policy. Optional input failures preserve diagnostic
+mode; narrow dialog hints fit alongside buttons. Existing polled xHCI is preserved.
+The acceptance sequence expands to 61 QEMU cases/17 host programs, including
+controlled large-image boot/install/reboot. See [M7D report](milestone-7d.md) for
+final results. Fusion remains untested and awaits actual hardware screenshots/logs.
+Previous working checkpoints are preserved; this is not full Milestone 7 completion.
+
 # M7C discovery and USB development checkpoint
 
 A separate input-free diagnostic ISO automatically reports firmware/UEFI/EL/ACPI/

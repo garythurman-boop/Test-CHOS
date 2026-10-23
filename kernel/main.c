@@ -13,6 +13,7 @@
 #include "desktop.h"
 #include "setup.h"
 #include "diagnostic.h"
+#include "kernel_image.h"
 static struct pmm physical;
 static struct heap heap;
 static struct worker_state workers[3];
@@ -22,7 +23,9 @@ void kernel_main(struct chos_boot_info *info) {
     if (!info || info->magic!=CHOS_BOOT_MAGIC) for (;;) __asm__ volatile("wfe");
     struct chos_boot_info *boot=info;
     console_init(info);
+    if(boot->boot_contract!=CHOS_BOOT_CONTRACT)panic("BOOT CONTRACT VERSION MISMATCH");
     if(info->entry_error)panic("UNSUPPORTED EL2 HANDOFF STATE");
+    if(!kernel_boot_regions(boot->kernel_base,boot->kernel_memory_bytes,boot->stack_base,boot->stack_bytes) || boot->kernel_base!=(uintptr_t)__text_start)panic("BOOTSTRAP REGIONS INVALID");
     exception_init();
     diagnostic_init(boot);
     console_rect(0,0,boot->width,boot->height,0x071b36);
@@ -67,8 +70,13 @@ void kernel_main(struct chos_boot_info *info) {
     diagnostic_value("GIC discovered version: ",platform.gic_version,false);
     if(!mmu_init(&physical,boot,platform.gic_distributor,platform.gic_version==2?platform.gic_cpu:0)) panic("MMU INIT FAILED");
     diagnostic_map_serial();diagnostic_log("Kernel MMU: PASS");
+    diagnostic_value("Kernel file bytes: ",boot->kernel_size,false);
+    diagnostic_value("Kernel memory bytes: ",boot->kernel_memory_bytes,false);
+    diagnostic_value("Bootstrap stack bytes: ",CHOS_BOOT_STACK_BYTES,false);
+    if(!exception_test_read(boot->stack_base+boot->stack_bytes-PAGE_SIZE))panic("UPPER STACK GUARD FAILED");
+    extern void kernel_image_test(const struct chos_boot_info *);kernel_image_test(boot);
     if(!exception_test_read(0)) panic("NULL GUARD TEST FAILED");
-    if(!exception_test_read((uintptr_t)__text_start+512*1024)) panic("STACK GUARD TEST FAILED");
+    if(!exception_test_read(boot->stack_base)) panic("STACK GUARD TEST FAILED");
     if(!exception_test_write((uintptr_t)__text_start)) panic("READONLY TEXT TEST FAILED");
     if(!exception_test_execute(arena)) panic("NX HEAP TEST FAILED");
     console_rect(0,160,boot->width,boot->height-160,0x071b36);
@@ -176,7 +184,11 @@ void kernel_main(struct chos_boot_info *info) {
     __asm__ volatile("msr daifset, #2":::"memory");
     if(!storage_phase && !(boot->reserved&CHOS_DIAGNOSTIC_BOOT))setup_initialize(disk_ready?&disk:0,boot,&physical);
     int input_devices=input_initialize(&physical,boot);
-    if(input_devices<0) panic("VIRTIO INPUT SETUP FAILED");
+    if(input_devices<0){
+        diagnostic_log("Optional Virtio input initialization failed");
+        if(!(boot->reserved&CHOS_DIAGNOSTIC_BOOT))panic("VIRTIO INPUT SETUP FAILED");
+        input_devices=0;
+    }
     platform_record(boot,&platform,(unsigned)input_devices,disk_ready);
     diagnostic_value("Input initialized devices: ",(unsigned)input_devices,false);
     if(!input_devices)diagnostic_log("Input unsupported/absent; inventory needs no input");

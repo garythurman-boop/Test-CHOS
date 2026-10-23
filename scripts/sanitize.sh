@@ -41,3 +41,6 @@ cc "${flags[@]}" tests/diagnostic.c kernel/diagnostics/buffer.c -o build/sanitiz
 build/sanitized/diagnostic
 cc "${flags[@]}" tests/usb.c drivers/usb/hid.c drivers/usb/ring.c -o build/sanitized/usb
 build/sanitized/usb
+
+cc "${flags[@]}" tests/image.c boot/image.c -o build/sanitized/image
+build/sanitized/image
