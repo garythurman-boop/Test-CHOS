@@ -1,6 +1,6 @@
 # CHOS acceptance evidence
 
-Current sequence: [M7A/7B boot/interrupt compatibility](milestone-7a-b.md),
+Current sequence: [M7C discovery/USB checkpoint](milestone-7c.md),
 [setup architecture](setup-environment.md). Earlier tables below retain their
 checkpoint-specific evidence; each new sequence reruns the earlier core coverage.
 
@@ -79,3 +79,15 @@ portable GICv3 resources/affinity/routing/mask/timeout tests, both ELF validator
 and ASan/UBSan. Require clean tracked-source ISO reproduction. Actual Fusion
 ISO/input/storage/install/reboot criteria remain pending separately; this is an
 intermediate checkpoint, not Milestone 7 completion or CHOS 0.1.
+
+## M7C additions
+
+Retain all 45 earlier cases. Add five QEMU VMs: input-free diagnostic inventory
+with USB/unsupported storage and unchanged disk; USB-only native input/edit/save/
+reopen/drag, transfer/event ring wrap, compact menu and disconnect; and three
+unsupported xHCI/OHCI/non-boot-device cases that must finish diagnostics. Require
+16 host programs including sanitized diagnostic export and USB descriptor/HID/
+ring/DMA bounds, both ELF validators, two reproducible ISO variants and a clean
+tracked-source rebuild. Native USB interrupts are unimplemented and have no pass
+claim; existing GIC/timer interrupts remain a separate tested path. Actual Fusion
+boot/input/storage/install/reboot acceptance remains pending.

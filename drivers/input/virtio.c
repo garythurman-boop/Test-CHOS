@@ -4,6 +4,7 @@
 #include "platform.h"
 #include "mmu.h"
 #include "console.h"
+#include "usb.h"
 struct device { volatile uint8_t *common,*notify,*isr; uint64_t desc,avail,used,buffer; uint16_t available,last; };
 static struct device devices[2];
 static unsigned device_count;
@@ -90,9 +91,10 @@ int input_initialize(struct pmm *p,const struct chos_boot_info *boot) {
             device_count++;
         }
     }
-    return (int)device_count;
+    return (int)device_count+usb_initialize(p,boot);
 }
 void input_poll(void) {
+    usb_poll();
     struct input_event batch[64];unsigned count=0;
     for(unsigned i=0;i<device_count;i++) {
         struct device *d=&devices[i];

@@ -52,7 +52,12 @@ void notepad_key(unsigned key) {
 }
 void notepad_paint(void) {
     begin(0xffffff);ui_toolbar(&app_gui,0,0,app_width,29);
+    bool narrow=app_width<400;int step=narrow?(app_width-16)/4:92;int file_x=narrow?4+3*step:286;
+    if(narrow){
+        ui_button(&app_gui,1,'o'|KEY_CTRL,4,2,step-4,25,"Open",true);ui_button(&app_gui,2,'s'|KEY_CTRL,4+step,2,step-4,25,"Save",true);ui_button(&app_gui,3,'a'|KEY_CTRL,4+step*2,2,step-4,25,"Save as",true);ui_button(&app_gui,4,600,file_x,2,step-4,25,"File",true);
+    }else {
     ui_button(&app_gui,1,'o'|KEY_CTRL,4,2,80,25,"Open",true);ui_button(&app_gui,2,'s'|KEY_CTRL,92,2,82,25,"Save",true);ui_button(&app_gui,3,'a'|KEY_CTRL,184,2,94,25,"Save As",true);ui_button(&app_gui,4,600,286,2,80,25,"File",true);
+    }
     text(10,38,filename[0]?filename:"Untitled",0x2a5579);
     unsigned columns=(unsigned)(app_width-24)/12,rows=(unsigned)(app_height-105)/18;
     if(columns>78)columns=78;
@@ -69,11 +74,12 @@ void notepad_paint(void) {
     if(cursor_line>=first && cursor_line<first+rows)box(10+(int)column*12,62+(int)(cursor_line-first)*18,2,16,0x286bb0);
     if(modified)text(app_width-118,38,"Modified",0x965024);
     if(menu) {
-        ui_menu_panel(&app_gui,286,30,200,118);
-        ui_menu_item(&app_gui,610,'o'|KEY_CTRL,290,34,192,"Open...       Ctrl-O",true);
-        ui_menu_item(&app_gui,611,'s'|KEY_CTRL,290,61,192,"Save          Ctrl-S",true);
-        ui_menu_item(&app_gui,612,'a'|KEY_CTRL,290,88,192,"Save as...    Ctrl-A",true);
-        ui_menu_item(&app_gui,613,'n'|KEY_CTRL,290,115,192,"New           Ctrl-N",true);
+        int menu_x=app_width<486?app_width-204:286;
+        ui_menu_panel(&app_gui,menu_x,30,200,118);
+        ui_menu_item(&app_gui,610,'o'|KEY_CTRL,menu_x+4,34,192,"Open...       Ctrl-O",true);
+        ui_menu_item(&app_gui,611,'s'|KEY_CTRL,menu_x+4,61,192,"Save          Ctrl-S",true);
+        ui_menu_item(&app_gui,612,'a'|KEY_CTRL,menu_x+4,88,192,"Save as...    Ctrl-A",true);
+        ui_menu_item(&app_gui,613,'n'|KEY_CTRL,menu_x+4,115,192,"New           Ctrl-N",true);
     }
 }
 

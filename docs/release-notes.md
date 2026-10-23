@@ -1,3 +1,14 @@
+# M7C discovery and USB development checkpoint
+
+A separate input-free diagnostic ISO automatically reports firmware/UEFI/EL/ACPI/
+GIC/timer/PCI/GOP and initialized/unsupported drivers, with bounded read-only export
+and firmware-described PL011 serial output. Original polled xHCI USB2 root boot-HID
+input joins the existing events; narrow Notepad controls/menu retain Royale styling.
+Acceptance expands to 50 QEMU cases/16 host programs and two reproducible images.
+See [M7C report](milestone-7c.md) for final results. Fusion is untested; USB interrupts,
+other controllers/hubs/general HID and broad recovery remain unfinished. Previous
+images are preserved. This is an intermediate checkpoint, not CHOS 0.1.
+
 # M7A/7B development checkpoint
 
 Original non-VHE EL2→EL1 startup, ACPI GICv3 discovery/controller/CPU interface,

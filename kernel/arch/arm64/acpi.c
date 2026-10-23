@@ -145,3 +145,34 @@ bool platform_psci(const struct chos_boot_info *b,bool *hvc) {
     }
     return false;
 }
+
+/* Read-only inventory is useful even when interrupt discovery fails. */
+static const uint8_t *root_table(const struct chos_boot_info *b){
+    if(!memory(b,b->rsdp,36))return 0;
+    const uint8_t *r=(void *)(uintptr_t)b->rsdp;uint32_t n=u32(r+20);
+    if(!same(r,"RSD PTR ",8) || r[15]<2 || !checksum(r,20) || n<36 || n>4096 || !memory(b,b->rsdp,n) || !checksum(r,n))return 0;
+    const uint8_t *x=table(b,u64(r+24));if(!x || !same(x,"XSDT",4) || (u32(x+4)-36)%8 || (u32(x+4)-36)/8>1024)return 0;
+    return x;
+}
+bool platform_tables(const struct chos_boot_info *b,uint32_t *mask,unsigned *count){
+    *mask=0;*count=0;const uint8_t *x=root_table(b);if(!x)return false;
+    for(unsigned i=36;i<u32(x+4);i+=8){
+        const uint8_t *t=table(b,u64(x+i));if(!t)return false;
+        (*count)++;
+        const char *names[]={"APIC","GTDT","MCFG","FACP","SPCR"};
+        for(unsigned j=0;j<5;j++)if(same(t,names[j],4))*mask|=1u<<j;
+    }
+    return true;
+}
+bool platform_serial(const struct chos_boot_info *b,uint64_t *base){
+    const uint8_t *x=root_table(b);if(!x)return false;
+    for(unsigned i=36;i<u32(x+4);i+=8){
+        const uint8_t *t=table(b,u64(x+i));if(!t || !same(t,"SPCR",4))continue;
+        /* Original PL011 / SBSA UART register subset only; no assumed address. */
+        if(u32(t+4)<80 || t[36]!=3 || t[40]!=0 || (t[41]!=0 && t[41]!=32) || t[42]!=0 || (t[43]!=0 && t[43]!=3))return false;
+        uint64_t address=u64(t+44);
+        if(!address || address%4096 || !mmio(b,address,4096))return false;
+        *base=address;return true;
+    }
+    return false;
+}

@@ -11,18 +11,22 @@ import time
 from boot import BUILD, read_ppm, save_png
 
 class Guest:
-    def __init__(self,label='desktop',ram=512,disk=None,sector_bytes=512,optical=False,live=True,fault_config=None,gic_version=2,virtualization=False):
+    def __init__(self,label='desktop',ram=512,disk=None,sector_bytes=512,optical=False,live=True,fault_config=None,gic_version=2,virtualization=False,iso=None,input_backend="virtio",extra_devices=()):
         self.label=label
         self.lock=(BUILD/'boot-test.lock').open('w')
         fcntl.flock(self.lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
         self.sockpath=Path(f'/tmp/chos-desktop-{os.getpid()}.sock')
         self.screen=BUILD/f'{label}.ppm'
-        self.iso=BUILD/'CHOS-ARM64.iso'
+        self.iso=Path(iso) if iso else BUILD/'CHOS-ARM64.iso'
         self.command=['qemu-system-aarch64','-machine',f'virt,gic-version={gic_version},virtualization={"on" if virtualization else "off"}','-cpu','cortex-a72','-accel','tcg','-m',str(ram),'-smp','1',
             '-bios',os.environ.get('CHOS_UEFI_FIRMWARE','/usr/share/qemu-efi-aarch64/QEMU_EFI.fd'),
-            '-device','ramfb','-device','virtio-keyboard-pci','-device','virtio-mouse-pci',
+            '-device','ramfb',
             '-display','none','-serial',f'file:{BUILD}/{label}.serial.log',
             '-qmp',f'unix:{self.sockpath},server=on,wait=off','-no-reboot','-net','none']
+        if input_backend=="virtio":self.command += ["-device","virtio-keyboard-pci","-device","virtio-mouse-pci"]
+        elif input_backend=="usb":self.command += ["-device","qemu-xhci,id=xhci","-device","usb-kbd,id=usbkbd,bus=xhci.0","-device","usb-mouse,id=usbmouse,bus=xhci.0"]
+        elif input_backend!="none":raise ValueError("Unknown input backend")
+        for device in extra_devices:self.command += ["-device",device]
         if disk:
             backend=f'blkdebug:{fault_config}:{disk}' if fault_config else str(disk)
             self.command += ['-drive',f'if=none,id=nvme0,format=raw,file={backend}',

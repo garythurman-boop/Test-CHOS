@@ -60,5 +60,15 @@ int main(void) {
     fadt[129]=1;sum(fadt,132,9);assert(platform_psci(&b,&hvc) && !hvc);
     fadt[129]=0;sum(fadt,132,9);assert(!platform_psci(&b,&hvc));
     fadt[129]=3;sum(fadt,132,9);fadt[9]++;assert(!platform_psci(&b,&hvc));
+    sum(fadt,132,9);
+    unsigned char *spcr=data+1280;memcpy(spcr,"SPCR",4);w32(spcr+4,80);spcr[36]=3;spcr[41]=32;spcr[43]=3;w64(spcr+44,0x9000000);sum(spcr,80,9);
+    w32(x+4,76);w64(x+68,(uintptr_t)spcr);sum(x,76,9);
+    uint32_t mask=0;unsigned tables=0;uint64_t uart=0;
+    assert(platform_tables(&b,&mask,&tables) && mask==31 && tables==5);
+    assert(platform_serial(&b,&uart) && uart==0x9000000);
+    spcr[40]=1;sum(spcr,80,9);assert(!platform_serial(&b,&uart));
+    spcr[40]=0;w64(spcr+44,(uintptr_t)data);sum(spcr,80,9);assert(!platform_serial(&b,&uart));
+    w64(spcr+44,0x9000001);sum(spcr,80,9);assert(!platform_serial(&b,&uart));
+    spcr[9]++;assert(!platform_tables(&b,&mask,&tables) && !platform_serial(&b,&uart));
     puts("PASS: ACPI discovery, checksums, MPIDR selection, malformed entries, IRQ ranges, out-of-map pointers, reserved/MMIO exclusion and oversized RSDP");
 }

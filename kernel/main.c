@@ -12,6 +12,7 @@
 #include "input.h"
 #include "desktop.h"
 #include "setup.h"
+#include "diagnostic.h"
 static struct pmm physical;
 static struct heap heap;
 static struct worker_state workers[3];
@@ -23,6 +24,7 @@ void kernel_main(struct chos_boot_info *info) {
     console_init(info);
     if(info->entry_error)panic("UNSUPPORTED EL2 HANDOFF STATE");
     exception_init();
+    diagnostic_init(boot);
     console_rect(0,0,boot->width,boot->height,0x071b36);
     console_rect(0,0,boot->width,72,0x164a82);
     console_text(32,24,"CHOS",0xffffff);
@@ -62,7 +64,9 @@ void kernel_main(struct chos_boot_info *info) {
     uint64_t mpidr; __asm__ volatile("mrs %0, mpidr_el1":"=r"(mpidr));
     struct platform platform;
     if(!platform_discover(boot,mpidr,&platform)) panic("ACPI GIC TIMER DISCOVERY FAILED");
+    diagnostic_value("GIC discovered version: ",platform.gic_version,false);
     if(!mmu_init(&physical,boot,platform.gic_distributor,platform.gic_version==2?platform.gic_cpu:0)) panic("MMU INIT FAILED");
+    diagnostic_map_serial();diagnostic_log("Kernel MMU: PASS");
     if(!exception_test_read(0)) panic("NULL GUARD TEST FAILED");
     if(!exception_test_read((uintptr_t)__text_start+512*1024)) panic("STACK GUARD TEST FAILED");
     if(!exception_test_write((uintptr_t)__text_start)) panic("READONLY TEXT TEST FAILED");
@@ -78,11 +82,14 @@ void kernel_main(struct chos_boot_info *info) {
     int high_id=thread_create(&physical,high_thread,0,2);
     if(a_id<0 || b_id<0 || low_id<0 || high_id<0) panic("THREAD CREATION FAILED");
     if(!timer_init(&platform)) panic("TIMER INIT FAILED");
+    diagnostic_value("Timer initialized PPI: ",platform.timer_irq,false);
     __asm__ volatile("msr daifclr, #2":::"memory");
     while(timer_ticks()<30) __asm__ volatile("wfi");
     if(!workers[0].progress || !workers[1].progress || workers[2].progress ||
        high_ran!=1 || !thread_dead((unsigned)high_id) || scheduler_switches()<10)
         panic("PREEMPTION OR PRIORITY FAILED");
+    diagnostic_value("Timer delivered ticks: ",timer_ticks(),false);
+    diagnostic_log("GIC delivery and preemption: PASS");
     workers[0].stop=workers[1].stop=1;
     while(!thread_dead((unsigned)a_id) || !thread_dead((unsigned)b_id)) __asm__ volatile("wfi");
     thread_priority(0);
@@ -142,6 +149,7 @@ void kernel_main(struct chos_boot_info *info) {
     __asm__ volatile("msr daifclr, #2":::"memory");
     struct block_device disk; bool test_identity=false;
     bool disk_ready=nvme_init(&physical,boot,&disk,&test_identity);
+    diagnostic_log(disk_ready?"NVMe initialized: PASS":nvme_error());
     unsigned storage_phase=0;
     if(boot->reserved&1) {
         if(!disk_ready) { console_text(32,520,"BAR ADDRESS",0xffffff); console_number(240,520,nvme_bar()); panic(nvme_error()); }
@@ -166,10 +174,22 @@ void kernel_main(struct chos_boot_info *info) {
         __asm__ volatile("msr daifclr, #2":::"memory");
     }
     __asm__ volatile("msr daifset, #2":::"memory");
-    if(!storage_phase)setup_initialize(disk_ready?&disk:0,boot,&physical);
+    if(!storage_phase && !(boot->reserved&CHOS_DIAGNOSTIC_BOOT))setup_initialize(disk_ready?&disk:0,boot,&physical);
     int input_devices=input_initialize(&physical,boot);
     if(input_devices<0) panic("VIRTIO INPUT SETUP FAILED");
     platform_record(boot,&platform,(unsigned)input_devices,disk_ready);
+    diagnostic_value("Input initialized devices: ",(unsigned)input_devices,false);
+    if(!input_devices)diagnostic_log("Input unsupported/absent; inventory needs no input");
+    diagnostic_log("Core exception/EL0/IPC/protection tests: PASS");
+    if(boot->reserved&CHOS_DIAGNOSTIC_BOOT){
+        diagnostic_log("Diagnostic mode: no installer, no filesystem writes");
+        unsigned page=0,pages=diagnostic_screen(0);uint64_t next=timer_ticks()+500;
+        __asm__ volatile("msr daifclr, #2":::"memory");
+        for(;;){input_poll();struct input_event ignored;while(input_next(&ignored)){}
+            if(timer_ticks()>=next){page=(page+1)%pages;pages=diagnostic_screen(page);next=timer_ticks()+500;}
+            __asm__ volatile("wfi");
+        }
+    }
     __asm__ volatile("msr daifclr, #2":::"memory");
     console_rect(0,150,boot->width,boot->height-150,0x071b36);
     console_text(32,172,"MEMORY PREEMPTION AND REAP PASS",0x8effb0);

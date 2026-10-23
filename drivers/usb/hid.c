@@ -1,0 +1,61 @@
+/* Original USB boot-interface validation and HID-to-CHOS event translation. */
+#include "usb.h"
+static unsigned le16(const uint8_t *p){return (unsigned)p[0]|(unsigned)p[1]<<8;}
+bool usb_boot_configuration(const uint8_t *p,unsigned n,struct usb_boot_interface *out){
+    if(!p || !out || n<9 || n>512 || p[0]!=9 || p[1]!=2 || le16(p+2)!=n || !p[5])return false;
+    bool match=false,found=false;struct usb_boot_interface selected={0};
+    for(unsigned at=0;at<n;){
+        if(n-at<2 || p[at]<2 || p[at]>n-at)return false;
+        const uint8_t *d=p+at;
+        if(d[1]==4){
+            if(d[0]<9)return false;
+            match=d[3]==0 && d[4]==1 && d[5]==3 && d[6]==1 && (d[7]==1 || d[7]==2);
+            if(match){if(found)return false;selected=(struct usb_boot_interface){.configuration=p[5],.interface=d[2],.protocol=d[7]};}
+        }else if(d[1]==5){
+            if(d[0]<7)return false;
+            if(match){
+                unsigned packet=le16(d+4);
+                if(found || !(d[2]&128) || (d[2]&0x70) || !(d[2]&15) || (d[3]&3)!=3 || packet<3 || packet>64 || (selected.protocol==1 && packet<8) || !d[6])return false;
+                selected.endpoint=d[2]&15;selected.packet=(uint16_t)packet;selected.interval=d[6];found=true;
+            }
+        }
+        at+=d[0];
+    }
+    if(!found)return false;
+    *out=selected;return true;
+}
+static uint16_t code(unsigned usage){
+    static const uint8_t letters[26]={30,48,46,32,18,33,34,35,23,36,37,38,50,49,24,25,16,19,31,20,22,47,17,45,21,44};
+    static const uint8_t rest[]={2,3,4,5,6,7,8,9,10,11,28,1,14,15,57,12,13,26,27,43,43,39,40,41,51,52,53,58,59,60,61,62,63,64,65,66,67,68,87,88,99,70,119,110,102,104,111,107,109,106,105,108,103};
+    if(usage>=4 && usage<=29)return letters[usage-4];
+    if(usage>=30 && usage<30+sizeof(rest))return rest[usage-30];
+    return 0;
+}
+static bool contains(const uint8_t *keys,uint8_t key){for(unsigned i=0;i<6;i++)if(keys[i]==key)return true;return false;}
+bool usb_hid_report(struct usb_hid_state *s,unsigned protocol,const uint8_t *p,unsigned n,struct input_event *events,unsigned *count){
+    if(!s || !p || !events || !count || *count>32)return false;
+    struct input_event temp[24];unsigned used=0;
+    if(protocol==1){
+        if(n!=8 || p[1])return false;
+        for(unsigned i=2;i<8;i++)if(p[i]){
+            if(p[i]<4 || p[i]>0xe7)return false;
+            for(unsigned j=2;j<i;j++)if(p[i]==p[j])return false;
+        }
+        static const uint8_t mods[8]={29,42,56,125,97,54,100,126};
+        for(unsigned i=0;i<8;i++)if((s->modifiers^p[0])&(1u<<i))temp[used++]=(struct input_event){1,mods[i],(p[0]>>i)&1};
+        for(unsigned i=0;i<6;i++)if(s->keys[i] && !contains(p+2,s->keys[i]) && code(s->keys[i]))temp[used++]=(struct input_event){1,code(s->keys[i]),0};
+        for(unsigned i=2;i<8;i++)if(p[i] && !contains(s->keys,p[i]) && code(p[i]))temp[used++]=(struct input_event){1,code(p[i]),1};
+        if(used>32-*count)return false;
+        s->modifiers=p[0];for(unsigned i=0;i<6;i++)s->keys[i]=p[i+2];
+    }else if(protocol==2){
+        if(n<3 || n>4 || (p[0]&~7u))return false;
+        for(unsigned i=0;i<3;i++)if((s->buttons^p[0])&(1u<<i))temp[used++]=(struct input_event){1,(uint16_t)(272+i),(p[0]>>i)&1};
+        if(p[1])temp[used++]=(struct input_event){2,0,(int8_t)p[1]};
+        if(p[2])temp[used++]=(struct input_event){2,1,(int8_t)p[2]};
+        if(n==4 && p[3])temp[used++]=(struct input_event){2,8,(int8_t)p[3]};
+        if(used>32-*count)return false;
+        s->buttons=p[0];
+    }else return false;
+    for(unsigned i=0;i<used;i++)events[(*count)++]=temp[i];
+    return true;
+}

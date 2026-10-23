@@ -8,10 +8,11 @@
 | 4: CHOS Desktop/window manager/taskbar/Start | Working core; Royale widgets and multi-window usage tested; dedicated Search/Help and wallpaper file loading remain |
 | 5: six native applications | Functional bounded native apps with installed persistence and shared widgets; see desktop.md |
 | 6: graphical installer/GPT/ESP/installed boot | Dedicated full-screen blue/Royale native setup, disk boot and persistent system volume; saved computer/theme/fixed clock offset implemented; account/password/layout and graphical mode configuration unfinished |
-| 7: VMware Fusion validation | 7A/7B original EL2/GICv3 and diagnostics tested under QEMU; actual Fusion/7C device support blocked by missing target inventory/host |
+| 7: VMware Fusion validation | M7C adds automatic diagnostics and bounded original polled xHCI boot-HID tested in QEMU; actual Fusion and broader USB/interrupt support remain open |
 | 8: CHOS 0.1 | Not ready |
 
-Current ISO/results: [M7A/7B boot and interrupts](milestone-7a-b.md).
+Current ISO/results: [M7C diagnostics and USB](milestone-7c.md).
+Preserved [M7A/7B boot and interrupts](milestone-7a-b.md).
 Preserved [M6D dedicated Setup iteration](milestone-6d-setup.md).
 [Setup flow and safety](setup-environment.md). Preserved [M6D widgets/settings checkpoint](milestone-6d.md). [Saved configuration](configuration.md), [native toolkit](gui-toolkit.md). Previous visual checkpoint: [milestone 6C](milestone-6c.md). [Royale visual architecture](royale.md). Previous installer core: [milestone 6B](milestone-6b.md). Earlier foundations: [milestone 6A](milestone-6a.md). Ordinary images
 boot dedicated Setup after kernel tests. L/F3 starts Live Desktop; installed disks
@@ -25,7 +26,9 @@ not an installer or desktop persistence environment.
 
 - One CPU, EL1 or supported non-VHE EL2→EL1 entry, ACPI 2.x, GICv2/v3 and GTDT.
   No VHE/LPA2/52-bit/MMU-off/big-endian EL2 handoff, DT-only discovery, SMP,
-  GIC ITS/LPI/MSI, USB host/HID drivers or confirmed Fusion device inventory.
+  GIC ITS/LPI/MSI or confirmed Fusion device inventory. Original xHCI supports a
+  bounded polled USB2 root-port boot-HID subset only; no USB interrupts, hubs,
+  general HID reports, legacy controllers, ownership takeover or hotplug re-enumeration.
 - Eight user processes/twelve threads; private static AArch64 ELF subset, no
   dynamic linker, public arbitrary-executable spawn/wait or signals. Application
   launch selects one embedded ELF entry role. FP/SIMD traps; general registers only.
@@ -42,7 +45,7 @@ not an installer or desktop persistence environment.
 - Native handles are path based; rename/unlink invalidates old path handles. File
   calls cap transfers at 4 KiB. Notepad/GUI copy/cat cap files at 4095 bytes. Text
   editing is basic ASCII with no clipboard/undo, proportional editing or IME.
-- Virtio PCI keyboard/relative mouse only; fixed queues and counted software drops.
+- Virtio PCI and bounded xHCI USB boot keyboard/relative mouse; fixed queues and counted software drops.
   Basic US modifiers/punctuation/navigation; no Caps Lock, LEDs or keyboard layouts.
 - GOP RGB/BGR 640×480 through 1920×1200; UEFI mode selection before boot, no runtime switch/GPU acceleration/full alpha
   compositor or image-file wallpaper loader. Pointer-only damage is clipped; other
@@ -67,3 +70,8 @@ The M7A/7B sequence expands acceptance to 45 QEMU cases and 14 host programs,
 including EL2/GICv3 native installation/persistence and firmware/native hardware
 diagnostics. See the [iteration report](milestone-7a-b.md) for final evidence.
 [Account architecture](accounts-design.md) is design only; no new security claim.
+
+M7C adds a separate automatic noninteractive diagnostic ISO, read-only bounded
+report export, ACPI-SPCR PL011 logging, USB descriptor/HID/ring host tests and native
+USB-only QEMU interactions. Target Fusion remains untested. See [report](milestone-7c.md),
+[USB limits](usb.md) and [first-boot instructions](fusion-first-boot.md).

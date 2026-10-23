@@ -36,3 +36,8 @@ build/sanitized/inventory
 
 cc "${flags[@]}" tests/gic.c drivers/interrupts/gicv3.c -o build/sanitized/gic
 build/sanitized/gic
+
+cc "${flags[@]}" tests/diagnostic.c kernel/diagnostics/buffer.c -o build/sanitized/diagnostic
+build/sanitized/diagnostic
+cc "${flags[@]}" tests/usb.c drivers/usb/hid.c drivers/usb/ring.c -o build/sanitized/usb
+build/sanitized/usb

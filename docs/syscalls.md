@@ -195,3 +195,16 @@ resources are zero; storage/input fields indicate actual driver initialization,
 not mere device presence. All apps may query the immutable kernel snapshot; it
 provides diagnostics, not new device access or authentication authority. Terminal
 `hardware` shows the first eight PCI records within its bounded text history.
+
+## M7C bounded diagnostic export
+
+34 DIAGNOSTICS: x0 writable destination, x1 capacity 1..1024, x2 report byte
+offset. Returns bytes available (0 at end), -22 for invalid capacity/offset, -14
+for invalid/protected destination. The entire requested span is validated and
+zero-padded after the available bytes. Read repeatedly with increasing offsets
+until zero. Kernel storage is an append-only 16 KiB sanitized ASCII report, with
+512 bytes maximum per append; full storage discards further text. No arbitrary
+address, filesystem or device write is accepted. Original apps query and reject
+invalid spans on startup. On this single-CPU kernel, syscall/driver access is
+serialized by exception/input execution. The report contains firmware/device and
+initialization status, never raw memory, password input or HID key contents.

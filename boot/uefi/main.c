@@ -1,6 +1,7 @@
 #include "efi.h"
 #include "boot.h"
 #include "display_mode.h"
+#include <stdbool.h>
 static const struct guid acpi_guid={0x8868e871,0xe4f1,0x11d3,{0xbc,0x22,0,0x80,0xc7,0x3c,0x88,0x81}};
 static struct guid path_guid={0x09576e91,0x6d3f,0x11d2,{0x8e,0x39,0,0xa0,0xc9,0x69,0x72,0x3b}};
 static struct guid loaded_guid={0x5b1b31a1,0x9562,0x11d2,{0x8e,0x3f,0,0xa0,0xc9,0x69,0x72,0x3b}};
@@ -80,6 +81,13 @@ status efi_main(handle image,struct system_table *st) {
         for(unsigned i=0;equal && i<sizeof(expected)-1;i++) if(content[i]!=expected[i]) equal=0;
         if(equal) test_flags=1;
     }
+    if(!EFI_ERROR(root->open(root,&config,(char16 *)u"\\CHOS\\DIAG.CFG",1,0))) {
+        char content[32];uint64_t bytes=sizeof(content);
+        status cs=config->read(config,&bytes,content);config->close(config);
+        const char expected[]="CHOS DIAGNOSTICS V1";bool equal=!EFI_ERROR(cs) && bytes==sizeof(expected)-1;
+        for(unsigned i=0;equal && i<sizeof(expected)-1;i++)if(content[i]!=expected[i])equal=false;
+        if(equal && !test_flags)test_flags=2;
+    }
     uint32_t requested_w=1024,requested_h=768;
     if(!EFI_ERROR(root->open(root,&config,(char16 *)u"\\CHOS\\DISPLAY.CFG",1,0))) {
         char content[16];uint64_t bytes=sizeof(content);
@@ -94,7 +102,15 @@ status efi_main(handle image,struct system_table *st) {
     if (EFI_ERROR(s)) return fail(st,(char16 *)u"CHOS: boot information allocation failed\r\n",s);
     for (uint64_t i=0;i<sizeof(*bi);i++) ((uint8_t *)bi)[i]=0;
     bi->magic=CHOS_BOOT_MAGIC; bi->reserved=test_flags;
+    bi->firmware_revision=st->firmware_revision;bi->uefi_revision=st->header.revision;
     if(st->vendor)for(unsigned i=0;i<63 && st->vendor[i];i++)bi->firmware_vendor[i]=st->vendor[i]>=32 && st->vendor[i]<127?(char)st->vendor[i]:'?';
+    char16 firmware[80];unsigned fw=0;
+    const char prefix[]="CHOS: firmware ";for(unsigned i=0;prefix[i];i++)firmware[fw++]=(char16)prefix[i];
+    for(unsigned i=0;bi->firmware_vendor[i] && fw<76;i++)firmware[fw++]=(char16)bi->firmware_vendor[i];
+    firmware[fw++]=13;firmware[fw++]=10;firmware[fw]=0;st->console_out->output(st->console_out,firmware);
+    char16 revisions[]=u"CHOS: firmware revision 00000000 UEFI 00000000\r\n";
+    for(unsigned i=0;i<8;i++){revisions[24+i]=(char16)"0123456789abcdef"[(bi->firmware_revision>>((7-i)*4))&15];revisions[38+i]=(char16)"0123456789abcdef"[(bi->uefi_revision>>((7-i)*4))&15];}
+    st->console_out->output(st->console_out,revisions);
     pci_inventory(st,bi);
     void *pristine=0;
     s=bs->allocate_pool(2,file_size,&pristine);
@@ -128,6 +144,7 @@ status efi_main(handle image,struct system_table *st) {
             if(((const uint8_t *)&entries[i].guid)[j]!=((const uint8_t *)&acpi_guid)[j]) equal=0;
         if(equal) bi->rsdp=(uint64_t)(uintptr_t)entries[i].table;
     }
+    st->console_out->output(st->console_out,bi->rsdp?(char16 *)u"CHOS: ACPI 2.x RSDP present\r\n":(char16 *)u"CHOS: ACPI 2.x RSDP MISSING\r\n");
     struct gop *gop=0;
     s=bs->locate_protocol(&gop_guid,0,(void **)&gop);
     if (EFI_ERROR(s)||!gop||!gop->mode||!gop->mode->info)

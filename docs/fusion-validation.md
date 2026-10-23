@@ -6,7 +6,9 @@ successful installation record. Keep evidence per gate; stop at failed prerequis
 1. Record Apple SoC, macOS, exact Fusion version/build, firmware and VM CPU/memory,
    disk/controller, display/input settings. Check that release's supported custom/
    other ARM64 UEFI workflow. Do not select x86 or assume another version's UI.
-2. Download [M7A/7B ISO](../artifacts/milestone-7a-b/CHOS-ARM64.iso) using GitHub
+2. First run the [non-destructive diagnostic evaluation](fusion-first-boot.md), which
+   requires no input or disk. For later installation download
+   [M7C normal ISO](../artifacts/milestone-7c/CHOS-ARM64.iso) using GitHub
    **Download raw file**; compare adjacent SHA256SUMS. Preserve M6D. Create a new
    disposable ARM64 VM, one CPU, 1 GiB RAM, Secure Boot off. Attach connected optical
    media and a disposable disk at least 1 GiB, selecting NVMe if actually available.
@@ -24,8 +26,8 @@ successful installation record. Keep evidence per gate; stop at failed prerequis
 6. Capture actual ACPI/MADT/GTDT resources, boot MPIDR, GIC revision, distributor/
    redistributor and timer flags/PPI. Verify timer scheduling and exception/protection
    self-tests. Capture firmware diagnostics if CHOS cannot reach its Terminal.
-7. Confirm blue Setup and keyboard arrows/Enter/Back/F3/Live. If USB input is
-   unsupported, mark **blocked**, capture controller IDs/class/programming interface
+7. Confirm blue Setup and keyboard arrows/Enter/Back/F3/Live. If the actual USB controller/protocol is outside the tested polled xHCI
+   boot-HID subset, mark **blocked**, capture controller IDs/class/programming interface
    and USB/HID descriptors. A static visible Setup screen is not usable installation;
    injected QMP input is not a Fusion input driver.
 8. Choose L/Live, run Terminal `hardware`, capture firmware/EL/GIC/timer/input/NVMe/

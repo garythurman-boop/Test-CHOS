@@ -20,6 +20,7 @@ struct chos_boot_info {
     char firmware_vendor[64];
     uint32_t pci_count,pci_total;
     struct chos_pci_device pci[32];
+    uint32_t firmware_revision,uefi_revision;
 };
 _Static_assert(offsetof(struct chos_boot_info,entry_el)==144,"assembly boot entry offset");
 _Static_assert(offsetof(struct chos_boot_info,entry_error)==148,"assembly boot error offset");

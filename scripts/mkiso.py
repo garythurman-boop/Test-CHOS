@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Create a deterministic FAT EFI El Torito image; never opens host block devices."""
 import datetime
+import fcntl
 import os
 from pathlib import Path
 import shutil
@@ -13,6 +14,9 @@ def run(*args, **kwargs):
     subprocess.run(list(map(str, args)), check=True, **kwargs)
 
 def main():
+    BUILD.mkdir(exist_ok=True)
+    lock=(BUILD/'iso-build.lock').open('w')
+    fcntl.flock(lock,fcntl.LOCK_EX)
     epoch = int(os.environ.get('SOURCE_DATE_EPOCH', '1767225600'))
     stamp = datetime.datetime.fromtimestamp(epoch, datetime.timezone.utc).strftime('%Y%m%d%H%M%S00')
     stage = BUILD / 'iso-root'
@@ -34,6 +38,11 @@ def main():
         config=BUILD/'storage-test.cfg'
         config.write_text('CHOS STORAGE TEST V1')
         inputs.append((config,'::/CHOS/TEST.CFG'))
+    if os.environ.get('CHOS_DIAGNOSTIC'):
+        if os.environ.get('CHOS_TEST_STORAGE'): raise ValueError('Diagnostic and destructive storage-test modes cannot be combined')
+        config=BUILD/'diagnostic.cfg'
+        config.write_text('CHOS DIAGNOSTICS V1')
+        inputs.append((config,'::/CHOS/DIAG.CFG'))
     if os.environ.get('CHOS_DISPLAY_MODE'):
         config=BUILD/'display.cfg'
         config.write_text(os.environ['CHOS_DISPLAY_MODE'])
@@ -68,7 +77,7 @@ def main():
                 directory(root_offset+root_bytes+(cluster-2)*cluster_bytes, cluster_bytes)
     directory(root_offset,root_bytes)
     image.write_bytes(data)
-    output = BUILD / ('CHOS-STORAGE-TEST.iso' if os.environ.get('CHOS_TEST_STORAGE') else 'CHOS-missing-kernel.iso' if os.environ.get('CHOS_TEST_MISSING_KERNEL') else 'CHOS-ARM64.iso')
+    output = BUILD / ('CHOS-ARM64-M7C.iso' if os.environ.get('CHOS_DIAGNOSTIC') else 'CHOS-STORAGE-TEST.iso' if os.environ.get('CHOS_TEST_STORAGE') else 'CHOS-missing-kernel.iso' if os.environ.get('CHOS_TEST_MISSING_KERNEL') else 'CHOS-ARM64.iso')
     run('xorriso', '-as', 'mkisofs', '-quiet', '-V', 'CHOS_ARM64',
         '--modification-date='+stamp, '--set_all_file_dates', stamp,
         '-c', 'boot/boot.cat', '-e', 'boot/efi.img', '-no-emul-boot',

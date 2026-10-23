@@ -2,7 +2,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 mkdir -p build
-make test-memory test-elf test-filesystem test-input test-desktop test-setup test-graphics test-config test-gui test-inventory test-gic
+make test-memory test-elf test-filesystem test-input test-desktop test-setup test-graphics test-config test-gui test-inventory test-gic test-usb test-diagnostic
 make iso
 sha256sum build/CHOS-ARM64.iso > build/hash-1
 make iso
@@ -46,4 +46,12 @@ python3 tests/settings.py
 python3 tests/volume_error.py
 python3 tests/setup_mode.py
 python3 tests/display_modes.py
-printf 'Forty-five QEMU cases, fourteen host programs (both ELF payloads checked), both ISO repeatability checks and independent disk verification passed.\n'
+make diagnostic-iso
+sha256sum build/CHOS-ARM64-M7C.iso > build/diagnostic-hash-1
+make diagnostic-iso
+sha256sum build/CHOS-ARM64-M7C.iso > build/diagnostic-hash-2
+cmp build/diagnostic-hash-1 build/diagnostic-hash-2
+python3 tests/diagnostic_boot.py
+python3 tests/usb_boot.py
+python3 tests/usb_failures.py
+printf 'Fifty QEMU cases, sixteen host programs (both ELF payloads checked), both ISO repeatability checks and independent disk verification passed.\n'

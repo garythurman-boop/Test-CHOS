@@ -2,6 +2,7 @@
 #include "console.h"
 #include "scheduler.h"
 #include "process.h"
+#include "diagnostic.h"
 extern void arch_break_test(void);
 extern uint64_t arch_read_test(uint64_t);
 extern void arch_write_test(uint64_t);
@@ -11,6 +12,7 @@ static volatile uint64_t expected_pc,expected_far,expected_class,observed;
 static volatile bool write_probe;
 _Noreturn void panic(const char *message) {
     __asm__ volatile("msr daifset, #15":::"memory");
+    diagnostic_log(message);
     console_rect(0,72,640,408,0x300808);
     console_text(32,100,"CHOS KERNEL PANIC",0xff8080);
     console_text(32,132,message,0xffffff);

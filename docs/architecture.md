@@ -226,3 +226,20 @@ Native Setup uses the shared integer-only binary-size formatter for capacities,
 partitions, logical sectors and real byte progress. No geometry or theme redesign.
 Account authority/entropy/hash/session prerequisites are specified separately in
 [accounts-design.md](accounts-design.md); none are implied by this checkpoint.
+
+## M7C automatic discovery and USB input
+
+The original loader retains firmware and UEFI revisions and recognizes a bounded
+optical DIAG.CFG marker. The diagnostic variant uses the same kernel with explicit
+no-installer mode; it rotates a framebuffer report without input and does not
+mount/format the system filesystem or export to disk. Native log storage is bounded
+and read-only to apps. ACPI inventory validates table extents/checksums; PL011
+UART output uses only a validated SPCR MMIO address mapped by CHOS, with bounded
+transmit waits. There are no post-exit firmware protocol calls or guessed UARTs.
+
+Original xHCI/ring/boot-HID modules share PMM/MMIO/cache/event facilities and feed
+the existing input FIFO. Eight interrupt-IN receive TDs per device tolerate GUI
+rendering delays; each has a distinct bounded DMA region. Descriptor publication
+uses release fences, completion consumption acquire fences, and native cache/DMA
+barriers. IRQ routing, broad device support and recovery remain explicit limits.
+See [USB architecture](usb.md) and [M7C](milestone-7c.md).

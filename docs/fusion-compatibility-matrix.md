@@ -1,4 +1,4 @@
-# ARM64 compatibility matrix — M7A/7B
+# ARM64 compatibility matrix — M7C checkpoint
 
 **No Fusion test has been performed.** No Apple Silicon/Fusion host is attached.
 “Tested” means the recorded QEMU AArch64 UEFI setup or portable host tests.
@@ -12,7 +12,7 @@ The target Fusion build, custom ARM64 workflow and actual hardware remain unknow
 | Timer | GTDT non-secure physical PPI, CNTFRQ, nominal 100 Hz | Actual PPI/flags and physical timer permission | QEMU pass at both EL handoffs | Protection, preemption, IPC and input checks on all four EL/GIC combinations |
 | ACPI/CPU topology | Checksummed RSDP/XSDT/MADT/GTDT; MCFG segment 0/bus 0; boot CPU only | Actual tables, PSCI conduit and CPU affinity | QEMU pass; no DT-only or SMP | ACPI-off refusal; capture target tables before modifying discovery |
 | Storage | Original polling NVMe, one controller/namespace, 512/4096 sectors, GPT/FAT32/CHFS | Actual IDs/class, BARs, namespace, DMA and geometry | QEMU install/persistence pass; Fusion unknown | Capture PCI inventory, then test actual controller; SCSI/SATA absent |
-| Input | Modern Virtio PCI keyboard and relative mouse | Actual USB controller(s), PCI class/programming interface, topology and HID descriptors, or other interface | Virtio tested; USB host/HID absent; Fusion unknown | Inventory actual hardware first; do not assume xHCI is the only required controller |
+| Input | Virtio PCI and original polled xHCI USB2 boot keyboard/relative mouse | Actual USB controller(s), PCI class/programming interface, topology and HID descriptors, or other interface | Both tested only in QEMU; Fusion unknown; USB interrupts/hubs/general HID/other controllers absent | Capture actual target IDs and descriptors; xHCI support is a subset, not an assumed Fusion requirement |
 | Display | GOP RGB/BGR linear framebuffer, pre-exit mode choice, original renderer | Actual format/stride/mode and post-exit mapping lifetime | QEMU pass; Fusion unknown | Test target pointer alignment, clipping, redraw and framebuffer stability; no VMware GPU driver claim |
 | Network | No driver/stack | Actual adapter IDs/protocol | Unsupported | Later after boot/input/storage stability |
 | Installation | Confirmed native GPT/ESP/CHFS writer, verification, reset, disk-only persistence | All target hardware prerequisites plus optical exclusion/disk identity | QEMU pass on both sectors and EL1/GICv2, EL2/GICv3 | Separate full Fusion checklist; QEMU cannot satisfy it |
@@ -48,9 +48,16 @@ retains at most 32 records and frees the handle buffer before exit. Firmware ven
 and entry EL are retained. The kernel adds actual current EL, ACPI GIC resources,
 selected redistributor, timer, initialized input/storage and GOP geometry. Terminal
 `hardware` shows a bounded snapshot through syscall 33 (first eight PCI entries in
-visible history; 32 in the ABI). This is instrumentation, not a USB/Fusion driver.
+visible history; 32 in the ABI). M7C adds a separate automatic diagnostic ISO, immutable 16 KiB read-only log export,
+firmware/UEFI revisions, ACPI table mask, driver status and PL011 UART discovery
+from SPCR. The independent bounded USB driver does not establish Fusion support.
 
 The QEMU probe compares firmware PCI IDs with independent QMP inventory and verifies
 an unconfirmed disk remains byte-identical. Full target ACPI tables and USB/HID
 reports still need firmware diagnostics; this snapshot is not a complete dump tool.
-See [manual checklist](fusion-validation.md) and [iteration report](milestone-7a-b.md).
+See [manual checklist](fusion-validation.md) and [iteration report](milestone-7c.md).
+
+M7C also tests a no-input VM with USB and unsupported storage inventory and an
+unchanged disposable disk, USB-only native editing/save/reopen/mouse/ring-wrap/
+disconnect, zero-port xHCI refusal, non-boot tablet rejection and OHCI inventory.
+See [USB subset](usb.md) and [input-free Fusion package instructions](fusion-first-boot.md).

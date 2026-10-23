@@ -11,6 +11,8 @@ struct platform {
 };
 void platform_record(const struct chos_boot_info *,const struct platform *,unsigned,bool);
 const struct chos_hardware *platform_hardware(void);
+bool platform_tables(const struct chos_boot_info *,uint32_t *,unsigned *);
+bool platform_serial(const struct chos_boot_info *,uint64_t *);
 bool platform_psci(const struct chos_boot_info *,bool *hvc);
 int64_t platform_power(const struct chos_boot_info *,unsigned);
 bool platform_pcie(const struct chos_boot_info *,uint64_t *base);
