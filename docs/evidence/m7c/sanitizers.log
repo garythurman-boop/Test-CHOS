@@ -1,0 +1,17 @@
+PASS: PMM reserved ranges, fragmentation, exhaustion, overflow, stride, >4GiB; heap alignment, integrity, invalid/double free and coalescing
+PASS: ACPI discovery, checksums, MPIDR selection, malformed entries, IRQ ranges, out-of-map pointers, reserved/MMIO exclusion and oversized RSDP
+PASS: CHFS directories, create/read/write/rename/delete, cross-block reads, remount, data CRC, metadata fallback, torn-write/flush failure recovery and capacity limits
+PASS: input decoding, key releases, signed motion/clamping, buttons, FIFO ordering and bounded overflow
+Desktop ownership, lifetime, focus, move/resize, controls, keys, queue saturation and clipping passed
+PASS: actual AArch64 ELF, truncated headers, architecture/type/endianness, overflow, W+X, entry bounds, overlapping segments and metadata mutation sweep
+PASS: actual AArch64 ELF, truncated headers, architecture/type/endianness, overflow, W+X, entry bounds, overlapping segments and metadata mutation sweep
+FAT32 bounds, confirmation, 512/4096 sectors, mirrored metadata, payload integrity, read-only verification and write/flush errors passed
+GPT planning, unconfirmed/changed-geometry refusal, 512/4096 sectors, write/flush errors and read-back verification passed
+Setup rejects self/unknown boot media, missing authority, wrong disk identity, malformed confirmation and invalid names
+Royale font validation, grayscale coverage, proportional metrics, roundrects, blend, clipped blit and firmware mode policy passed
+Configuration version/CRC/ranges/clock wrap and failed atomic save/reopen passed
+GUI press/release cancellation, disabled controls, focus traversal, bounded editing, scrollbar drag and registry limits passed
+Read-only inventory, GPT CRC/name/capacity bounds, read failures and exact 512/4096 layout capacity thresholds passed
+GICv3 affinity/stride/Last, direct GICC frame, SPI routing, PPI masking/priority/trigger, invalid resources and RWP/wake timeouts passed
+Diagnostic append/export sanitation, line cap, offset/capacity bounds and saturation passed
+USB rings cycle/link/event wrap/DMA bounds; boot descriptor bounds/type/endpoint rejection, HID key/release/modifier/rollover/duplicates, signed mouse/buttons/wheel and event-capacity atomicity passed

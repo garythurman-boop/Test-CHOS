@@ -48,7 +48,7 @@ retains at most 32 records and frees the handle buffer before exit. Firmware ven
 and entry EL are retained. The kernel adds actual current EL, ACPI GIC resources,
 selected redistributor, timer, initialized input/storage and GOP geometry. Terminal
 `hardware` shows a bounded snapshot through syscall 33 (first eight PCI entries in
-visible history; 32 in the ABI). M7C adds a separate automatic diagnostic ISO, immutable 16 KiB read-only log export,
+visible history; 32 in the ABI). M7C adds a separate automatic diagnostic ISO, bounded 16 KiB read-only log export,
 firmware/UEFI revisions, ACPI table mask, driver status and PL011 UART discovery
 from SPCR. The independent bounded USB driver does not establish Fusion support.
 

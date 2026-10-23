@@ -12,7 +12,8 @@ establish Fusion's hardware or compatibility.
 
 M7C adds input-free diagnostics and a bounded original polled xHCI USB2 boot-HID
 path tested only in QEMU. USB interrupts, other controllers, hubs and general HID
-remain unsupported. [First evaluation](fusion-first-boot.md) requires no installation. Other tested input is Virtio PCI; storage is one bus-0 NVMe
+remain unsupported. [First evaluation](fusion-first-boot.md) requires no
+installation. Other tested input is Virtio PCI; storage is one bus-0 NVMe
 controller/namespace; display uses GOP RGB/BGR. Obtain actual target IDs/descriptors
 and the release's custom ARM64 optical workflow before claiming support. New
 read-only firmware PCI inventory and Terminal `hardware` help capture evidence.

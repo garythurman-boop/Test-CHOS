@@ -1,0 +1,46 @@
+{
+  "passed": true,
+  "scope": "Build-time disk construction; not guest installation",
+  "cases": [
+    {
+      "passed": true,
+      "sector_bytes": 512,
+      "disk_image": "/src/build/fat32-test-98302u9p/chos-512.img",
+      "sha256": "d6db87b134044988607440b5b3cc8ca54894a7e0954d98f61df1d6ff452ed76e",
+      "files": {
+        "EFI/BOOT/BOOTAA64.EFI": "3c822ef296c974b26f2df4fa6c7bee996a9945b20c8f55abc371871faf54187d",
+        "CHOS/KERNEL.BIN": "3320b1975895beb3cd627d90dc1feba50bbf475a57c02535cf927ba76ec83c5a"
+      },
+      "checks": [
+        "BPB and backup",
+        "FSInfo and backup",
+        "mirrored FATs",
+        "bounded non-cyclic non-crosslinked cluster chains",
+        "directory tree",
+        "exact original EFI/kernel bytes and zero padding",
+        "exclusive new-image creation",
+        "identical second fresh build"
+      ]
+    },
+    {
+      "passed": true,
+      "sector_bytes": 4096,
+      "disk_image": "/src/build/fat32-test-98302u9p/chos-4096.img",
+      "sha256": "21d54081ad9f1da750179ac7fddbc9001bae072597e99938b675f917f0e9eab9",
+      "files": {
+        "EFI/BOOT/BOOTAA64.EFI": "3c822ef296c974b26f2df4fa6c7bee996a9945b20c8f55abc371871faf54187d",
+        "CHOS/KERNEL.BIN": "3320b1975895beb3cd627d90dc1feba50bbf475a57c02535cf927ba76ec83c5a"
+      },
+      "checks": [
+        "BPB and backup",
+        "FSInfo and backup",
+        "mirrored FATs",
+        "bounded non-cyclic non-crosslinked cluster chains",
+        "directory tree",
+        "exact original EFI/kernel bytes and zero padding",
+        "exclusive new-image creation",
+        "identical second fresh build"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "passed": true,
+  "workspace_disk": "/src/build/storage-run-_j7avszz/storage-test.img",
+  "cold_boots": 3,
+  "generation": 18,
+  "disk_sha256": "78f2562d006caff43c1edb632c772b21706e594da7c8e56767bb15299a397ab7",
+  "data_checks": "independent Python little-endian parser and zlib CRC32",
+  "refused_identity_unchanged": true,
+  "normal_iso_disk_unchanged": true,
+  "third_boot_unchanged": true,
+  "files": {
+    "/documents/check.txt": "6ff375f6141946b3426550d1109f788d9be630c5ce88b19ad6b965d2ccc8f88b",
+    "/state": "d86e8112f3c4c4442126f8e9f44f16867da487f29052bf91b810457db34209a4",
+    "/user/renamed.txt": "ecff8c1d3417bff1e9a55d70d3496048fb09a73e9ca2fd2dd83a9b328071f593"
+  }
+}
