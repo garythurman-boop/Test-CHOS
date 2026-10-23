@@ -153,3 +153,5 @@ shortcuts remain available. Networking, SMP and release-0.1 readiness remain ope
 Next: continue installer configuration and recovery with the shared controls,
 resolve remaining menu/toolkit behaviors, and add target hardware support before
 actual Fusion validation. Preserve the approved visual design and native app tests.
+
+Source-package verification: a fresh `git archive` of the complete tracked source was built in an empty build directory. The resulting ISO SHA-256 matches the published image (`3e78748a915480308645759917aa6e9d2ffcb3492d40e968baf4456c60077923`). GUI, configuration, both ELF payload and desktop host tests passed in that clean build. See [source-package-build.log](evidence/m6d/source-package-build.log).
