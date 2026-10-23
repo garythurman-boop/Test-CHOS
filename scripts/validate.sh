@@ -2,7 +2,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 mkdir -p build
-make test-memory test-elf test-filesystem
+make test-memory test-elf test-filesystem test-input
 make iso
 sha256sum build/CHOS-ARM64.iso > build/hash-1
 make iso
@@ -26,4 +26,4 @@ sha256sum build/CHOS-STORAGE-TEST.iso > build/storage-hash-2
 cmp build/storage-hash-1 build/storage-hash-2
 python3 tests/storage.py
 make iso
-printf 'Nine QEMU cases, four host programs, both ISO repeatability checks and independent disk verification passed.\n'
+printf 'Nine QEMU cases, five host programs, both ISO repeatability checks and independent disk verification passed.\n'

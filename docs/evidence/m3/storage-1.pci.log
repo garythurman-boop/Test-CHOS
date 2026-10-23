@@ -1,0 +1,32 @@
+  Bus  0, device   0, function 0:
+    Host bridge: PCI device 1b36:0008
+      PCI subsystem 1af4:1100
+      id ""
+  Bus  0, device   1, function 0:
+    Keyboard: PCI device 1af4:1052
+      PCI subsystem 1af4:1100
+      IRQ 255, pin A
+      BAR1: 32 bit memory at 0x10002000 [0x10002fff]
+      BAR4: 64 bit prefetchable memory at 0x8000000000 [0x8000003fff]
+      id ""
+  Bus  0, device   2, function 0:
+    Mouse: PCI device 1af4:1052
+      PCI subsystem 1af4:1100
+      IRQ 255, pin A
+      BAR1: 32 bit memory at 0x10001000 [0x10001fff]
+      BAR4: 64 bit prefetchable memory at 0x8000004000 [0x8000007fff]
+      id ""
+  Bus  0, device   3, function 0:
+    SCSI controller: PCI device 1af4:1004
+      PCI subsystem 1af4:0008
+      IRQ 255, pin A
+      BAR0: I/O at 0x0000 [0x003f]
+      BAR1: 32 bit memory (not mapped)
+      BAR4: 64 bit prefetchable memory (not mapped)
+      id ""
+  Bus  0, device   4, function 0:
+    Class 0264: PCI device 1b36:0010
+      PCI subsystem 1af4:1100
+      IRQ 255, pin A
+      BAR0: 64 bit memory at 0x800000c000 [0x800000ffff]
+      id ""

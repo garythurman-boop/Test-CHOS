@@ -1,4 +1,4 @@
-# CHOS architecture: boot and Milestone 2A
+# CHOS architecture: boot and Milestones 2–3
 
 ## Boot contract
 
@@ -42,9 +42,9 @@ requires interrupts masked if used after scheduling starts.
 A bounded 64 KiB heap uses aligned headers, splitting, exact-pointer free checks,
 and coalescing. It does not expand or tolerate corrupted kernel-owned metadata.
 
-CHOS installs its own 39-bit identity address space: 4 KiB normal-RAM pages,
+CHOS installs its own 48-bit identity address space: 4 KiB normal-RAM pages,
 EL1 read-only/executable text, read-only/NX rodata, and read-write/NX data/heap.
-All pages deny EL0 access. MMIO framebuffer/GIC use Device-nGnRE. WXN is enabled;
+All kernel-template pages deny EL0 access. MMIO framebuffer/GIC use Device-nGnRE. WXN is enabled;
 TTBR1 is disabled. Page-table storage reserves 4 MiB from the physical allocator.
 Memory types/identity mappings are preserved across a short MMU-off trampoline;
 table cache cleans and TLB/barrier operations precede use. QEMU does not validate
@@ -54,7 +54,7 @@ Null, bootstrap stack guard and thread stack guard pages are absent. Normal RAM
 uses page mappings before activation, so adding guards never splits a live mapping
 covering page-table storage. Live block splitting is deliberately rejected until
 an alias-based, break-before-make path exists. Current mappings and pool are bounded;
-this is not yet a general virtual-memory or per-process address-space API.
+private process spaces are bounded, with no general mmap/demand-paging API.
 
 ## Hardware discovery, timer and scheduling
 
@@ -70,18 +70,46 @@ Group-1 acknowledgement in the unified view. The physical generic timer is rearm
 at nominal 100 Hz based on CNTFRQ_EL0. Rearming from the current counter allows
 latency drift; no precise wall-clock or idle-CPU claim is made.
 
-The scheduler supports up to eight kernel threads including bootstrap. Each added
+The scheduler supports up to eight threads including bootstrap and EL0 tasks. Each added
 thread gets two usable stack pages and one guard. IRQ frames carry full integer
 contexts and exception return restores the selected thread. Highest numeric
 priority wins; equal priorities rotate. Strict priority may starve lower work.
 A private EL1 SVC immediate terminates a returning kernel thread; it is not a public
-user syscall ABI. Exited stacks/slots remain retained, pending safe deferred reaping.
+user syscall ABI. Exited stacks/slots are reaped after switching away, with guard mappings restored before page reuse.
 FP/SIMD context is absent; every kernel C file uses general registers only.
+
+## Processes and services
+
+The static ELF validator rejects malformed/overflowing headers, overlapping pages,
+non-AArch64/non-little-endian files, dynamic/interpreter segments and writable
+executable mappings. Private process roots clone kernel L0 and the low L1 before
+adding user L2/L3 mappings. The same user virtual addresses resolve to different
+physical pages. Shared kernel mappings retain supervisor permissions. Context
+switches update TTBR0 and invalidate the TLB without ASIDs; this is correct but
+not optimized. User-copy routines validate the whole span before using kernel
+physical aliases. Code/BSS/stacks are zero-initialized; heap allocations are bounded.
+
+Public SVC #0 provides the versioned ABI in syscalls.md. Process management remains
+kernel-controlled plus exit/PID/yield calls. Mailboxes are bounded nonblocking
+sender/value queues. Unknown EL0 faults terminate only that process; the supervisor
+reaps private pages/tables and its guarded kernel stack after switching away.
+EL0 FP/SIMD is explicitly trapped until vector state is saved per task.
+
+NVMe PCI discovery uses MCFG/bus-0 enumeration and firmware-assigned BARs, including
+addresses above 512 GiB. Four-level page tables replaced M2's three-level layout
+for that hardware. The original driver uses split admin/I/O queues and cache
+maintenance for bounded DMA, with flushes before/after COW metadata commits.
+See storage.md for the CHFS wire format, file APIs and safety gates.
+
+Modern Virtio PCI input negotiates VERSION_1, validates capability chains and
+common/notify/ISR ranges, posts device-writable event buffers and validates used
+indices/completion IDs/lengths before decoding. Two independent input queues feed
+a bounded raw event FIFO and pointer/key state. The idle loop polls and draws a
+small original cursor and last uppercase character. USB/desktop work is not implied.
 
 ## Next boundary
 
-Milestone 2B must add a strict AArch64 ELF64 subset, EL0 entry, per-process mappings,
-user-pointer validation, documented public syscalls, process cleanup and basic IPC.
-Files/handles, processes, mappings, console/graphics, time and IPC remain proposed
-syscall families, with no implemented public numbers yet. No user process currently
-runs. Storage and persistent filesystem support come after this foundation.
+Milestone 4 requires an original window/compositor protocol, per-application event
+routing and bounded graphics access, followed by launcher/taskbar and native apps.
+GPT/ESP, FAT and installation remain separate later work. No existing OS kernel,
+filesystem, GUI framework or input stack is linked into CHOS.

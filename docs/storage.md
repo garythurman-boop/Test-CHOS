@@ -45,7 +45,9 @@ there is no hotplug, NCQ concurrency, PRP lists, MSI-X or controller error recov
 Initial failed device setup may retain allocated queue pages until reboot.
 
 This is a raw test volume, with no GPT, ESP, FAT driver or installed-disk boot.
-Storage is not mounted in the normal diagnostic ISO. Fusion NVMe, ACPI topology,
-DMA coherency and input remain unverified. QEMU is the evidence source, not a
+Storage is not mounted in the normal diagnostic ISO. Fusion NVMe, ACPI topology and DMA coherency remain unverified. Input support
+added after this checkpoint is Virtio PCI keyboard/mouse for QEMU, not Fusion USB. QEMU is the evidence source, not a
 substitute for Fusion testing. Exact logs/screenshots/results: evidence/m3a/.
 Reproduce: ./scripts/container.sh bash scripts/validate.sh.
+
+Current combined sequence evidence is in milestone-3.md and evidence/m3/.

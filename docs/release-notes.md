@@ -1,3 +1,20 @@
+# CHOS milestones 2 core and 3 development sequence
+
+Milestone 2 adds isolated static ELF processes, public syscalls, IPC, memory-fault
+termination and safe context/page reclamation. Milestone 3 adds NVMe, original
+CHFS persistent files and native file handles, then original Virtio PCI keyboard/
+relative mouse queues, bounded event delivery and cursor/character feedback.
+
+Validated on QEMU ARM64 UEFI at 512 MiB/1 GiB; actual events and three fresh-VM
+storage boots are checked. Both normal and specialized test ISO builds are
+repeatable in the recorded toolchain. See milestone-3.md for final evidence.
+
+Ordinary ISO: no disk writes. Specialized storage ISO: explicit boot opt-in plus
+exact disposable-device identity. No installer, GPT/ESP, installed boot, desktop,
+applications or Fusion compatibility claim. CHOS 0.1 is not released.
+
+---
+
 # CHOS development milestone 2A
 
 Adds original exception vectors and fault reporting, bitmap physical allocator,

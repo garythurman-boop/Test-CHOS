@@ -12,7 +12,7 @@ build/boot.obj: boot/uefi/main.c boot/uefi/efi.h include/boot.h | build
 	$(CC) $(CFLAGS) --target=aarch64-pc-windows-msvc -c $< -o $@
 build/BOOTAA64.EFI: build/boot.obj
 	lld-link /subsystem:efi_application /entry:efi_main /nodefaultlib /machine:arm64 /timestamp:0 /out:$@ $<
-KSOURCES := filesystem/vfs.c filesystem/chfs.c drivers/storage/nvme.c kernel/storage_test.c kernel/runtime.c kernel/main.c kernel/console.c kernel/process/elf.c kernel/process/process.c kernel/syscall/syscall.c kernel/arch/arm64/acpi.c kernel/memory/physical.c kernel/memory/heap.c kernel/memory/virtual.c kernel/interrupts/exception.c kernel/scheduler/scheduler.c drivers/interrupts/gicv2_timer.c
+KSOURCES := drivers/input/virtio.c drivers/input/events.c filesystem/vfs.c filesystem/chfs.c drivers/storage/nvme.c kernel/storage_test.c kernel/runtime.c kernel/main.c kernel/console.c kernel/process/elf.c kernel/process/process.c kernel/syscall/syscall.c kernel/arch/arm64/acpi.c kernel/memory/physical.c kernel/memory/heap.c kernel/memory/virtual.c kernel/interrupts/exception.c kernel/scheduler/scheduler.c drivers/interrupts/gicv2_timer.c
 KASM := kernel/arch/arm64/entry.S kernel/arch/arm64/vectors.S kernel/arch/arm64/mmu.S kernel/arch/arm64/test_worker.S kernel/process/image.S
 KOBJECTS := $(patsubst %.c,build/%.o,$(KSOURCES)) $(patsubst %.S,build/%.o,$(KASM))
 build/%.o: %.c $(wildcard include/*.h) Makefile
@@ -55,3 +55,8 @@ test-elf: build/init.elf
 test-filesystem: | build
 	$(CC) -std=c11 -Wall -Wextra -Werror -Iinclude tests/filesystem.c filesystem/chfs.c -o build/test-filesystem
 	./build/test-filesystem
+
+.PHONY: test-input
+test-input: | build
+	$(CC) -std=c11 -Wall -Wextra -Werror -Iinclude tests/input.c drivers/input/events.c -o build/test-input
+	./build/test-input

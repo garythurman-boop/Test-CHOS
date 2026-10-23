@@ -1,0 +1,2 @@
+rom: file vgabios-ramfb.bin   : error Failed to open file “vgabios-ramfb.bin”: No such file or directory
+qemu-system-aarch64: terminating on signal 15 from pid 88 (python3)

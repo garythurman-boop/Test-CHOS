@@ -23,6 +23,9 @@ int user_main(uint64_t role,uint64_t peer) {
         CHECK(call(SYS_MKDIR,(uintptr_t)"/user",0)==0);
         int64_t fd=call(SYS_OPEN,(uintptr_t)"/user/note.txt",15);
         CHECK(fd>=3);
+        CHECK(file_call(SYS_FWRITE,(uint64_t)fd,0,10)==-14 && call(SYS_SIZE,(uint64_t)fd,0)==0);
+        CHECK(call(SYS_SEEK,(uint64_t)fd,UINT64_MAX)==-22);
+        CHECK(call(SYS_LIST,0,0)==-14);
         uint8_t *data=(void *)(uintptr_t)call(SYS_ALLOC,2,0);
         CHECK((int64_t)(uintptr_t)data>0);
         for(unsigned i=0;i<8192;i++) data[i]=(uint8_t)(i^0x9b);
@@ -41,6 +44,10 @@ int user_main(uint64_t role,uint64_t peer) {
         CHECK(fd>=3 && call(SYS_SIZE,(uint64_t)fd,0)==8192 && call(SYS_CLOSE,(uint64_t)fd,0)==0);
         struct chos_dirent entry; bool found=false;
         for(unsigned i=0;i<40;i++) if(call(SYS_LIST,i,(uintptr_t)&entry)==0 && entry.size==8192 && entry.kind==1) found=true;
+        int64_t temporary=call(SYS_OPEN,(uintptr_t)"/user/tmp",7);
+        CHECK(temporary>=3 && file_call(SYS_FWRITE,(uint64_t)temporary,(uintptr_t)data,1)==1);
+        CHECK(call(SYS_CLOSE,(uint64_t)temporary,0)==0 && call(SYS_UNLINK,(uintptr_t)"/user/tmp",0)==0);
+        CHECK(call(SYS_OPEN,(uintptr_t)"/user/tmp",1)==-2);
         CHECK(found && call(SYS_FREE,(uintptr_t)data,0)==0);
         return 44;
     }

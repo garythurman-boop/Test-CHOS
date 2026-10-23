@@ -9,6 +9,7 @@
 #include "process.h"
 #include "storage.h"
 #include "vfs.h"
+#include "input.h"
 static struct pmm physical;
 static struct heap heap;
 static struct worker_state workers[3];
@@ -161,6 +162,10 @@ void kernel_main(struct chos_boot_info *info) {
         }
         __asm__ volatile("msr daifclr, #2":::"memory");
     }
+    __asm__ volatile("msr daifset, #2":::"memory");
+    int input_devices=input_initialize(&physical,boot);
+    if(input_devices<0) panic("VIRTIO INPUT SETUP FAILED");
+    __asm__ volatile("msr daifclr, #2":::"memory");
     console_rect(0,150,boot->width,boot->height-150,0x071b36);
     console_text(32,172,"MEMORY PREEMPTION AND REAP PASS",0x8effb0);
     console_text(32,200,"EL0 ELF SYSCALLS AND IPC PASS",0x8effb0);
@@ -182,5 +187,22 @@ void kernel_main(struct chos_boot_info *info) {
     console_text(32,436,"ALLOCATED PHYSICAL PAGES",0xffffff); console_number(360,436,physical.used);
     console_text(32,464,"MANAGED PHYSICAL PAGES",0xffffff); console_number(360,464,physical.total);
     __asm__ volatile("dsb sy":::"memory");
-    for(;;) __asm__ volatile("wfi");
+    if(input_devices) console_rect(32,420,8,8,0x99aa77);
+    int32_t old_x=-1,old_y=-1; char last=0;
+    for(;;) {
+        input_poll(); const struct input_state *state=input_get();
+        if(input_devices && (state->x!=old_x || state->y!=old_y)) {
+            if(old_x>=0) console_rect((unsigned)old_x,(unsigned)old_y,8,10,0x071b36);
+            static const uint8_t arrow[10]={0x80,0xc0,0xe0,0xf0,0xf8,0xfc,0xe0,0xb0,0x18,0x18};
+            for(unsigned y=0;y<10;y++) for(unsigned x=0;x<8;x++)
+                if(arrow[y]&(0x80>>x)) console_rect((unsigned)state->x+x,(unsigned)state->y+y,1,1,0xffffff);
+            old_x=state->x; old_y=state->y;
+        }
+        if(state->last && state->last!=last) {
+            char letter[2]={state->last,0}; console_rect(200,420,16,16,0x071b36);
+            console_text(200,420,letter,0xffffff); last=state->last;
+        }
+        if(state->last=='A' && state->motion && state->clicks) console_rect(32,420,8,8,0x8effb0);
+        __asm__ volatile("dsb sy; wfi":::"memory");
+    }
 }

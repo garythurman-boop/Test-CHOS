@@ -111,7 +111,7 @@ def main():
     firmware=os.environ.get('CHOS_UEFI_FIRMWARE','/usr/share/qemu-efi-aarch64/QEMU_EFI.fd')
     command=['qemu-system-aarch64','-machine',f'virt,gic-version={args.gic_version}','-cpu','cortex-a72',
              '-accel','tcg','-m',str(args.ram),'-smp','1','-bios',firmware,
-             '-device','ramfb','-device','virtio-scsi-pci',
+             '-device','ramfb','-device','virtio-keyboard-pci','-device','virtio-mouse-pci','-device','virtio-scsi-pci',
              '-drive',f'if=none,id=cd,media=cdrom,readonly=on,file={args.iso.resolve()}',
              '-device','scsi-cd,drive=cd','-boot','order=d',
              '-display','none','-serial',f'file:{serial}',
@@ -146,6 +146,7 @@ def main():
                     if 'return' in response:
                         return response['return']
             qmp('qmp_capabilities')
+            injected=False
             while time.monotonic()<deadline:
                 if proc.poll() is not None:
                     raise RuntimeError('QEMU exited before acceptance condition')
@@ -157,6 +158,12 @@ def main():
                         break
                 else:
                     qmp('screendump',{'filename':str(screen)})
+                    pixel=read_ppm(screen)
+                    if not injected and pixel(36,424)==0x99aa77:
+                        events=[{'type':'key','data':{'down':down,'key':{'type':'qcode','data':'a'}}} for down in [True,False]]
+                        events += [{'type':'rel','data':{'axis':'x','value':17}},{'type':'rel','data':{'axis':'y','value':9}}]
+                        events += [{'type':'btn','data':{'down':down,'button':'left'}} for down in [True,False]]
+                        qmp('input-send-event',{'events':events}); injected=True
                     if args.expect_platform_reject or args.expect_disk_reject:
                         if platform_rejected(screen,args.expect_disk_reject):
                             outcome['passed']=True
@@ -166,7 +173,7 @@ def main():
                         debug=qmp('human-monitor-command',{'command-line':'info pci'})
                         (BUILD/f'{name}.pci.log').write_text(debug)
                         raise RuntimeError('CHOS panic; inspect screenshot')
-                    if not args.expect_platform_reject and not args.expect_disk_reject and completed(screen,args.storage_phase or 0):
+                    if not args.expect_platform_reject and not args.expect_disk_reject and completed(screen,args.storage_phase or 0) and pixel(36,424)==0x8effb0:
                         outcome['passed']=True
                         break
                 time.sleep(.5)
@@ -176,7 +183,7 @@ def main():
                 raise RuntimeError('Boot acceptance timed out; inspect screenshot and logs')
             if not args.expect_missing_kernel:
                 save_png(screen)
-            outcome['milestone']='3A'
+            outcome['milestone']='3'
             if args.storage_phase: outcome['storage_phase']=args.storage_phase
             outcome['result_kind']=('expected_rejection' if args.expect_platform_reject or args.expect_missing_kernel or args.expect_disk_reject else 'functional_boot')
             if outcome['result_kind']=='functional_boot':
@@ -186,7 +193,7 @@ def main():
                     'timer-driven non-yielding worker preemption','register context canaries',
                     'strict priority and round-robin selection','thread exit and continued scheduling','EL0 static ELF execution and syscalls',
                     'per-process private mappings and IPC','invalid user buffer rejection',
-                    'kernel/text/NX-stack violation termination','deferred process and thread reclamation']
+                    'kernel/text/NX-stack violation termination','deferred process and thread reclamation','Virtio PCI keyboard/mouse events injected over QMP']
             if args.storage_phase:
                 outcome['storage_checks']={1:['NVMe block read/write/flush','CHFS format/create/read/rename','EL0 file-handle and invalid-buffer tests'],2:['cold boot generation 1 integrity','persistent delete/rewrite','EL0 file persistence'],3:['cold boot generation 2 integrity','EL0 file persistence','read-only verification boot']}[args.storage_phase]
             if args.disk:

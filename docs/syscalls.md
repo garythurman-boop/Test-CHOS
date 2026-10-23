@@ -38,9 +38,9 @@ span before copying through kernel aliases. No caller-supplied physical address 
 trusted. Copy spans are bounded to 4096 bytes internally; console is capped at 64.
 
 Kernel code creates processes from a validated embedded ELF. There is no public
-spawn/wait API, executable filesystem, dynamic linker, POSIX compatibility, file
-syscalls, time zone service or GUI API yet. File/handle operations are deferred
-until persistent storage is implemented and validated. Graphics, broader time,
+spawn/wait API, filesystem-based executable loading, dynamic linker, POSIX
+compatibility, time zone service or GUI API yet. File operations added at checkpoint
+3A are documented below. Graphics, broader time,
 process control and IPC extensions must get documented numbers when implemented.
 
 Unknown EL0 synchronous faults terminate only that process. Exited contexts remain

@@ -1,31 +1,36 @@
 # CHOS
 
-CHOS is an original C/AArch64 operating system project. **Milestone 1 is implemented:**
-a native UEFI loader boots a freestanding original kernel from an ARM64 ISO.
-This is a real firmware-to-kernel handoff, with no Linux/BSD kernel, GRUB, or host OS
-in the guest boot path. Debian is used only as the build/test tool container.
+CHOS is an original C/AArch64 operating system under development. A native UEFI
+loader boots its own kernel, with no Linux/BSD kernel or GRUB in the guest. Debian
+is used only as a build/test host. No Microsoft code, artwork or fonts are used.
 
-**Milestone 2A is also implemented:** CHOS owns exception vectors and page tables,
-physical allocation and a bounded heap, discovers GICv2/timer resources via ACPI,
-and preemptively schedules original kernel threads. Deliberate fault tests verify
-null/stack guards, read-only code and NX heap. See [the current report](docs/milestone-2a.md).
+Milestones 1–2 core and milestone 3's **tested QEMU hardware/storage/input subset**
+are implemented: exceptions, protected page tables, physical/heap memory,
+preemptive threads, isolated EL0 ELF processes, syscalls/IPC, NVMe, original CHFS
+persistent file operations and Virtio PCI keyboard/mouse input with framebuffer
+cursor/character output. This is not yet a desktop or installable operating system.
 
-This is not yet a usable desktop OS or installation image. User processes, ELF
-loading, public syscalls, IPC, persistent filesystem, input and VMware validation
-remain unfinished. The kernel runs self-tests and then waits with timer IRQs active.
+**VMware Fusion compatibility remains unverified.** GICv3, USB/xHCI input and EL2
+entry are unsupported. No GPT/ESP installer, installed-disk boot, window manager,
+built-in desktop applications, networking or CHOS 0.1 release is delivered yet.
 
-## Download milestone images
+## Download testing images
 
-The [Milestone 2A testing ISO](artifacts/milestone-2a/CHOS-ARM64.iso) is committed
-under artifacts/milestone-2a. Use GitHub's **Download raw file** button, then verify
-it with [SHA256SUMS](artifacts/milestone-2a/SHA256SUMS). Read the
-[image limitations](artifacts/milestone-2a/README.md) before testing. This is a
-kernel-development ISO, not an installer; Fusion compatibility remains unverified.
+- [Current milestone 3 ISO](artifacts/milestone-3/CHOS-ARM64.iso): ordinary boot
+  diagnostics and keyboard/mouse input; **no disk writes**.
+- [Milestone 2 core ISO](artifacts/milestone-2/CHOS-ARM64.iso): original isolated
+  process/syscall/IPC checkpoint.
+- [Older M2A ISO](artifacts/milestone-2a/CHOS-ARM64.iso).
 
-## Build and test
+On GitHub choose **Download raw file**, then verify the adjacent SHA256SUMS.
+Read [current image notes](artifacts/milestone-3/README.md) before testing. The
+separate STORAGE-TEST ISO is for the automated disposable-disk tests only, with
+an explicit boot-volume opt-in and exact device identity gate. It is not an installer.
 
-Requirements: Docker Engine with bind mounts supported. On a Linux development
-machine with the packages listed in Dockerfile installed, run `make` directly.
+## Build and validate
+
+Docker Engine with bind mounts is required. The Dockerfile lists packages for a
+native Linux toolchain alternative.
 
 ```sh
 ./scripts/container.sh image
@@ -33,35 +38,33 @@ machine with the packages listed in Dockerfile installed, run `make` directly.
 ./scripts/container.sh bash scripts/validate.sh
 ```
 
-Output: `build/CHOS-ARM64.iso` (ARM64 UEFI optical image), `BOOTAA64.EFI`,
-`KERNEL.BIN`, and `kernel.elf` (debug/link inspection only). ISO boot volume contains
-`EFI/BOOT/BOOTAA64.EFI` and `CHOS/KERNEL.BIN`. Boot it with Secure Boot disabled.
-It never writes guest disks. The 16 MiB FAT boot image is not an installed ESP.
+`build/CHOS-ARM64.iso` contains EFI/BOOT/BOOTAA64.EFI and CHOS/KERNEL.BIN on an
+El Torito FAT boot volume. Secure Boot must be off. The FAT volume is not an
+installed ESP. `kernel.elf` is a debug artifact; the separate static ELF loader
+runs original acceptance programs embedded in the kernel.
 
-The test suite boots real AArch64 EDK II firmware on QEMU `virt`, with ramfb and a
-SCSI CD-ROM, at 512 MiB and 1 GiB. It verifies the M2A completion marker after
-actual kernel fault/preemption tests, tests a missing kernel, and verifies a clear
-rejection of unsupported GICv3. Two host test programs cover allocator/heap and
-malformed ACPI metadata. `build/*.json`, serial/QEMU
-logs, and screenshots contain the evidence. It also compares two generated ISO
-hashes. Run a clean rebuild with `./scripts/container.sh make clean` first if needed.
+Validation runs five host C test programs and nine real AArch64 UEFI QEMU cases,
+including 512 MiB/1 GiB boots, EL0 protection and IPC, real keyboard/mouse events,
+three fresh VMs verifying NVMe/CHFS persistence, and expected error/safety cases.
+An independent Python parser checks actual disk metadata/data CRCs and byte content.
+Two normal and two storage-test ISO builds are compared for repeatability. Tests
+create disposable image files under build/ and never attach host block devices.
+Evidence is committed in docs/evidence/m3; generated outputs remain ignored.
 
-Builds run without container network access after the toolchain image is prepared.
-The base image digest is pinned; APT package versions are not locked, so binary
-reproducibility is demonstrated within the recorded toolchain, not across all
-future Debian package updates. SOURCE_DATE_EPOCH defaults to 2026-01-01 UTC.
+The pinned base image uses current APT package versions; bit-identical ISO builds
+are verified within the recorded toolchain, not arbitrary future package updates.
+SOURCE_DATE_EPOCH defaults to 2026-01-01 UTC. Build/test containers need no network
+after toolchain installation. Tests start/stop their own QEMU processes.
 
 ## Documentation
 
-- [Architecture and boot contract](docs/architecture.md)
-- [Feature status, known issues and next milestone](docs/status.md)
-- [Current M2A validation and next steps](docs/milestone-2a.md)
-- [Historical M1 evidence](docs/validation.md)
-- [VMware Fusion compatibility and test procedure](docs/vmware-fusion.md)
-- [Milestone release notes](docs/release-notes.md)
+- [Current sequence results and next milestone](docs/milestone-3.md)
+- [Milestone 2 process results](docs/milestone-2.md)
+- [Architecture](docs/architecture.md), [syscalls](docs/syscalls.md), [storage](docs/storage.md)
+- [Feature status and known issues](docs/status.md)
+- [VMware Fusion investigation/test plan](docs/vmware-fusion.md)
+- [Release notes](docs/release-notes.md)
 
-Source is organized into `boot/uefi`, `kernel/arch/arm64`, `kernel/memory`,
-`kernel/interrupts`, `kernel/scheduler`, `drivers/interrupts`, shared `include`,
-`scripts`, and `tests`. Future subsystem directories will be added with their
-implementations rather than empty or decorative components. No Microsoft assets
-or fonts are used; the diagnostic glyphs are original.
+Source is organized into boot/uefi, kernel/{arch,memory,process,scheduler,interrupts,
+syscall}, drivers/{storage,input,interrupts}, filesystem, userspace/init, include,
+scripts and tests. Application/desktop directories will be added with working code.

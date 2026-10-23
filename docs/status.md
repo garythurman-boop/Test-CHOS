@@ -1,51 +1,56 @@
-# Feature status and known issues
+# CHOS feature status and known issues
 
-| Milestone | Status |
+| Milestone | Current status |
 |---|---|
-| 1: native loader, kernel console, bootable ISO, QEMU | Complete; historical report in validation.md |
-| 2A: exceptions, physical memory, heap, page tables, timer, kernel threads | Implemented and tested; milestone-2a.md |
-| 2B: user processes, ELF loading, public syscalls, IPC | Not implemented; milestone 2 remains in progress |
-| 3: runtime input, storage, filesystem, persistence | Not implemented |
-| 4: desktop and window manager | Not implemented |
-| 5: native applications | Not implemented |
-| 6: graphical installer and installed-disk boot | Not implemented |
-| 7: VMware Fusion validation | Not run |
-| 8: CHOS 0.1 release | Not ready |
+| 1: original UEFI loader/kernel, bootable ISO | Verified under QEMU UEFI |
+| 2: memory, exceptions, timer, threads, processes, syscalls/IPC | Core implemented and tested; public ABI remains deliberately small |
+| 3: display/input/storage/persistent file operations | Implemented for QEMU GOP + Virtio PCI input + NVMe; Fusion devices unverified/unsupported where listed |
+| 4: CHOS Desktop, window manager, taskbar/Start menu | Not implemented |
+| 5: native Explorer/Notepad/Terminal/Control Panel/Task Manager | Not implemented; acceptance ELF programs are not these applications |
+| 6: graphical installer, GPT/ESP and installed boot | Not implemented |
+| 7: VMware Fusion validation | Not run; no Apple Silicon/Fusion host available |
+| 8: release CHOS 0.1 | Not ready |
 
-## Current limitations
+Current boot images run genuine kernel and EL0 self-tests, then provide basic
+framebuffer input feedback. They do not display a decorative desktop or installer.
+See milestone-3.md for exact acceptance outcomes and downloadable artifacts.
 
-- Single CPU and EL1 entry only. ACPI 2.x, GICv2 and GTDT are required; no DT-only,
-  GICv3 or EL2 startup path. QEMU virt with GICv2 is the tested platform. M2A adds
-  requirements beyond the simpler M1 firmware/framebuffer boot; Fusion is untested.
-- No ELF/user processes, user/kernel process isolation, public syscall ABI or IPC.
-  Present protections apply to kernel mappings; all current threads share EL1.
-- Eight lifetime thread slots, strict priority starvation, 8 KiB usable stacks,
-  retained terminated stacks, and no FP/SIMD context. No general thread reaper.
-- Physical allocator manages at most 1 GiB/128 extents. Heap is fixed at 64 KiB;
-  page-table pool reserves 4 MiB. Allocation/heap/table APIs need IRQ exclusion
-  once scheduling is enabled and are not SMP safe.
-- Virtual space is 39-bit identity mapped, with no demand paging, arbitrary
-  mappings, page reclamation or swapping. Live large-block splitting is refused.
-- No independent clock/calendar service. Timer is nominal 100 Hz and drifts with
-  interrupt latency. No instrumented idle CPU or total resident-footprint claim.
-- Boot-time self-tests intentionally exercise BRK, null/guard translation faults,
-  read-only text and NX heap faults before starting the scheduling test.
-- Diagnostic console only. No input driver, interactive shell, applications or
-  installer. No kernel storage driver or CHOS filesystem: firmware reads the
-  kernel before ExitBootServices. No guest disk writes are possible yet.
-- Unsigned loader/payload; disable Secure Boot. No payload authentication.
-- Only GOP RGB/BGR framebuffer >=640x480. No hotplug or mode-switch support.
-- Memory-map/exit failure after an exit attempt halts without firmware output.
-  Earlier boot failure allocation cleanup is incomplete; restart after failure.
-- QEMU's missing legacy vgabios-ramfb.bin warning is harmless for the tested native
-  UEFI GOP path. Legacy BIOS is not supported or targeted.
-- Container base digest is pinned; APT package versions are not. Identical ISO
-  rebuilds are verified in the recorded toolchain, not across arbitrary updates.
+## Limits
 
-## Next engineering step
+- One CPU, EL1 entry, ACPI 2.x and GICv2/GTDT required. No EL2 transition, GICv3,
+  DT-only discovery, SMP or full interrupt-controller coverage.
+- Four live process records, eight threads, static AArch64 ELF subset, no dynamic
+  linker/public spawn/wait, no signal model. FP/SIMD traps at EL0; general registers
+  only. User mappings are private; all processes currently share one filesystem
+  authority, with no per-user file permissions or authentication.
+- Physical allocation tracks 1 GiB/128 ranges; heap is 64 KiB. Page-table pool
+  reserves 4 MiB, with 48-bit identity mappings and bounded private process tables.
+  512 MiB/1 GiB configurations were tested; larger RAM may exhaust table storage.
+  No demand paging/swapping. Single-CPU management calls require IRQ exclusion.
+- Strict priorities can starve low-priority threads. Completed contexts are reaped
+  only after switching away; there is no autonomous process supervisor/reaper yet.
+- Polling NVMe: one controller/namespace on PCI segment/bus 0, 4 KiB PRP transfers,
+  512/4096-byte sectors, fixed queues and 2 s timeouts. No hotplug/IOMMU isolation,
+  advanced recovery, queue concurrency or Fusion driver validation. Partial failed
+  initialization can retain bounded queue allocations until reboot.
+- CHFS is a bounded raw test volume: 4 MiB maximum, 40 entries, 59-byte ASCII paths,
+  32 KiB files. No GPT/ESP, FAT runtime driver, file permissions, timestamps, links,
+  directory rename, fsck or general mount table. Checkpoint/reboot and fault-model
+  tests passed; production reliability and hardware power-cut testing remain open.
+- Native file handles are path-based; rename/unlink invalidates old path handles.
+  Read/write syscalls are capped at 4 KiB per call. The ordinary ISO does not mount
+  or write volumes; native file acceptance runs only in the opt-in storage-test ISO.
+- Virtio PCI input: two devices, 32-entry event queues, a 128-event software FIFO
+  with counted drops, polling via the timer. Relative mouse and basic uppercase
+  US key feedback are tested; raw navigation/modifier events are exposed for future
+  clients. No USB/xHCI, tablet absolute-coordinate support, LEDs, IME or keymaps.
+- GOP RGB/BGR >=640x480 only, no mode switching/hotplug. The cursor/character
+  feedback is not a desktop/window manager.
+- Unsigned payload, Secure Boot off, no payload authentication. Boot allocation
+  cleanup on early error is incomplete. Final map/ExitBootServices failure halts.
+- No measured idle CPU, total resident footprint or application latency claims.
+  Timer is nominal 100 Hz and can drift with polling/IRQ latency.
 
-Milestone 2B: define and validate the executable/syscall boundary before permitting
-EL0 code to run. Add malformed-ELF tests, kernel-pointer rejection tests, separate
-user mappings, fault termination and safe process resource cleanup. Persistence
-must later pass cold-reboot and integrity tests before an installer or editor can
-claim data was saved. Networking follows stable local operation.
+Next: milestone 4 begins with compositor/window primitives and an application
+message/graphics boundary, then focus, move/resize, taskbar and launcher. Keep
+Fusion USB/GICv3 investigation separate and do not substitute QEMU for target testing.
