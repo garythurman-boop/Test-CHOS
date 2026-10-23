@@ -1,0 +1,10 @@
+UEFI firmware (version 2025.02-8+deb13u1 built at 18:06:17 on Nov  8 2025)
+BdsDxe: loading Boot0001 "UEFI QEMU NVMe Ctrl CHOS-GPT-BOOT 1" from PciRoot(0x0)/Pci(0x3,0x0)/NVMe(0x1,00-00-00-00-00-00-00-00)
+BdsDxe: starting Boot0001 "UEFI QEMU NVMe Ctrl CHOS-GPT-BOOT 1" from PciRoot(0x0)/Pci(0x3,0x0)/NVMe(0x1,00-00-00-00-00-00-00-00)
+CHOS - ARM64 UEFI loader
+CHOS: firmware entry EL2
+CHOS: PCI 0000:00:00.0 ID 1b36:0008 CLASS 060000
+CHOS: PCI 0000:00:01.0 ID 1af4:1052 CLASS 090000
+CHOS: PCI 0000:00:02.0 ID 1af4:1052 CLASS 090200
+CHOS: PCI 0000:00:03.0 ID 1b36:0010 CLASS 010802
+CHOS: kernel loaded; leaving firmware

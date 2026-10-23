@@ -1,0 +1,46 @@
+{
+  "passed": true,
+  "scope": "Build-time disk construction; not guest installation",
+  "cases": [
+    {
+      "passed": true,
+      "sector_bytes": 512,
+      "disk_image": "/src/build/fat32-test-kw8_7ri2/chos-512.img",
+      "sha256": "d69c6dd8f2d2358d03672c3ea8dd1457c1d51e43fdc6c34cde7417ab169371ac",
+      "files": {
+        "EFI/BOOT/BOOTAA64.EFI": "4e37f4c01fcadaa2c42cd5ae34958df6ed28be45f28f04fe782097835622c158",
+        "CHOS/KERNEL.BIN": "7aba00d2f557c51a9f072fae1af71b65ff578840c2260393d8fd557ee792b0fe"
+      },
+      "checks": [
+        "BPB and backup",
+        "FSInfo and backup",
+        "mirrored FATs",
+        "bounded non-cyclic non-crosslinked cluster chains",
+        "directory tree",
+        "exact original EFI/kernel bytes and zero padding",
+        "exclusive new-image creation",
+        "identical second fresh build"
+      ]
+    },
+    {
+      "passed": true,
+      "sector_bytes": 4096,
+      "disk_image": "/src/build/fat32-test-kw8_7ri2/chos-4096.img",
+      "sha256": "0466b2d88fd46e5a5cefc479aadb3763bac57851fb3bbb2292fb0b705a651a68",
+      "files": {
+        "EFI/BOOT/BOOTAA64.EFI": "4e37f4c01fcadaa2c42cd5ae34958df6ed28be45f28f04fe782097835622c158",
+        "CHOS/KERNEL.BIN": "7aba00d2f557c51a9f072fae1af71b65ff578840c2260393d8fd557ee792b0fe"
+      },
+      "checks": [
+        "BPB and backup",
+        "FSInfo and backup",
+        "mirrored FATs",
+        "bounded non-cyclic non-crosslinked cluster chains",
+        "directory tree",
+        "exact original EFI/kernel bytes and zero padding",
+        "exclusive new-image creation",
+        "identical second fresh build"
+      ]
+    }
+  ]
+}

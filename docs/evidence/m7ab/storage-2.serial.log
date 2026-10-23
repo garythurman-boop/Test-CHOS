@@ -1,0 +1,11 @@
+UEFI firmware (version 2025.02-8+deb13u1 built at 18:06:17 on Nov  8 2025)
+BdsDxe: loading Boot0001 "UEFI QEMU QEMU CD-ROM " from PciRoot(0x0)/Pci(0x3,0x0)/Scsi(0x0,0x0)
+BdsDxe: starting Boot0001 "UEFI QEMU QEMU CD-ROM " from PciRoot(0x0)/Pci(0x3,0x0)/Scsi(0x0,0x0)
+CHOS - ARM64 UEFI loader
+CHOS: firmware entry EL1
+CHOS: PCI 0000:00:00.0 ID 1b36:0008 CLASS 060000
+CHOS: PCI 0000:00:01.0 ID 1af4:1052 CLASS 090000
+CHOS: PCI 0000:00:02.0 ID 1af4:1052 CLASS 090200
+CHOS: PCI 0000:00:03.0 ID 1af4:1004 CLASS 010000
+CHOS: PCI 0000:00:04.0 ID 1b36:0010 CLASS 010802
+CHOS: kernel loaded; leaving firmware
