@@ -73,6 +73,11 @@ for label,devices in [('fusion-input-absent',['qemu-xhci']),('fusion-input-refus
 g=Guest('fusion-nvme-refusal',ram=2048,disk=disk,optical=True,live=False,gic_version=3,input_backend='none',iso=BUILD/'CHOS-ARM64-M7F-INPUT.iso',storage_pci_bus='nvmeroot',early_devices=['pcie-root-port,id=nvmeroot,chassis=2'],nvme_options='mqes=7')
 try:
  text=diagnostic(g);assert 'NVME CAPABILITIES UNSUPPORTED' in text and 'NVMe failure stage: 4' in text
+ # Wait for the actual controller error line, not an unrelated first report page.
+ glyphs=[[17,25,21,19,17,17,17],[17,17,17,17,17,10,4],[17,27,21,21,17,17,17],[31,16,16,30,16,16,31]]
+ def error_visible(p):
+  return any(all(p(16+i*12+c*2,78+line*18+r*2)==(0xe0efff if bits&(16>>c) else 0x102b50) for i,glyph in enumerate(glyphs) for r,bits in enumerate(glyph) for c in range(5)) for line in range((g.dimensions()[1]-264)//18))
+ g.wait(error_visible,'visible NVME capability refusal line',60)
  g.snapshot('fusion-nvme-refusal');results.append(record(g,controller_detected_but_capabilities_rejected=True,read_only=True))
 finally:g.close()
 assert sha(disk)==before

@@ -40,7 +40,7 @@ not an installer or desktop persistence environment.
 - PMM: 1 GiB/128 ranges; kernel heap 64 KiB; on-demand translation tables capped at 4 MiB; no swapping or
   demand paging. Single-CPU management calls require IRQ exclusion. Strict scheduler
   priorities can starve lower threads; dead desktop clients are safely reaped.
-- NVMe: one segment-0/bus-0 controller/namespace, 512/4096-byte sectors, polling and
+- NVMe: one firmware-BDF controller/namespace 1 (bus-zero fallback), 512/4096-byte sectors, polling and
   4 KiB transfers, bounded queues/timeouts. No hotplug/IOMMU/advanced recovery.
 - CHFS: raw volume up to 4 MiB, 40 entries, 59-byte ASCII paths, 32 KiB files. No
   general GPT mounting, FAT runtime layer, timestamps, links, fsck or directory rename. Cold-boot,
@@ -76,7 +76,8 @@ diagnostics. See the [iteration report](milestone-7a-b.md) for final evidence.
 
 M7C adds a separate automatic noninteractive diagnostic ISO, read-only bounded
 report export, ACPI-SPCR PL011 logging, USB descriptor/HID/ring host tests and native
-USB-only QEMU interactions. Target Fusion remains untested. See [report](milestone-7c.md),
+USB-only QEMU interactions at M7C. M7E now has actual Fusion core-boot evidence;
+M7F input/storage retest is pending. See [report](milestone-7c.md),
 [USB limits](usb.md) and [first-boot instructions](fusion-first-boot.md).
 
 M7D replaces the fixed half-megabyte bootstrap limit with a bounded versioned

@@ -1,0 +1,84 @@
+{
+  "source": "Three original Fusion diagnostic screenshots supplied by user in chat; visually transcribed; image files remain in conversation",
+  "host_reported": "Apple M1 MacBook Air",
+  "macos_reported": "27 Golden Gate",
+  "fusion_reported": "26H1u1",
+  "full_fusion_build": "unspecified",
+  "vcpus": 1,
+  "ram_mib": 2048,
+  "tested_checkpoint": "M7E 52487b9",
+  "firmware": "EDK II",
+  "firmware_revision": "0x10000",
+  "uefi_revision": "0x20046",
+  "firmware_el": 1,
+  "kernel_el": 1,
+  "acpi_tables": 6,
+  "acpi_mask": "0xf",
+  "spcr_present": false,
+  "gic_version": 3,
+  "timer_ppi": 30,
+  "delivered_ticks": 31,
+  "mmu_table_pages": 531,
+  "mmu_table_capacity": 1024,
+  "memory_descriptors": 29,
+  "highest_physical_end": "0x100000000",
+  "kernel_file_bytes": 262432,
+  "kernel_memory_bytes": 491520,
+  "gop": [
+    1024,
+    768,
+    1024,
+    1
+  ],
+  "retained_pci": 32,
+  "firmware_pci_handles": 43,
+  "mmu_protection_core_tests": "PASS",
+  "normal_setup": "reached, reported by user",
+  "input_devices": 0,
+  "nvme_result": "NVME PCI CONTROLLER NOT FOUND",
+  "controllers": [
+    {
+      "kind": "UHCI",
+      "bdf": "0000:01:00.0",
+      "id": "15ad:0774",
+      "class": "0c0300"
+    },
+    {
+      "kind": "EHCI",
+      "bdf": "0000:01:02.0",
+      "id": "15ad:0770",
+      "class": "0c0320"
+    },
+    {
+      "kind": "xHCI",
+      "bdf": "0000:0a:00.0",
+      "id": "15ad:077a",
+      "class": "0c0330"
+    },
+    {
+      "kind": "NVMe",
+      "bdf": "0000:12:00.0",
+      "id": "15ad:07f0",
+      "class": "010802"
+    },
+    {
+      "kind": "display",
+      "bdf": "0000:00:0f.0",
+      "id": "15ad:0406",
+      "class": "030000"
+    },
+    {
+      "kind": "AHCI unsupported",
+      "bdf": "0000:01:03.0",
+      "id": "15ad:07e0",
+      "class": "010601"
+    }
+  ],
+  "unestablished": [
+    "Keyboard/mouse attachment path",
+    "BARs/capabilities/ownership/ports/HID",
+    "NVMe namespace/reads",
+    "M7F target correction",
+    "Fusion installation and persistent boot"
+  ]
+}

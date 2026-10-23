@@ -42,7 +42,8 @@ API or speculative alternate controller driver was added. Existing limits remain
 one AC64 xHCI, two direct-root USB2 boot-HID devices, bounded contexts/rings; no USB
 interrupt routing, hubs/general HID, firmware ownership takeover, scratchpads,
 USB3 input, hotplug re-enumeration or controller reset recovery. Timeouts are bounded;
-uncertain DMA pages remain reserved. No target HID success is claimed yet.
+uncertain DMA pages remain reserved. Unexpected MMIO exceptions still use the
+kernel exception screen; automatic controller recovery is not implemented. No target HID success is claimed yet.
 
 ## NVMe stages and read-only policy
 

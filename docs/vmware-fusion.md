@@ -11,22 +11,17 @@ input/read-only diagnostics; actual M7F peripheral retest is pending.
 - [Current iteration and QEMU evidence](milestone-7f.md)
 - [Versioned test images and checksums](../artifacts/milestone-7f/README.md)
 
-M7C adds input-free diagnostics and a bounded original polled xHCI USB2 boot-HID
-path tested only in QEMU. USB interrupts, other controllers, hubs and general HID
-remain unsupported. [First evaluation](fusion-first-boot.md) requires no
-installation. Other tested input is Virtio PCI; storage is one bus-0 NVMe
-controller/namespace; display uses GOP RGB/BGR. Obtain actual target IDs/descriptors
-and the release's custom ARM64 optical workflow before claiming support. New
-read-only firmware PCI inventory and Terminal `hardware` help capture evidence.
-Do not apply x86 VMware assumptions or QEMU addresses to the generic ARM64 kernel.
+The original EL1/EL2, GICv2/v3, GOP and polled drivers are preserved. xHCI/NVMe
+now use checked firmware BDF/MCFG/live config; the old bus-zero scan is a fallback.
+One NVMe controller/namespace 1 and bounded USB2 direct-root boot-HID remain the
+supported subsets. Other USB controllers, hubs/general HID, ownership takeover,
+scratchpads, USB interrupts and recovery are not implemented.
 
-M7D hardens kernel sizing and diagnostic failure handling without assuming new
-Fusion hardware. Actual first-boot screenshots/serial and host/Fusion versions
-have been requested; target validation remains pending. Initial testing requires
-no disk. Do not proceed to installation on Fusion until boot/input/storage pass.
-
-Retest at the same 2 GiB with the M7E diagnostic image and [capture the complete
-MMU failure report or all inventory pages](fusion-first-boot.md).
+Retest with the **M7F INPUT image** at the same one CPU/2 GiB, no disk first.
+Capture every report page and live key/pointer fields. Then follow the ordered
+Setup-interaction/read-only-storage gates before any installation. The diagnostic
+modes enforce namespace write/flush rejection. Actual target input, controller
+capabilities, USB attachment and NVMe namespaces still need evidence.
 
 [Actual target evidence](fusion-observations-m7e.md) · [PCI routing](pci-discovery.md)
-· [live input/driver reports](driver-diagnostics.md).
+· [live input/driver reports](driver-diagnostics.md) · [ordered retest](fusion-first-boot.md).

@@ -58,7 +58,8 @@ tables allocate individual pages on demand, with a 1,024-page (4 MiB) ceiling.
 Memory types/identity mappings are preserved across a short MMU-off trampoline;
 table cache cleans and TLB/barrier operations precede use. QEMU does not validate
 all real-hardware cache/coherency behavior. M7D reached an MMU initialization
-failure in the user-reported Fusion test; M7E target retest remains pending.
+failure in M7D; the subsequent supplied M7E Fusion screenshots confirm MMU,
+protection and timer success. Actual M7F peripheral retest remains pending.
 
 Null, bootstrap stack guard and thread stack guard pages are absent. Normal RAM
 managed by the allocator uses page mappings before activation, so adding guards
@@ -112,7 +113,8 @@ sender/value queues. Unknown EL0 faults terminate only that process; the supervi
 reaps private pages/tables and its guarded kernel stack after switching away.
 EL0 FP/SIMD is explicitly trapped until vector state is saved per task.
 
-NVMe PCI discovery uses MCFG/bus-0 enumeration and firmware-assigned BARs, including
+NVMe PCI discovery uses validated firmware BDF/MCFG/live config with a bus-zero
+fallback and firmware-assigned BARs, including
 addresses above 512 GiB. Four-level page tables replaced M2's three-level layout
 for that hardware. The original driver uses split admin/I/O queues and cache
 maintenance for bounded DMA, with flushes before/after COW metadata commits.

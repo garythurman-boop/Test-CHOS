@@ -5,7 +5,8 @@ Current installer/persistent-system behavior is documented in
 [feature status](status.md). The raw-test-only descriptions below record M3A,
 not the current desktop/installer feature set.
 
-Original polling NVMe, discovered through validated ACPI MCFG and PCI bus 0,
+Original polling NVMe, discovered through validated firmware BDF/ACPI MCFG/live
+configuration, with a bus-zero compatibility fallback,
 with one controller/namespace, 16-entry admin/I/O queues, 4 KiB DMA bounce buffer,
 512/4096-byte sectors and NVM FLUSH. No firmware I/O after ExitBootServices.
 The QEMU PCI BAR lies above 512 GiB (see evidence/m3a/*.pci.log), so the MMU now
@@ -56,3 +57,7 @@ substitute for Fusion testing. Exact logs/screenshots/results: evidence/m3a/.
 Reproduce: ./scripts/container.sh bash scripts/validate.sh.
 
 Current combined sequence evidence is in milestone-3.md and evidence/m3/.
+
+M7F adds capability/namespace validation and driver reports. Both diagnostic modes
+force namespace write/flush rejection and probe only first/last 4 KiB reads; normal
+explicitly confirmed installation remains separate. [Policy and stages](driver-diagnostics.md).

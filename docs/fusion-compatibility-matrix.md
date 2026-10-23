@@ -72,14 +72,14 @@ hardware support. QEMU validates a versioned file/BSS allocation contract with a
 independent guarded stack, controlled large-file/BSS boots and installation,
 malformed/old-loader rejection, and no-disk diagnostics despite optional input
 negotiation failure. The existing polled xHCI driver is preserved. Actual Fusion
-PCI/USB/GIC/storage/display observations are still required before target corrections
-or destructive installation tests. [Kernel report](kernel-image.md).
+M7E core/GOP/PCI observations have now arrived; controller/USB/namespace details
+and prerequisite passes remain required before destructive installation tests. [Kernel report](kernel-image.md).
 
 M7E reproduces the old 2 GiB table-pool exhaustion under QEMU with a two-branch
 instrumented preserved baseline. The new image passes larger-memory QEMU tests;
 that is a demonstrated correction of an independent defect, not proof of the
-Fusion root cause. The first Fusion retest must capture the new failure codes or
-all automatic inventory pages before any installation is attempted.
+Fusion root cause. The subsequent supplied M7E Fusion pages now confirm MMU/
+protection/timer success. M7F addresses the independently observed discovery blocker.
 
 M7F controller findings: UHCI `01:00.0 15ad:0774`, EHCI `01:02.0 15ad:0770`,
 xHCI `0a:00.0 15ad:077a`, NVMe `12:00.0 15ad:07f0`, GOP display

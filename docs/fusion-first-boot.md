@@ -39,9 +39,16 @@ comparisons can then identify the actual path. Firmware ownership, scratchpads,
 USB3/hub/general HID and alternate controllers remain bounded unsupported paths.
 No speculative new controller driver is included in M7F.
 
-## Second trial: read-only NVMe
+## Gate 4: Setup interaction without a disk
 
-Only after collecting input results, attach or retain **an explicitly designated
+After actual keyboard/mouse events pass, boot the [normal ISO](../artifacts/milestone-7f/CHOS-ARM64.iso)
+with **no disk attached**. Verify Setup keyboard navigation/mouse interaction;
+L/F3 selects Live Desktop. Record this separately from the input-panel result.
+Do not attempt installation. Then return to the INPUT ISO for storage testing.
+
+## Gates 5–6: read-only NVMe
+
+After input and Setup-interaction prerequisites pass, attach **an explicitly designated
 disposable virtual disk** using the observed virtual NVMe controller. Boot the
 **same INPUT ISO**, which enforces a driver-level write/flush rejection and skips
 Setup/filesystem mounting. No partitioning or formatting occurs. Capture:
@@ -57,10 +64,8 @@ PCI class match or from the word “NVMe” in the firmware inventory.
 
 ## Later gates
 
-The separate [normal ISO](../artifacts/milestone-7f/CHOS-ARM64.iso) preserves the
-approved full-screen Setup and Live Desktop. Once actual keyboard/mouse and
-read-only storage pass, test Setup keyboard navigation and mouse interaction;
-L/F3 selects Live Desktop. Installation remains a separate explicitly confirmed
+The normal ISO preserves the approved full-screen Setup and Live Desktop. After
+all input/Setup/read-only storage gates pass, installation is a separate explicitly confirmed
 action on a disposable disk, with exact identity/capacity review and typed `ERASE`.
 Do not install on Fusion before all prerequisites pass. Installed disk-only boot
 and file persistence are further independent gates.

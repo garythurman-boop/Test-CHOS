@@ -3,12 +3,13 @@
 M7C adds original C xHCI bring-up and USB boot-keyboard/mouse decoding. No Linux,
 BSD, firmware USB driver or third-party USB stack is linked or called by the
 running kernel. **Only the documented QEMU controller/device configurations are
-verified. Actual Fusion controller and HID descriptors remain unknown.**
+verified for HID operation. Actual Fusion xHCI is `15ad:077a` at `0a:00.0`;
+its capabilities, attached paths and HID behavior await M7F retest.**
 
 ## Boundaries
 
 `drivers/usb/xhci.c` discovers PCI class 0c/03/30 through the existing ACPI MCFG
-segment-0/bus-0 path. It uses firmware-assigned BARs, kernel MMIO mappings, PMM
+firmware-BDF/MCFG/live-config path added at M7F, with the old bus-zero fallback. It uses firmware-assigned BARs, kernel MMIO mappings, PMM
 pages and explicit DMA cache maintenance. No QEMU MMIO address or device vendor ID
 is used for controller selection. Other USB classes (UHCI/OHCI/EHCI/unknown) are
 identified in automatic inventory and left unsupported.
@@ -77,3 +78,6 @@ real QEMU USB-only keyboard modifiers/releases and mouse/buttons; native editing
 save/reopen/dragging; more than a full hardware transfer/event-ring wrap; disconnect;
 and noninteractive unsupported-controller/non-boot-device cases. Check the
 [iteration report](milestone-7c.md) for final results, not assumptions.
+
+M7F adds controller/port/enum status and a live input test ISO without replacing
+the polled path. [Reports/policy](driver-diagnostics.md), [PCI correction](pci-discovery.md).
