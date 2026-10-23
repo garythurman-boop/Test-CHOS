@@ -44,3 +44,6 @@ build/sanitized/usb
 
 cc "${flags[@]}" tests/image.c boot/image.c -o build/sanitized/image
 build/sanitized/image
+
+cc "${flags[@]}" -DCHOS_MMU_TEST tests/mmu.c kernel/memory/virtual.c kernel/memory/physical.c -o build/sanitized/mmu
+build/sanitized/mmu

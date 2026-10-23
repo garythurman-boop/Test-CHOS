@@ -3,6 +3,7 @@
 #include "memory.h"
 #include "exception.h"
 #include "mmu.h"
+#include "mmu_status.h"
 #include "platform.h"
 #include "scheduler.h"
 #include "timer.h"
@@ -40,10 +41,8 @@ void kernel_main(struct chos_boot_info *info) {
     console_text(32,200,"TIMER FREQUENCY HZ",0xffffff); console_number(300,200,freq);
     /* UEFI descriptor prefix: type, padding, physical, virtual, pages, attributes.
      * Iterate with the firmware-provided descriptor stride, never sizeof(prefix). */
-    if (boot->descriptor_size<40 || boot->descriptor_size>boot->memory_map_size ||
-        boot->memory_map_size%boot->descriptor_size) {
-        console_text(32,244,"INVALID MEMORY MAP",0xff7070);
-        for (;;) __asm__ volatile("wfe");
+    if(!pmm_init(&physical,(void *)(uintptr_t)info->memory_map,info->memory_map_size,info->descriptor_size)) {
+        mmu_memory_rejected(boot,&physical);mmu_failure_screen();for(;;)__asm__ volatile("wfe");
     }
     uint64_t pages=0,count=boot->memory_map_size/boot->descriptor_size;
     for (uint64_t i=0;i<count;i++) {
@@ -53,7 +52,6 @@ void kernel_main(struct chos_boot_info *info) {
     console_text(32,228,"CONVENTIONAL RAM MIB",0xffffff); console_number(300,228,pages/256);
     console_text(32,256,"MEMORY DESCRIPTORS",0xffffff); console_number(300,256,count);
     if(!exception_test_break()) panic("BREAKPOINT TEST FAILED");
-    if(!pmm_init(&physical,(void *)(uintptr_t)info->memory_map,info->memory_map_size,info->descriptor_size)) panic("MEMORY MAP REJECTED");
     uint64_t page=pmm_alloc(&physical,1);
     if(!page) panic("PAGE ALLOCATION FAILED");
     volatile uint64_t *check=(void *)(uintptr_t)page;
@@ -68,7 +66,9 @@ void kernel_main(struct chos_boot_info *info) {
     struct platform platform;
     if(!platform_discover(boot,mpidr,&platform)) panic("ACPI GIC TIMER DISCOVERY FAILED");
     diagnostic_value("GIC discovered version: ",platform.gic_version,false);
-    if(!mmu_init(&physical,boot,platform.gic_distributor,platform.gic_version==2?platform.gic_cpu:0)) panic("MMU INIT FAILED");
+    if(!mmu_init(&physical,boot,platform.gic_distributor,platform.gic_version==2?platform.gic_cpu:0)) {
+        mmu_failure_screen();for(;;)__asm__ volatile("wfe");
+    }
     diagnostic_map_serial();diagnostic_log("Kernel MMU: PASS");
     diagnostic_value("Kernel file bytes: ",boot->kernel_size,false);
     diagnostic_value("Kernel memory bytes: ",boot->kernel_memory_bytes,false);

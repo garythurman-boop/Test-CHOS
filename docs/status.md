@@ -8,10 +8,11 @@
 | 4: CHOS Desktop/window manager/taskbar/Start | Working core; Royale widgets and multi-window usage tested; dedicated Search/Help and wallpaper file loading remain |
 | 5: six native applications | Functional bounded native apps with installed persistence and shared widgets; see desktop.md |
 | 6: graphical installer/GPT/ESP/installed boot | Dedicated full-screen blue/Royale native setup, disk boot and persistent system volume; saved computer/theme/fixed clock offset implemented; account/password/layout and graphical mode configuration unfinished |
-| 7: VMware Fusion validation | M7C adds automatic diagnostics and bounded original polled xHCI boot-HID tested in QEMU; actual Fusion and broader USB/interrupt support remain open |
+| 7: VMware Fusion validation | Real M7D Fusion test reports MMU failure at 2 GiB; M7E corrects a reproduced QEMU capacity defect and adds precise reports; target retest and broader USB support remain open |
 | 8: CHOS 0.1 | Not ready |
 
-Current ISO/results: [M7D bootstrap/diagnostic hardening](milestone-7d.md).
+Current ISO/results: [M7E MMU correction and Fusion retest](milestone-7e.md).
+Preserved [M7D bootstrap/diagnostic hardening](milestone-7d.md).
 Preserved [M7C diagnostics and USB](milestone-7c.md).
 Preserved [M7A/7B boot and interrupts](milestone-7a-b.md).
 Preserved [M6D dedicated Setup iteration](milestone-6d-setup.md).
@@ -82,3 +83,11 @@ image and independent guarded stack. File/BSS sizing, far RO/NX, loader-version
 refusal, optional-driver failure without disk/input and remaining-device operation
 after unplug are covered by the expanded sequence. [Architecture](kernel-image.md).
 Actual Fusion evidence remains pending; no speculative target driver was added.
+
+M7E preserves the 1,024-table safety ceiling but allocates individual pages and
+uses 2 MiB blocks outside managed RAM. All managed RAM remains page-granular for
+live thread guards. Precise framebuffer failure codes, PA/granule validation,
+identity coverage, memory-map validation and host/QEMU stress tests are added.
+The reported M7D failure on an M1 MacBook Air is genuine target evidence; the
+specific cause and correction on Fusion await the new image retest. See
+[MMU architecture and codes](mmu-architecture.md).

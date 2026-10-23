@@ -1,3 +1,14 @@
+# M7E — precise MMU reports and table-demand correction
+
+Real M7D Fusion testing reports `MMU INIT FAILED` on an M1 MacBook Air at 2 GiB.
+M7E corrects a confirmed QEMU 2 GiB table-capacity defect without increasing the
+1,024-table policy limit or weakening protections. It allocates individual pages,
+uses 2 MiB blocks outside managed RAM and retains 4 KiB managed RAM for live guards.
+It adds detailed retained framebuffer reports, address/granule/coverage validation,
+PMM map errors, and production-mapper host stress tests. No speculative Fusion
+USB/storage changes or desktop redesign. See [M7E report](milestone-7e.md) and
+[MMU architecture/codes](mmu-architecture.md). Fusion retest remains pending.
+
 # M7D bootstrap and diagnostic hardening checkpoint
 
 Versioned flat kernel metadata replaces the fixed 512 KiB bootstrap contract.

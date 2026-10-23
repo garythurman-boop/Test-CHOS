@@ -1,6 +1,6 @@
 # CHOS acceptance evidence
 
-Current sequence: [M7D bootstrap/diagnostic hardening](milestone-7d.md),
+Current sequence: [M7E MMU and Fusion retest](milestone-7e.md),
 [setup architecture](setup-environment.md). Earlier tables below retain their
 checkpoint-specific evidence; each new sequence reruns the earlier core coverage.
 
@@ -104,3 +104,13 @@ The no-disk case must show diagnostics despite actual optional-driver initializa
 failure. The mixed preserved-loader case must show an explicit boot version error.
 Actual Fusion remains a separate pending gate; installation there is not authorized
 by a QEMU pass alone and must follow prerequisite validation.
+
+## M7E additions
+
+Retain all 61 earlier QEMU cases and add five: normal 2 GiB EL1/GICv2, 2 GiB
+EL2/GICv3, 8 GiB EL2/GICv3, 2 GiB input-free/disk-free diagnostics, and a controlled
+eight-table-capacity failure verified from framebuffer codes. Total: 66 unique
+QEMU cases and 18 host C programs, including the production mapper with privileged
+operations stubbed. ASan/UBSan and repeatable/clean-source image builds remain
+required. A real M7D Fusion failure is recorded; M7E target acceptance requires
+an actual M1 retest, separate from these controlled stress layouts.

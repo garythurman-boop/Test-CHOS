@@ -9,19 +9,23 @@ static void set(struct pmm *p,uint32_t i,bool value) {
 }
 bool pmm_init(struct pmm *p,const void *map,size_t size,size_t stride) {
     p->range_count=p->total=p->used=0;
+    p->error=PMM_OK;p->error_index=p->error_type=UINT32_MAX;p->error_address=(uintptr_t)map;p->error_pages=size/PAGE_SIZE;
     if(!map || stride<sizeof(struct memory_descriptor) || stride%8 ||
-       !size || size%stride || (uintptr_t)map%8) return false;
+       !size || size%stride || (uintptr_t)map%8 || (uintptr_t)map>=(1ULL<<48) || size>(1ULL<<48)-(uintptr_t)map) {p->error=PMM_MAP_SHAPE;return false;}
     size_t count=size/stride;
-    if(count>4096) return false;
+    if(count>4096) {p->error=PMM_MAP_SHAPE;return false;}
     for(size_t i=0;i<PMM_MAX_PAGES/64;i++) p->bits[i]=0;
     for(size_t i=0;i<count;i++) {
         const struct memory_descriptor *d=(const void *)((const uint8_t *)map+i*stride);
-        if(!d->pages || d->physical%PAGE_SIZE || d->pages>(UINT64_MAX-d->physical)/PAGE_SIZE)
-            goto invalid;
+        p->error_index=(uint32_t)i;p->error_type=d->type;p->error_address=d->physical;p->error_pages=d->pages;
+        if(!d->pages){p->error=PMM_DESCRIPTOR;goto invalid;}
+        if(d->physical%PAGE_SIZE){p->error=PMM_ALIGNMENT;goto invalid;}
+        if(d->physical>=(1ULL<<48)){p->error=PMM_ADDRESS;goto invalid;}
+        if(d->pages>((1ULL<<48)-d->physical)/PAGE_SIZE){p->error=PMM_OVERFLOW;goto invalid;}
         uint64_t end=d->physical+d->pages*PAGE_SIZE;
         for(size_t j=0;j<i;j++) {
             const struct memory_descriptor *a=(const void *)((const uint8_t *)map+j*stride);
-            if(d->physical<a->physical+a->pages*PAGE_SIZE && a->physical<end) goto invalid;
+            if(d->physical<a->physical+a->pages*PAGE_SIZE && a->physical<end) {p->error=PMM_OVERLAP;goto invalid;}
         }
         if(d->type!=7) continue;
         uint64_t base=d->physical,n=d->pages;
@@ -29,11 +33,12 @@ bool pmm_init(struct pmm *p,const void *map,size_t size,size_t stride) {
         /* Cap metadata, not physical addresses. Unmanaged excess remains reserved. */
         if(n>PMM_MAX_PAGES-p->total) n=PMM_MAX_PAGES-p->total;
         if(!n) continue;
-        if(p->range_count==PMM_MAX_RANGES) goto invalid;
+        if(p->range_count==PMM_MAX_RANGES) {p->error=PMM_RANGE_CAPACITY;goto invalid;}
         p->ranges[p->range_count++]=(struct pmm_range){base,(uint32_t)n,p->total};
         p->total+=(uint32_t)n;
     }
-    return p->total!=0;
+    if(!p->total){p->error=PMM_EMPTY;goto invalid;}
+    p->error_index=p->error_type=UINT32_MAX;p->error_address=p->error_pages=0;return true;
 invalid:
     p->range_count=p->total=p->used=0;
     return false;

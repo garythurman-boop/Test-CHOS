@@ -247,3 +247,12 @@ rendering delays; each has a distinct bounded DMA region. Descriptor publication
 uses release fences, completion consumption acquire fences, and native cache/DMA
 barriers. IRQ routing, broad device support and recovery remain explicit limits.
 See [USB architecture](usb.md) and [M7C](milestone-7c.md).
+
+## M7E MMU update
+
+Translation-table allocation is now individual and bounded rather than a contiguous
+4 MiB reservation. Normal RAM outside managed allocator ranges uses 2 MiB blocks
+where alignment permits. Managed RAM remains 4 KiB granular for runtime stack guards;
+text/rodata and bootstrap guards are refined before activation. Granule/PA/map/
+identity validation and retained framebuffer reports precede the switch. The table
+ceiling remains 1,024 pages. [Full audit and limits](mmu-architecture.md).

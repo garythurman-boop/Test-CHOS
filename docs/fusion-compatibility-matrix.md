@@ -1,12 +1,16 @@
-# ARM64 compatibility matrix — M7D checkpoint
+# ARM64 compatibility matrix — M7E checkpoint
 
-**No Fusion test has been performed.** No Apple Silicon/Fusion host is attached.
-“Tested” means the recorded QEMU AArch64 UEFI setup or portable host tests.
-The target Fusion build, custom ARM64 workflow and actual hardware remain unknown.
+**Real M7D Fusion test: kernel MMU initialization failed.** The user reports
+an Apple M1 MacBook Air, one CPU, 2 GiB RAM, macOS 27 “Golden Gate,” Fusion
+“26H1u1,” and normal M7D `CHOS-ARM64.iso`. Full build identifier, automatic versus
+manual optical path, firmware inventory and memory map have not been supplied.
+No target host is attached here. **M7E Fusion retest pending.** QEMU/stress results
+are separate from the user-reported Fusion failure.
 
 | Subsystem | Existing CHOS implementation | Fusion requirement / missing evidence | Status | Required changes / test evidence |
 |---|---|---|---|---|
-| Optical boot | Original AA64 PE, EFI El Torito FAT, `EFI/BOOT/BOOTAA64.EFI`, bounded ExitBootServices | Exact release must accept custom ARM64 optical UEFI boot; Secure Boot off | QEMU pass; Fusion unknown | Capture automatic catalog/path execution; ISO/EFI inspection logs and boot JSONs |
+| MMU | Validated CHOS identity tables, page-granular managed RAM, 2 MiB blocks elsewhere, individual table pages and retained failure codes | Retest M7E on the same 2 GiB configuration; capture stage/reason or discovery pages | M7D user-reported failure; M7E QEMU correction, Fusion pending | [MMU audit](mmu-architecture.md); actual Fusion map/cause unconfirmed |
+| Optical boot | Original AA64 PE, EFI El Torito FAT, `EFI/BOOT/BOOTAA64.EFI`, bounded ExitBootServices | Exact release must accept custom ARM64 optical UEFI boot; Secure Boot off | QEMU pass; user reports reaching MMU failure, automatic/manual path unknown | Capture automatic catalog/path execution; ISO/EFI inspection logs and boot JSONs |
 | Exception levels | EL1 direct; original non-VHE EL2→EL1 transition preserving firmware tables until kernel translation replaces them | Actual entry EL, HCR/TCR and mapping regime | Both tested in QEMU | `boot-gic2-el2.json`, `boot-gic3-el2.json`; validate target handoff |
 | Interrupts | ACPI GICv2 or GICv3; MPIDR-selected GICC/GICR, distributor, CPU interface, ack/EOI | Actual MADT GIC revision/resources and accessible CPU sysregs | Both tested in QEMU | Original GICv3 path; affinity/stride/masking/timeout host tests; actual target MADT required |
 | Timer | GTDT non-secure physical PPI, CNTFRQ, nominal 100 Hz | Actual PPI/flags and physical timer permission | QEMU pass at both EL handoffs | Protection, preemption, IPC and input checks on all four EL/GIC combinations |
@@ -55,7 +59,7 @@ from SPCR. The independent bounded USB driver does not establish Fusion support.
 The QEMU probe compares firmware PCI IDs with independent QMP inventory and verifies
 an unconfirmed disk remains byte-identical. Full target ACPI tables and USB/HID
 reports still need firmware diagnostics; this snapshot is not a complete dump tool.
-See [manual checklist](fusion-validation.md) and [iteration report](milestone-7d.md).
+See [manual checklist](fusion-validation.md) and [iteration report](milestone-7e.md).
 
 M7C also tests a no-input VM with USB and unsupported storage inventory and an
 unchanged disposable disk, USB-only native editing/save/reopen/mouse/ring-wrap/
@@ -69,3 +73,9 @@ malformed/old-loader rejection, and no-disk diagnostics despite optional input
 negotiation failure. The existing polled xHCI driver is preserved. Actual Fusion
 PCI/USB/GIC/storage/display observations are still required before target corrections
 or destructive installation tests. [Kernel report](kernel-image.md).
+
+M7E reproduces the old 2 GiB table-pool exhaustion under QEMU with a two-branch
+instrumented preserved baseline. The new image passes larger-memory QEMU tests;
+that is a demonstrated correction of an independent defect, not proof of the
+Fusion root cause. The first Fusion retest must capture the new failure codes or
+all automatic inventory pages before any installation is attempted.

@@ -22,13 +22,15 @@ Blue keyboard-driven disk selection and typed confirmation lead to native Royale
 configuration/progress/completion. Progress follows real operations and copied
 bytes. Original GPT/FAT32/CHFS writers verify the files and installed boot path.
 
-**VMware Fusion compatibility remains unverified.** Original EL2→EL1 startup and
-ACPI GICv3 now pass QEMU tests. Initial xHCI USB2 boot-keyboard/mouse input
-passes QEMU-only tests. Other USB controllers, hubs, general HID and USB interrupt
-routing remain unsupported. Actual Fusion
-device inventory and target validation are pending. Native installation and disk
-reboot are tested under QEMU; account/password
-and full time-zone/layout/mode setup, networking and CHOS 0.1 remain unfinished.
+**Real Fusion testing has reached the kernel but failed at MMU initialization.**
+The user reports an M1 MacBook Air, one CPU, 2 GiB RAM, macOS 27 “Golden Gate,”
+Fusion “26H1u1,” and the M7D normal ISO displaying `MMU INIT FAILED`. These are
+user-reported details; a full Fusion build number and memory map are unavailable.
+M7E corrects a confirmed 2 GiB QEMU table-exhaustion defect and adds retained
+framebuffer failure reports. **The M7E Fusion retest is pending.** Native input,
+storage, desktop, installation and persistence on Fusion remain unverified.
+USB interrupts/hubs/general HID, accounts/authentication/ACLs, full regional/display
+setup, networking, SMP and CHOS 0.1 remain unfinished.
 
 M7D replaces the fixed 512 KiB bootstrap ceiling with a validated versioned kernel
 image and a separately allocated 64 KiB guarded stack. Controlled large-file/BSS
@@ -40,8 +42,8 @@ to disk. [First Fusion evaluation instructions](docs/fusion-first-boot.md).
 
 ## Download testing images
 
-- [Current noninteractive M7D diagnostic ISO](artifacts/milestone-7d/CHOS-ARM64-M7D.iso).
-- [Current M7D Setup/Live Desktop ISO](artifacts/milestone-7d/CHOS-ARM64.iso).
+- [Current noninteractive M7E diagnostic ISO](artifacts/milestone-7e/CHOS-ARM64-M7E-DIAGNOSTIC.iso).
+- [Current M7E Setup/Live Desktop ISO](artifacts/milestone-7e/CHOS-ARM64.iso).
 - [Preserved noninteractive M7C diagnostic ISO](artifacts/milestone-7c/CHOS-ARM64-M7C.iso).
 - [Preserved M7C Setup/Live Desktop ISO](artifacts/milestone-7c/CHOS-ARM64.iso).
 - [Preserved M7A/7B boot/interrupt compatibility ISO](artifacts/milestone-7a-b/CHOS-ARM64.iso).
@@ -78,7 +80,7 @@ El Torito FAT boot volume. Secure Boot must be off. The FAT volume is not an
 installed ESP. `kernel.elf` is a debug artifact; the separate static ELF loader
 runs original acceptance and application programs embedded in the kernel.
 
-Validation runs seventeen host C test programs (both ELF payloads) and sixty-one real
+Validation runs eighteen host C test programs (both ELF payloads) and sixty-six real
 AArch64 UEFI QEMU cases, including 512 MiB/1 GiB boots, protection/IPC, keyboard/
 mouse window and application interactions, native restart/shutdown, three cold
 NVMe/CHFS boots, two GPT/ESP disk-only boots and expected error/safety cases.
@@ -103,7 +105,9 @@ disconnect, and unsupported xHCI/OHCI/non-boot-HID cases. Both ordinary and
 diagnostic ISOs are checked for repeatability. M7D adds disk-free optional-driver
 failure, mouse disconnect with a working keyboard, mixed-loader version rejection,
 large image/BSS boot/install/disk reboot and three malformed-image refusals.
-Evidence: docs/evidence/m7d.
+M7E adds 2/8 GiB UEFI boots, input-free 2 GiB discovery and an actual
+framebuffer table-capacity refusal. The production mapper also runs host stress
+tests with privileged operations stubbed. Evidence: docs/evidence/m7e.
 `bash scripts/sanitize.sh` additionally runs the portable modules with ASan/UBSan
 when host GCC/Clang supports them.
 
@@ -116,7 +120,8 @@ after toolchain installation. Tests start/stop their own QEMU processes.
 
 - [Acceptance criteria and evidence](docs/acceptance.md)
 - [Dedicated installation environment and safety](docs/setup-environment.md)
-- [Current M7D hardening iteration](docs/milestone-7d.md)
+- [Current M7E MMU hardening and Fusion retest](docs/milestone-7e.md)
+- [Preserved M7D hardening iteration](docs/milestone-7d.md)
 - [Kernel image and bootstrap architecture](docs/kernel-image.md)
 - [Previous M7C discovery/USB iteration](docs/milestone-7c.md)
 - [USB architecture and limits](docs/usb.md)

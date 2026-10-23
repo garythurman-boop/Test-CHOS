@@ -1,6 +1,7 @@
 SHELL := /bin/bash
 CC := clang
 CFLAGS := -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude
+KERNEL_TABLE_CAPACITY ?= 1024
 KFLAGS := $(CFLAGS) --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics
 SOURCE_DATE_EPOCH ?= 1767225600
 export SOURCE_DATE_EPOCH
@@ -14,15 +15,15 @@ build/image.obj: boot/image.c include/kernel_image.h | build
 	$(CC) $(CFLAGS) --target=aarch64-pc-windows-msvc -c $< -o $@
 build/BOOTAA64.EFI: build/boot.obj build/image.obj
 	lld-link /subsystem:efi_application /entry:efi_main /nodefaultlib /machine:arm64 /timestamp:0 /out:$@ $^
-KSOURCES := boot/image.c kernel/image_test.c drivers/usb/ring.c drivers/usb/hid.c drivers/usb/xhci.c kernel/diagnostics/buffer.c kernel/diagnostics/native.c kernel/arch/arm64/hardware.c kernel/config/format.c kernel/config/store.c installer/inventory.c installer/policy.c installer/service.c installer/gpt.c installer/fat32.c filesystem/ram.c kernel/arch/arm64/power.c desktop/desktop.c desktop/window-manager/model.c desktop/graphics/render.c desktop/graphics/primitives.c desktop/graphics/fontcache.c desktop/graphics/font.c drivers/input/virtio.c drivers/input/events.c filesystem/vfs.c filesystem/chfs.c drivers/storage/nvme.c kernel/storage_test.c kernel/runtime.c kernel/main.c kernel/console.c kernel/process/elf.c kernel/process/process.c kernel/syscall/syscall.c kernel/arch/arm64/acpi.c kernel/memory/physical.c kernel/memory/heap.c kernel/memory/virtual.c kernel/interrupts/exception.c kernel/scheduler/scheduler.c drivers/interrupts/gicv3.c drivers/interrupts/gicv2_timer.c
+KSOURCES := kernel/memory/report.c boot/image.c kernel/image_test.c drivers/usb/ring.c drivers/usb/hid.c drivers/usb/xhci.c kernel/diagnostics/buffer.c kernel/diagnostics/native.c kernel/arch/arm64/hardware.c kernel/config/format.c kernel/config/store.c installer/inventory.c installer/policy.c installer/service.c installer/gpt.c installer/fat32.c filesystem/ram.c kernel/arch/arm64/power.c desktop/desktop.c desktop/window-manager/model.c desktop/graphics/render.c desktop/graphics/primitives.c desktop/graphics/fontcache.c desktop/graphics/font.c drivers/input/virtio.c drivers/input/events.c filesystem/vfs.c filesystem/chfs.c drivers/storage/nvme.c kernel/storage_test.c kernel/runtime.c kernel/main.c kernel/console.c kernel/process/elf.c kernel/process/process.c kernel/syscall/syscall.c kernel/arch/arm64/acpi.c kernel/memory/physical.c kernel/memory/heap.c kernel/memory/virtual.c kernel/interrupts/exception.c kernel/scheduler/scheduler.c drivers/interrupts/gicv3.c drivers/interrupts/gicv2_timer.c
 KASM := kernel/arch/arm64/growth.S desktop/graphics/assets.S kernel/arch/arm64/entry.S kernel/arch/arm64/vectors.S kernel/arch/arm64/mmu.S kernel/arch/arm64/test_worker.S kernel/process/image.S
 KOBJECTS := $(patsubst %.c,build/%.o,$(KSOURCES)) $(patsubst %.S,build/%.o,$(KASM))
 build/%.o: %.c $(wildcard include/*.h) Makefile
 	mkdir -p $(dir $@)
-	$(CC) $(KFLAGS) -c $< -o $@
+	$(CC) $(KFLAGS) -DCHOS_MMU_TABLE_CAPACITY=$(KERNEL_TABLE_CAPACITY) -c $< -o $@
 build/%.o: %.S Makefile
 	mkdir -p $(dir $@)
-	$(CC) $(KFLAGS) -c $< -o $@
+	$(CC) $(KFLAGS) -DCHOS_MMU_TABLE_CAPACITY=$(KERNEL_TABLE_CAPACITY) -c $< -o $@
 build/kernel.ld: kernel/arch/arm64/kernel.ld include/kernel_image.h | build
 	$(CC) -E -P -x c -D__ASSEMBLER__ -Iinclude $< -o $@
 build/kernel.elf: $(KOBJECTS) build/kernel.ld
@@ -151,3 +152,12 @@ test-image: | build
 
 .PHONY: force-growth
 force-growth:
+
+.PHONY: test-mmu
+test-mmu: | build
+	$(CC) -std=c11 -Wall -Wextra -Werror -DCHOS_MMU_TEST -Iinclude tests/mmu.c kernel/memory/virtual.c kernel/memory/physical.c -o build/test-mmu
+	./build/test-mmu
+
+build/kernel/memory/virtual.o: force-tables
+.PHONY: force-tables
+force-tables:

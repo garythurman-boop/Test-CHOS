@@ -1,16 +1,17 @@
 # VMware Fusion ARM64 manual validation
 
-**Pending: no Apple Silicon/Fusion host available.** This is a checklist, not a
-successful installation record. Keep evidence per gate; stop at failed prerequisites.
+**M7D first target test failed at MMU initialization on the reported M1/2 GiB
+configuration. M7E retest pending; no target host is attached here.** This is a
+checklist, not a successful installation record. Keep evidence per gate; stop at failed prerequisites.
 
 1. Record Apple SoC, macOS, exact Fusion version/build, firmware and VM CPU/memory,
    disk/controller, display/input settings. Check that release's supported custom/
    other ARM64 UEFI workflow. Do not select x86 or assume another version's UI.
 2. First run the [non-destructive diagnostic evaluation](fusion-first-boot.md), which
    requires no input or disk. For later installation download
-   [M7D normal ISO](../artifacts/milestone-7d/CHOS-ARM64.iso) using GitHub
+   [M7E normal ISO](../artifacts/milestone-7e/CHOS-ARM64.iso) using GitHub
    **Download raw file**; compare adjacent SHA256SUMS. Preserve M6D. Create a new
-   disposable ARM64 VM, one CPU, 1 GiB RAM, Secure Boot off. Attach connected optical
+   disposable ARM64 VM, one CPU, 2 GiB RAM, Secure Boot off. Attach connected optical
    media and a disposable disk at least 1 GiB, selecting NVMe if actually available.
    Attach no valuable disks or host shared volumes.
 3. Cold boot. Record automatic optical detection, EFI catalog/path execution and

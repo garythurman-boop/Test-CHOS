@@ -1,18 +1,19 @@
 # First Fusion ARM64 evaluation — no installation required
 
-**Fusion has not been tested.** No Apple Silicon/Fusion host is available. The
-exact target Fusion version/build and its supported custom ARM64 workflow must be
-recorded. UI labels differ by version; the sequence below states required settings
-without claiming unverified release-specific screens.
+**M7E retest after a real M7D failure.** The user reports an M1 MacBook Air,
+one CPU, 2 GiB RAM, macOS 27 “Golden Gate,” Fusion “26H1u1,” normal M7D ISO and
+`MMU INIT FAILED`. Exact build and firmware/device map remain unknown. No target
+host is attached here. Keep the **same 2 GiB RAM** for the first retest so reducing
+RAM does not hide a capacity failure. UI labels vary by Fusion release.
 
-1. Download [CHOS-ARM64-M7D.iso](../artifacts/milestone-7d/CHOS-ARM64-M7D.iso)
+1. Download [CHOS-ARM64-M7E-DIAGNOSTIC.iso](../artifacts/milestone-7e/CHOS-ARM64-M7E-DIAGNOSTIC.iso)
    using GitHub **Download raw file**. Compare adjacent SHA256SUMS with
-   `shasum -a 256 CHOS-ARM64-M7D.iso`. This is the noninteractive diagnostic image.
+   `shasum -a 256 CHOS-ARM64-M7E-DIAGNOSTIC.iso`. This is the noninteractive diagnostic image.
 2. Open Fusion on an Apple Silicon Mac. Create a **new custom/other ARM64 64-bit
    UEFI VM** using that release's supported workflow. Select an ARM64 guest, not
    an x86 compatibility type. If custom optical boot is unavailable, record the
    release/UI as a blocker. Do not claim another guest type provides compatibility.
-3. Configure **one virtual CPU and 1 GiB RAM**. Disable **Secure Boot** for the
+3. Configure **one virtual CPU and 2 GiB RAM**. Disable **Secure Boot** for the
    unsigned CHOS EFI executable. No guest network is needed. Use default virtual
    display/input settings initially and record their exact configuration.
 4. Attach the diagnostic ISO to connected CD/DVD media, connected at power-on.
@@ -63,15 +64,27 @@ The bounded 16 KiB native report is also available read-only through syscall 34
 in ordinary sessions; it is not a disk writer or a general memory dump.
 
 After discovery identifies supported input/storage/display, a separate normal
-[CHOS-ARM64.iso](../artifacts/milestone-7d/CHOS-ARM64.iso) contains the same kernel
+[CHOS-ARM64.iso](../artifacts/milestone-7e/CHOS-ARM64.iso) contains the same kernel
 and starts full-screen Setup. Use L/F3 for Live Desktop first. USB xHCI boot-HID
 passes QEMU tests only; Fusion might expose other controllers/protocols. Follow
 [full installation checklist](fusion-validation.md) only after those prerequisites
 are validated. Keep typed `ERASE` and the exact selected disposable disk review.
 
-M7D explicitly tests the recommended 1 GiB, one-CPU configuration with no disk,
-network or desktop, including an actual optional Virtio feature-negotiation failure.
-That failure is logged and automatic diagnostic pages remain available. The report
-now also shows declared kernel file/memory and bootstrap stack sizes. No actual
-Fusion result has arrived in this workspace. Capture every page or the last visible
-error, plus Apple SoC/macOS/exact Fusion version/build, for the next hardware step.
+## If MMU initialization fails again
+
+Capture the **entire retained “CHOS MMU INIT FAILED / REPORT V1” screen**.
+Transcribe stage and reason numbers, physical address, size/argument, descriptor
+index/type/attributes, table count/capacity, PMM used/total/error/ranges, map entries,
+highest end, MMFR0 and old/new translation registers. `4294967295` for descriptor
+index/type means the failure is not tied to one descriptor. Stage/reason names and
+[codes](mmu-architecture.md) are included on screen. A register value of zero on a
+pre-MMU map rejection can mean it has not been captured yet. No serial is required.
+If the screen stops at “MMU STAGE 10” or an exception screen, capture that instead;
+that identifies the translation switch rather than a returned mapping error.
+
+If the previous point is passed, capture **every rotating hardware page**, including
+MMU table usage, firmware/EL/GIC/timer, GOP and all PCI/input/storage outcomes.
+Record ISO checksum, RAM, Secure Boot setting, exact Fusion About version/build,
+macOS version and whether optical boot was automatic or manually selected.
+Do not attach a valuable disk or attempt installation. Booting diagnostics is not
+input/storage/desktop/install acceptance. Preserve the original failed M7D image.
