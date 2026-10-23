@@ -7,7 +7,9 @@ bounds extended-capability reads and distinguishes allocation/ownership/reset/
 capability refusals. The no-input panel separates controller, connections,
 descriptors and HID readiness. NVMe, installer/Royale and original kernel remain.
 The exact old Fusion predicate/raw offsets still require capture; no target HID
-or installation pass is claimed. [M7G report](milestone-7g.md).
+or installation pass is claimed. Validation passed 76 QEMU cases, 20 host programs,
+portable sanitizers and clean source reproduction of all three ISOs.
+[M7G report](milestone-7g.md).
 
 # M7F — nonzero-bus discovery, input trial and safe NVMe diagnostics
 

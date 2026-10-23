@@ -5,7 +5,8 @@ image runs normal protection/timer tests, skips Setup/filesystem mounting, attem
 bounded driver initialization and rotates reports automatically. A fixed lower
 panel shows live USB keyboard/mouse availability, selected controller ID, actual
 active path, stage/reason, last numeric key code/value, pointer position/buttons
-and event count. It fits the supported 640×480 minimum as well as 1024×768.
+and event count. M7G also separates controller initialized, total/initially connected
+ports, descriptor-enumerated devices and ready HID interfaces. It fits the supported 640×480 minimum as well as 1024×768.
 
 The panel consumes existing `input_next` events; there is no second input API.
 Single last-event fields are volatile. Key codes/content are never appended to

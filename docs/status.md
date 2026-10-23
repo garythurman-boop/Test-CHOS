@@ -30,7 +30,7 @@ not an installer or desktop persistence environment.
 
 - One CPU, EL1 or supported non-VHE EL2→EL1 entry, ACPI 2.x, GICv2/v3 and GTDT.
   No VHE/LPA2/52-bit/MMU-off/big-endian EL2 handoff, DT-only discovery, SMP,
-  GIC ITS/LPI/MSI or confirmed Fusion device inventory. Original xHCI supports a
+  GIC ITS/LPI/MSI or full Fusion hardware support. Original xHCI supports a
   bounded polled USB2 root-port boot-HID subset only; no USB interrupts, hubs,
   general HID reports, legacy controllers, ownership takeover or hotplug re-enumeration.
 - Eight user processes/twelve threads; private static AArch64 ELF subset, no

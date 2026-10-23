@@ -18,7 +18,7 @@ M7G controller/HID/input operation remains pending. Keep the M7F ISO/checksum.
    **CHOS USB HARDWARE TEST** panel. No keyboard is needed to see the reports.
    The report should now identify and select xHCI at bus `0a`, rather than silently
    miss it. Seeing a selected controller does not establish working input.
-4. Capture **every rotating page**, particularly the xHCI PCI config/ID/MMIO,
+4. Capture **every rotating page until page 1 returns**, particularly the xHCI PCI config/ID/MMIO,
    CAPLENGTH, HCSPARAMS1/2, HCCPARAMS1/2, **DBOFF/RTSOFF**,
    **failure stage/reason and readable cause**, root ports and each PORTSC, initialization/ownership
    errors, enumeration port/stage, HID interface/protocol and ready counts.

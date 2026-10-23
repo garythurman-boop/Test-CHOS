@@ -1,0 +1,6 @@
+clang -std=c11 -Wall -Wextra -Werror -Iinclude tests/usb.c drivers/usb/layout.c drivers/usb/hid.c drivers/usb/ring.c -o build/test-usb
+./build/test-usb
+xHCI compact sub-page layout, exact block bounds/overlap, extended capabilities, stable refusal reasons passed
+USB rings cycle/link/event wrap/DMA bounds; boot descriptor bounds/type/endpoint rejection, HID key/release/modifier/rollover/duplicates, signed mouse/buttons/wheel and event-capacity atomicity passed
+xHCI compact sub-page layout, exact block bounds/overlap, extended capabilities, stable refusal reasons passed
+USB rings cycle/link/event wrap/DMA bounds; boot descriptor bounds/type/endpoint rejection, HID key/release/modifier/rollover/duplicates, signed mouse/buttons/wheel and event-capacity atomicity passed

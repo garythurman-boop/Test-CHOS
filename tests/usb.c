@@ -6,27 +6,27 @@ static _Alignas(4096) struct usb_trb page[256];
 int main(void){
     struct xhci_layout l;
     /* Compact, disjoint blocks are legal; old M7F rejects both offsets. This
-     * is a synthetic layout, not a claimed VMware register capture. */
-    assert(!xhci_layout_validate(0x1000020,0x08000020,0,1,0x800,0x600,65536,&l));
+     * is a synthetic layout (one interrupter), not a VMware register capture. */
+    assert(!xhci_layout_validate(0x1000020,0x08000120,0,1,0x800,0x600,65536,&l));
     assert(l.operational==32 && l.doorbell==0x800 && l.runtime==0x600);
     assert(xhci_extended_span(&l,0x900,8));
     assert(!xhci_extended_span(&l,0x800,4) && !xhci_extended_span(&l,0x620,4));
     assert(!xhci_extended_span(&l,0xfffc,8) && !xhci_extended_span(&l,0x901,4));
-    assert(!xhci_layout_validate(0x1000040,0x08000040,0,1,0x2000,0x1000,65536,&l));
+    assert(!xhci_layout_validate(0x1000040,0x08000140,0,1,0x2000,0x1000,65536,&l));
     assert(xhci_extended_span(&l,0x20,16)); /* QEMU extended caps before op */
-    assert(xhci_layout_validate(31,0x08000020,0,1,0x800,0x600,65536,&l)==XHCI_CAPLEN);
-    assert(xhci_layout_validate(32,0x08000020,0,0,0x800,0x600,65536,&l)==XHCI_DMA64);
-    for(unsigned b=21;b<32;b++)if(b!=26)assert(xhci_layout_validate(32,0x08000020,1u<<b,1,0x800,0x600,65536,&l)==XHCI_SCRATCHPADS);
-    assert(xhci_layout_validate(32,0x08000000,0,1,0x800,0x600,65536,&l)==XHCI_SLOTS);
-    assert(xhci_layout_validate(32,0x00000020,0,1,0x800,0x600,65536,&l)==XHCI_PORTS);
-    assert(xhci_layout_validate(32,0x21000020,0,1,0x800,0x600,65536,&l)==XHCI_PORTS);
-    assert(xhci_layout_validate(32,0x08000020,0,1,0xfffc,0x600,65536,&l)==XHCI_DOORBELL);
-    assert(xhci_layout_validate(32,0x08000020,0,1,0x800,0xffe0,65536,&l)==XHCI_RUNTIME);
-    assert(xhci_layout_validate(32,0x08000020,0,1,0x800,0x800,65536,&l)==XHCI_OVERLAP);
-    assert(xhci_layout_validate(32,0x08000020,0,1,0x400,0x600,65536,&l)==XHCI_OVERLAP);
+    assert(xhci_layout_validate(31,0x08000120,0,1,0x800,0x600,65536,&l)==XHCI_CAPLEN);
+    assert(xhci_layout_validate(32,0x08000120,0,0,0x800,0x600,65536,&l)==XHCI_DMA64);
+    for(unsigned b=21;b<32;b++)if(b!=26)assert(xhci_layout_validate(32,0x08000120,1u<<b,1,0x800,0x600,65536,&l)==XHCI_SCRATCHPADS);
+    assert(xhci_layout_validate(32,0x08000100,0,1,0x800,0x600,65536,&l)==XHCI_SLOTS);
+    assert(xhci_layout_validate(32,0x00000120,0,1,0x800,0x600,65536,&l)==XHCI_PORTS);
+    assert(xhci_layout_validate(32,0x21000120,0,1,0x800,0x600,65536,&l)==XHCI_PORTS);
+    assert(xhci_layout_validate(32,0x08000120,0,1,0xfffc,0x600,65536,&l)==XHCI_DOORBELL);
+    assert(xhci_layout_validate(32,0x08000120,0,1,0x800,0xffe0,65536,&l)==XHCI_RUNTIME);
+    assert(xhci_layout_validate(32,0x08000120,0,1,0x800,0x800,65536,&l)==XHCI_OVERLAP);
+    assert(xhci_layout_validate(32,0x08000120,0,1,0x400,0x600,65536,&l)==XHCI_OVERLAP);
     /* MaxSlots+1 doorbells, including doorbell zero, must fit completely. */
-    assert(!xhci_layout_validate(32,0x080000ff,0,1,0xfc00,0x600,65536,&l));
-    assert(xhci_layout_validate(32,0x080000ff,0,1,0xfc04,0x600,65536,&l)==XHCI_DOORBELL);
+    assert(!xhci_layout_validate(32,0x080001ff,0,1,0xfc00,0x600,65536,&l));
+    assert(xhci_layout_validate(32,0x080001ff,0,1,0xfc04,0x600,65536,&l)==XHCI_DOORBELL);
     puts("xHCI compact sub-page layout, exact block bounds/overlap, extended capabilities, stable refusal reasons passed");
 
     struct usb_ring ring={(uintptr_t)page,0,1};

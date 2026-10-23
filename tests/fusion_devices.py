@@ -60,7 +60,7 @@ try:
  g.key('down');g.wait(lambda p:p(30,212)==0x244da8,'USB arrow selects Live Desktop')
  g.key('up');g.wait(lambda p:p(30,160)==0x244da8,'USB arrow restores Install')
  g.key('ret');g.wait(lambda p:matches(p,32,92,'CHOS Setup Agreement',0xf2f6ff),'USB Enter opens license')
- g.key('esc');g.wait(lambda p:p(30,160)==0x244da8,'USB Escape restores welcome focus')
+ g.key('esc');g.wait(lambda p:p(30,160)==0x244da8 and matches(p,32,g.dimensions()[1]-90,'Your disk is unchanged until typed confirmation.',0xc3d5ff,0),'USB Escape restores complete welcome and focus')
  g.snapshot('fusion-bus-navigation')
  g.key('l');g.wait(lambda p:p(60,250)==0x326bb0,'USB Setup L selects native Live Desktop',120)
  g.click(618,36);launch(g,2);type_text(g,'BRIDGED USB INPUT')

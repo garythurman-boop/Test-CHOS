@@ -83,7 +83,7 @@ El Torito FAT boot volume. Secure Boot must be off. The FAT volume is not an
 installed ESP. `kernel.elf` is a debug artifact; the separate static ELF loader
 runs original acceptance and application programs embedded in the kernel.
 
-Validation runs twenty host C test programs (both ELF payloads) and seventy-five real
+Validation runs twenty host C test programs (both ELF payloads) and seventy-six real
 AArch64 UEFI QEMU cases, including 512 MiB/1 GiB boots, protection/IPC, keyboard/
 mouse window and application interactions, native restart/shutdown, three cold
 NVMe/CHFS boots, two GPT/ESP disk-only boots and expected error/safety cases.
@@ -125,7 +125,8 @@ after toolchain installation. Tests start/stop their own QEMU processes.
 
 - [Acceptance criteria and evidence](docs/acceptance.md)
 - [Dedicated installation environment and safety](docs/setup-environment.md)
-- [Current M7F discovery/input/storage checkpoint](docs/milestone-7f.md)
+- [Current M7G xHCI layout/diagnostic checkpoint](docs/milestone-7g.md)
+- [Preserved M7F discovery/input/storage checkpoint](docs/milestone-7f.md)
 - [Preserved M7E MMU hardening](docs/milestone-7e.md)
 - [Preserved M7D hardening iteration](docs/milestone-7d.md)
 - [Kernel image and bootstrap architecture](docs/kernel-image.md)

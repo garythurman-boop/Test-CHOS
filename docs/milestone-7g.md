@@ -20,6 +20,8 @@ Reports include PCI command before/decode/DMA enable, raw BAR DWORDs, CAPLENGTH/
 
 The INPUT panel adds controller initialized YES/NO, total/connected root ports, descriptor-enumerated devices and ready HID interfaces. Keyboard/mouse readiness remains distinct from controller readiness. The selected polled controller path can be running with zero usable HID devices. Last key code/value and pointer/buttons/event count remain volatile and never enter logs/export/files. Automatic pages require no input and fit 640×480. Root PORTSC, speed IDs and rejected enumeration stages remain available even without a usable keyboard.
 
+The UEFI executable and application ELF are byte-for-byte identical to M7F; [source/payload preservation checks](evidence/m7g/m7g-preservation.json) record the hashes and unchanged paths. The normal kernel file is 274,720 bytes with 507,904 bytes declared image memory, plus the unchanged 73,728-byte guarded stack allocation. The application ELF linked text/data/BSS remains 66,408 bytes. These are binary footprints, not total RAM or native Fusion performance.
+
 The normal installer uses the same driver correction. Approved full-screen Setup, shared focus handling, desktop, applications and filesystem are preserved. Diagnostic ISOs still reject NVMe write/flush at driver level and never mount, partition, format or enter Setup. No destructive Fusion test is performed or authorized before actual input/storage gates pass.
 
 ## Build and validation
@@ -31,11 +33,33 @@ The normal installer uses the same driver correction. Approved full-screen Setup
 bash scripts/sanitize.sh
 ```
 
-Final results are recorded in [the evidence summary](evidence/m7g/summary.json) and [validation log](evidence/m7g/validation.log). The preserved 75-case QEMU suite plus a minimum-resolution panel boot covers EL1/EL2, GICv2/v3, MMU/RO/NX/guards/user isolation, USB rings/descriptors/real keyboard/mouse/disconnect, both NVMe sector sizes, native install/persistence, applications/Royale, installer safety/errors/retry, large images and malformed-image refusal. A separate isolated 640×480 INPUT variant checks controller/keyboard/mouse initialization and visible live key release without a disk. All 76 QEMU cases and twenty host programs include the production layout validator and ASan/UBSan. Synthetic compact register layouts are **host tests**, not a modified QEMU controller or a VMware register capture. QEMU's normal register layout remains a separate real boot/input regression.
+**All 76 QEMU cases and 20 host test programs passed**, including both ELF payload checks, portable ASan/UBSan, independent disk verification, all three ISO repeatability checks and clean tracked-source reproduction. Final results are recorded in [the evidence summary](evidence/m7g/summary.json) and [validation log](evidence/m7g/validation.log). The preserved 75-case QEMU suite plus a minimum-resolution panel boot covers EL1/EL2, GICv2/v3, MMU/RO/NX/guards/user isolation, USB rings/descriptors/real keyboard/mouse/disconnect, both NVMe sector sizes, native install/persistence, applications/Royale, installer safety/errors/retry, large images and malformed-image refusal. A separate isolated 640×480 INPUT variant checks controller/keyboard/mouse initialization and visible live key release without a disk. Twenty host test programs include the production layout validator; portable subsystems also run under ASan/UBSan. Synthetic compact register layouts are **host tests**, not a modified QEMU controller or a VMware register capture. QEMU's normal register layout remains a separate real boot/input regression.
 
 Targeted host tests accept a compact disjoint doorbell `0x800` / runtime `0x600` layout, reject truncated arrays, runtime bounds/overlap, invalid capability length, zero slots/ports, unsupported DMA/scratchpads and malformed extended-capability spans. These fixture values are invented for standards validation and are not attributed to Fusion. The bridged QEMU normal-image test additionally checks Down/Up selection, Enter/license, Escape/back/focus, then Live Desktop mouse/application input. Existing read-only disk hashes and zero-write counters are retained.
 
-Source files: new `drivers/usb/layout.c`; updated `drivers/usb/xhci.c`, `include/usb.h`, `kernel/diagnostics/native.c`, host USB tests, bridged device tests and build/ISO/validation/sanitizer scripts. NVMe, kernel memory/interrupt paths, ring/HID mechanics, application and installer source remain unchanged. Start checkpoint is `a128e622f93dc4325e22c277ab3fb0f5467fd2a4`, preserved by `checkpoint/milestone-7g-start`.
+Runtime/source checkpoint: `c8506aa98de51935788d5534600a4b5fdcef3f1c` (following the initial layout checkpoint `3662a72`).
+
+Source files: new `drivers/usb/layout.c` and `tests/input_panel.py`; updated `drivers/usb/xhci.c`, `include/usb.h`, `kernel/diagnostics/native.c`, host USB tests, bridged device tests and build/ISO/validation/sanitizer scripts. NVMe, kernel memory/interrupt paths, ring/HID mechanics, application and installer source remain unchanged. Start checkpoint is `a128e622f93dc4325e22c277ab3fb0f5467fd2a4`, preserved by `checkpoint/milestone-7g-start`.
+
+## Actual QEMU framebuffer captures
+
+These are QEMU captures of the original running kernel/UI. Names containing
+“fusion” identify the regression scenario; none is a Fusion screenshot.
+
+| Observation | Capture |
+|---|---|
+| Controller/HID/live input at 1024×768 | [Key event](evidence/m7g/fusion-input-key.png), [mouse/button](evidence/m7g/fusion-input-mouse.png) |
+| Minimum-resolution controller/event panel | [640×480](evidence/m7g/input-panel-640.png) |
+| No attached peripherals / explicit controller refusal | [Absent](evidence/m7g/fusion-input-absent.png), [refusal](evidence/m7g/fusion-input-refusal.png) |
+| Normal bridged USB Setup navigation and native editing | [Navigation](evidence/m7g/fusion-bus-navigation.png), [Notepad](evidence/m7g/fusion-bus-notepad.png) |
+| Bridged installed file persistence | [File reopened](evidence/m7g/installed-notepad-reopen-512-gic3-bridged.png) |
+
+The package contains 144 actual QEMU PNGs and 52 fresh build/test metadata files, plus the separately attributed target report and summary. The manifest hashes 288 evidence files. A focused repeat waits for the complete welcome repaint after Escape; [its result](evidence/m7g/navigation-focused.log) passed with unchanged guest image hashes. Compact-layout host fixtures (one interrupter) also passed focused Clang and ASan/UBSan checks. Repeat cases are not added to the 76 unique QEMU count.
+
+[Complete evidence manifest](evidence/m7g/files.sha256),
+[portable sanitizers](evidence/m7g/sanitizers.log),
+[focused layout/ring/HID tests under Clang and ASan/UBSan](evidence/m7g/layout-focused.log),
+[clean committed-source build](evidence/m7g/source-package-build.log).
 
 ## Deliverables and next target gate
 
