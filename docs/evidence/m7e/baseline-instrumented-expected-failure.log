@@ -1,0 +1,7 @@
+Traceback (most recent call last):
+  File "/src/tests/boot.py", line 221, in <module>
+    if __name__=='__main__': main()
+                             ~~~~^^
+  File "/src/tests/boot.py", line 181, in main
+    raise RuntimeError('CHOS panic; inspect screenshot')
+RuntimeError: CHOS panic; inspect screenshot

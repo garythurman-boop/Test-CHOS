@@ -1,0 +1,11 @@
+{
+  "scope": "QEMU experiment, not actual Fusion memory-map reproduction",
+  "baseline_commit": "b4859764aebe78cb0d51ade4ebfc5cff0fca3d2a",
+  "ram_mib": 2048,
+  "baseline_original_observation": "MMU INIT FAILED; expected test process exit 1",
+  "instrumented_baseline_observation": "MMU TABLE CAPACITY 1024; expected test process exit 1",
+  "instrumentation": "Only contiguous-allocation failure and table-pool capacity branches changed to explicit panics; patch published",
+  "instrumented_iso_sha256": "0047fb11ea1e9908e6cae4a3a57f8e12a4468c1fa67e41bd372b79538a5d9624",
+  "framebuffers": "Manually inspected actual QEMU captures; not automated Fusion results",
+  "target_root_cause": "Unconfirmed pending M7E Fusion retest"
+}

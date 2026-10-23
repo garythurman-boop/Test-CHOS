@@ -105,7 +105,10 @@ boot-contract rejection. See [final M7D report](milestone-7d.md) for measurement
 source revision and actual results.
 
 Remaining limits: 48-bit physical mappings, fixed 4 KiB kernel pages, one CPU,
-1 GiB PMM tracking, 4 MiB translation pool, bounded private user spaces and no
+1 GiB PMM tracking, on-demand translation tables capped at 4 MiB, bounded private user spaces and no
 swapping/demand paging. Dynamic bootstrap sizing does not implement SMP or a
 general kernel module loader. Further growth still needs measured page-table,
 PMM, media-capacity and memory-pressure acceptance rather than removing all bounds.
+
+M7E updates table construction and failure reporting without changing this image
+format or private boot contract. See [MMU audit](mmu-architecture.md).

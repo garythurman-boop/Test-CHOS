@@ -1,0 +1,297 @@
+mkdir -p build
+mkdir -p build/kernel/memory/
+mkdir -p build/boot/
+mkdir -p build/kernel/
+mkdir -p build/drivers/usb/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -DCHOS_MMU_TABLE_CAPACITY=1024 -c kernel/memory/report.c -o build/kernel/memory/report.o
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -DCHOS_MMU_TABLE_CAPACITY=1024 -c boot/image.c -o build/boot/image.o
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -DCHOS_MMU_TABLE_CAPACITY=1024 -c drivers/usb/ring.c -o build/drivers/usb/ring.o
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -DCHOS_MMU_TABLE_CAPACITY=1024 -c kernel/image_test.c -o build/kernel/image_test.o
+mkdir -p build/drivers/usb/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -DCHOS_MMU_TABLE_CAPACITY=1024 -c drivers/usb/hid.c -o build/drivers/usb/hid.o
+mkdir -p build/drivers/usb/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -DCHOS_MMU_TABLE_CAPACITY=1024 -c drivers/usb/xhci.c -o build/drivers/usb/xhci.o
+mkdir -p build/kernel/diagnostics/
+mkdir -p build/kernel/diagnostics/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -DCHOS_MMU_TABLE_CAPACITY=1024 -c kernel/diagnostics/buffer.c -o build/kernel/diagnostics/buffer.o
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -DCHOS_MMU_TABLE_CAPACITY=1024 -c kernel/diagnostics/native.c -o build/kernel/diagnostics/native.o
+mkdir -p build/kernel/arch/arm64/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -DCHOS_MMU_TABLE_CAPACITY=1024 -c kernel/arch/arm64/hardware.c -o build/kernel/arch/arm64/hardware.o
+mkdir -p build/kernel/config/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -DCHOS_MMU_TABLE_CAPACITY=1024 -c kernel/config/format.c -o build/kernel/config/format.o
+mkdir -p build/kernel/config/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -DCHOS_MMU_TABLE_CAPACITY=1024 -c kernel/config/store.c -o build/kernel/config/store.o
+mkdir -p build/installer/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -DCHOS_MMU_TABLE_CAPACITY=1024 -c installer/inventory.c -o build/installer/inventory.o
+mkdir -p build/installer/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -DCHOS_MMU_TABLE_CAPACITY=1024 -c installer/policy.c -o build/installer/policy.o
+mkdir -p build/installer/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -DCHOS_MMU_TABLE_CAPACITY=1024 -c installer/service.c -o build/installer/service.o
+mkdir -p build/installer/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -DCHOS_MMU_TABLE_CAPACITY=1024 -c installer/gpt.c -o build/installer/gpt.o
+mkdir -p build/installer/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -DCHOS_MMU_TABLE_CAPACITY=1024 -c installer/fat32.c -o build/installer/fat32.o
+mkdir -p build/filesystem/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -DCHOS_MMU_TABLE_CAPACITY=1024 -c filesystem/ram.c -o build/filesystem/ram.o
+mkdir -p build/kernel/arch/arm64/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -DCHOS_MMU_TABLE_CAPACITY=1024 -c kernel/arch/arm64/power.c -o build/kernel/arch/arm64/power.o
+mkdir -p build/desktop/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -DCHOS_MMU_TABLE_CAPACITY=1024 -c desktop/desktop.c -o build/desktop/desktop.o
+mkdir -p build/desktop/window-manager/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -DCHOS_MMU_TABLE_CAPACITY=1024 -c desktop/window-manager/model.c -o build/desktop/window-manager/model.o
+mkdir -p build/desktop/graphics/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -DCHOS_MMU_TABLE_CAPACITY=1024 -c desktop/graphics/render.c -o build/desktop/graphics/render.o
+mkdir -p build/desktop/graphics/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -DCHOS_MMU_TABLE_CAPACITY=1024 -c desktop/graphics/primitives.c -o build/desktop/graphics/primitives.o
+mkdir -p build/desktop/graphics/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -DCHOS_MMU_TABLE_CAPACITY=1024 -c desktop/graphics/fontcache.c -o build/desktop/graphics/fontcache.o
+mkdir -p build/desktop/graphics/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -DCHOS_MMU_TABLE_CAPACITY=1024 -c desktop/graphics/font.c -o build/desktop/graphics/font.o
+mkdir -p build/drivers/input/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -DCHOS_MMU_TABLE_CAPACITY=1024 -c drivers/input/virtio.c -o build/drivers/input/virtio.o
+mkdir -p build/drivers/input/
+mkdir -p build/filesystem/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -DCHOS_MMU_TABLE_CAPACITY=1024 -c drivers/input/events.c -o build/drivers/input/events.o
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -DCHOS_MMU_TABLE_CAPACITY=1024 -c filesystem/vfs.c -o build/filesystem/vfs.o
+mkdir -p build/filesystem/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -DCHOS_MMU_TABLE_CAPACITY=1024 -c filesystem/chfs.c -o build/filesystem/chfs.o
+mkdir -p build/drivers/storage/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -DCHOS_MMU_TABLE_CAPACITY=1024 -c drivers/storage/nvme.c -o build/drivers/storage/nvme.o
+mkdir -p build/kernel/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -DCHOS_MMU_TABLE_CAPACITY=1024 -c kernel/storage_test.c -o build/kernel/storage_test.o
+mkdir -p build/kernel/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -DCHOS_MMU_TABLE_CAPACITY=1024 -c kernel/runtime.c -o build/kernel/runtime.o
+mkdir -p build/kernel/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -DCHOS_MMU_TABLE_CAPACITY=1024 -c kernel/main.c -o build/kernel/main.o
+mkdir -p build/kernel/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -DCHOS_MMU_TABLE_CAPACITY=1024 -c kernel/console.c -o build/kernel/console.o
+mkdir -p build/kernel/process/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -DCHOS_MMU_TABLE_CAPACITY=1024 -c kernel/process/elf.c -o build/kernel/process/elf.o
+mkdir -p build/kernel/process/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -DCHOS_MMU_TABLE_CAPACITY=1024 -c kernel/process/process.c -o build/kernel/process/process.o
+mkdir -p build/kernel/syscall/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -DCHOS_MMU_TABLE_CAPACITY=1024 -c kernel/syscall/syscall.c -o build/kernel/syscall/syscall.o
+mkdir -p build/kernel/arch/arm64/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -DCHOS_MMU_TABLE_CAPACITY=1024 -c kernel/arch/arm64/acpi.c -o build/kernel/arch/arm64/acpi.o
+mkdir -p build/kernel/memory/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -DCHOS_MMU_TABLE_CAPACITY=1024 -c kernel/memory/physical.c -o build/kernel/memory/physical.o
+mkdir -p build/kernel/memory/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -DCHOS_MMU_TABLE_CAPACITY=1024 -c kernel/memory/heap.c -o build/kernel/memory/heap.o
+mkdir -p build/kernel/memory/
+mkdir -p build/kernel/interrupts/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -DCHOS_MMU_TABLE_CAPACITY=1024 -c kernel/memory/virtual.c -o build/kernel/memory/virtual.o
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -DCHOS_MMU_TABLE_CAPACITY=1024 -c kernel/interrupts/exception.c -o build/kernel/interrupts/exception.o
+mkdir -p build/kernel/scheduler/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -DCHOS_MMU_TABLE_CAPACITY=1024 -c kernel/scheduler/scheduler.c -o build/kernel/scheduler/scheduler.o
+mkdir -p build/drivers/interrupts/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -DCHOS_MMU_TABLE_CAPACITY=1024 -c drivers/interrupts/gicv3.c -o build/drivers/interrupts/gicv3.o
+mkdir -p build/drivers/interrupts/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -DCHOS_MMU_TABLE_CAPACITY=1024 -c drivers/interrupts/gicv2_timer.c -o build/drivers/interrupts/gicv2_timer.o
+mkdir -p build/kernel/arch/arm64/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -DCHOS_TEST_RO=0 -DCHOS_TEST_BSS=0 -c kernel/arch/arm64/growth.S -o build/kernel/arch/arm64/growth.o
+mkdir -p build/desktop/graphics/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -DCHOS_MMU_TABLE_CAPACITY=1024 -c desktop/graphics/assets.S -o build/desktop/graphics/assets.o
+mkdir -p build/kernel/arch/arm64/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -DCHOS_MMU_TABLE_CAPACITY=1024 -c kernel/arch/arm64/entry.S -o build/kernel/arch/arm64/entry.o
+mkdir -p build/kernel/arch/arm64/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -DCHOS_MMU_TABLE_CAPACITY=1024 -c kernel/arch/arm64/vectors.S -o build/kernel/arch/arm64/vectors.o
+mkdir -p build/kernel/arch/arm64/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -DCHOS_MMU_TABLE_CAPACITY=1024 -c kernel/arch/arm64/mmu.S -o build/kernel/arch/arm64/mmu.o
+mkdir -p build/kernel/arch/arm64/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -DCHOS_MMU_TABLE_CAPACITY=1024 -c kernel/arch/arm64/test_worker.S -o build/kernel/arch/arm64/test_worker.o
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -mno-outline-atomics -c userspace/init/main.c -o build/user-main.o
+clang --target=aarch64-none-elf -c userspace/init/entry.S -o build/user-entry.o
+mkdir -p build/app/userspace/libraries/gui/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude -Iapplications/common --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -mno-outline-atomics -c userspace/libraries/gui/widgets.c -o build/app/userspace/libraries/gui/widgets.o
+mkdir -p build/app/applications/setup/
+mkdir -p build/app/applications/common/
+mkdir -p build/app/applications/desktop/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude -Iapplications/common --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -mno-outline-atomics -c applications/setup/main.c -o build/app/applications/setup/main.o
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude -Iapplications/common --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -mno-outline-atomics -c applications/common/runtime.c -o build/app/applications/common/runtime.o
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude -Iapplications/common --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -mno-outline-atomics -c applications/desktop/main.c -o build/app/applications/desktop/main.o
+mkdir -p build/app/applications/explorer/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude -Iapplications/common --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -mno-outline-atomics -c applications/explorer/main.c -o build/app/applications/explorer/main.o
+mkdir -p build/app/applications/notepad/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude -Iapplications/common --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -mno-outline-atomics -c applications/notepad/main.c -o build/app/applications/notepad/main.o
+mkdir -p build/app/applications/terminal/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude -Iapplications/common --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -mno-outline-atomics -c applications/terminal/main.c -o build/app/applications/terminal/main.o
+mkdir -p build/app/applications/control-panel/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude -Iapplications/common --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -mno-outline-atomics -c applications/control-panel/main.c -o build/app/applications/control-panel/main.o
+mkdir -p build/app/applications/task-manager/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude -Iapplications/common --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -mno-outline-atomics -c applications/task-manager/main.c -o build/app/applications/task-manager/main.o
+mkdir -p build/app/applications/about/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude -Iapplications/common --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -mno-outline-atomics -c applications/about/main.c -o build/app/applications/about/main.o
+mkdir -p build/app/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -c kernel/runtime.c -o build/app/runtime.o
+clang -E -P -x c -D__ASSEMBLER__ -Iinclude kernel/arch/arm64/kernel.ld -o build/kernel.ld
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-pc-windows-msvc -c boot/uefi/main.c -o build/boot.obj
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-pc-windows-msvc -c boot/image.c -o build/image.obj
+ld.lld -T userspace/init/user.ld -z max-page-size=4096 --no-undefined -o build/init.elf build/user-entry.o build/user-main.o
+ld.lld -T userspace/init/user.ld -z max-page-size=4096 --no-undefined -o build/desktop.elf build/user-entry.o build/app/userspace/libraries/gui/widgets.o build/app/applications/setup/main.o build/app/applications/common/runtime.o build/app/applications/desktop/main.o build/app/applications/explorer/main.o build/app/applications/notepad/main.o build/app/applications/terminal/main.o build/app/applications/control-panel/main.o build/app/applications/task-manager/main.o build/app/applications/about/main.o build/app/runtime.o
+lld-link /subsystem:efi_application /entry:efi_main /nodefaultlib /machine:arm64 /timestamp:0 /out:build/BOOTAA64.EFI build/boot.obj build/image.obj
+mkdir -p build/kernel/process/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -DCHOS_MMU_TABLE_CAPACITY=1024 -c kernel/process/image.S -o build/kernel/process/image.o
+ld.lld -T build/kernel.ld --no-undefined -o build/kernel.elf build/kernel/memory/report.o build/boot/image.o build/kernel/image_test.o build/drivers/usb/ring.o build/drivers/usb/hid.o build/drivers/usb/xhci.o build/kernel/diagnostics/buffer.o build/kernel/diagnostics/native.o build/kernel/arch/arm64/hardware.o build/kernel/config/format.o build/kernel/config/store.o build/installer/inventory.o build/installer/policy.o build/installer/service.o build/installer/gpt.o build/installer/fat32.o build/filesystem/ram.o build/kernel/arch/arm64/power.o build/desktop/desktop.o build/desktop/window-manager/model.o build/desktop/graphics/render.o build/desktop/graphics/primitives.o build/desktop/graphics/fontcache.o build/desktop/graphics/font.o build/drivers/input/virtio.o build/drivers/input/events.o build/filesystem/vfs.o build/filesystem/chfs.o build/drivers/storage/nvme.o build/kernel/storage_test.o build/kernel/runtime.o build/kernel/main.o build/kernel/console.o build/kernel/process/elf.o build/kernel/process/process.o build/kernel/syscall/syscall.o build/kernel/arch/arm64/acpi.o build/kernel/memory/physical.o build/kernel/memory/heap.o build/kernel/memory/virtual.o build/kernel/interrupts/exception.o build/kernel/scheduler/scheduler.o build/drivers/interrupts/gicv3.o build/drivers/interrupts/gicv2_timer.o build/kernel/arch/arm64/growth.o build/desktop/graphics/assets.o build/kernel/arch/arm64/entry.o build/kernel/arch/arm64/vectors.o build/kernel/arch/arm64/mmu.o build/kernel/arch/arm64/test_worker.o build/kernel/process/image.o
+llvm-objcopy -O binary build/kernel.elf build/KERNEL.BIN
+python3 scripts/mkiso.py
+CHOS_DIAGNOSTIC=1 python3 scripts/mkiso.py
+xorriso 1.5.6 : RockRidge filesystem manipulator, libburnia project.
+
+xorriso : NOTE : Environment variable SOURCE_DATE_EPOCH encountered with value 1767225600
+3d792bd8352d3977cea00771175c1279ad7789396816af1c54822a87edfa9bfe  /src/build/CHOS-ARM64.iso
+xorriso 1.5.6 : RockRidge filesystem manipulator, libburnia project.
+
+xorriso : NOTE : Environment variable SOURCE_DATE_EPOCH encountered with value 1767225600
+4443a6dc70f0a8a45034083383e82cbb4795c286d550b102d39d71b4768cf322  /src/build/CHOS-ARM64-M7C.iso
+clang -std=c11 -Wall -Wextra -Werror -Iinclude tests/memory.c kernel/memory/physical.c kernel/memory/heap.c -o build/test-memory
+./build/test-memory
+PASS: PMM reserved ranges, fragmentation, exhaustion, overflow, stride, >4GiB; heap alignment, integrity, invalid/double free and coalescing
+clang -std=c11 -Wall -Wextra -Werror -Iinclude tests/acpi.c kernel/arch/arm64/acpi.c -o build/test-acpi
+./build/test-acpi
+PASS: ACPI discovery, checksums, MPIDR selection, malformed entries, IRQ ranges, out-of-map pointers, reserved/MMIO exclusion and oversized RSDP
+clang -std=c11 -Wall -Wextra -Werror -Iinclude tests/elf.c kernel/process/elf.c -o build/test-elf
+./build/test-elf build/init.elf
+PASS: actual AArch64 ELF, truncated headers, architecture/type/endianness, overflow, W+X, entry bounds, overlapping segments and metadata mutation sweep
+./build/test-elf build/desktop.elf
+PASS: actual AArch64 ELF, truncated headers, architecture/type/endianness, overflow, W+X, entry bounds, overlapping segments and metadata mutation sweep
+clang -std=c11 -Wall -Wextra -Werror -Iinclude tests/filesystem.c filesystem/chfs.c -o build/test-filesystem
+./build/test-filesystem
+PASS: CHFS directories, create/read/write/rename/delete, cross-block reads, remount, data CRC, metadata fallback, torn-write/flush failure recovery and capacity limits
+clang -std=c11 -Wall -Wextra -Werror -Iinclude tests/input.c drivers/input/events.c -o build/test-input
+./build/test-input
+PASS: input decoding, key releases, signed motion/clamping, buttons, FIFO ordering and bounded overflow
+clang -std=c11 -Wall -Wextra -Werror -Iinclude tests/desktop.c desktop/window-manager/model.c desktop/graphics/render.c desktop/graphics/primitives.c desktop/graphics/fontcache.c desktop/graphics/font.c desktop/graphics/assets.S -o build/test-desktop
+./build/test-desktop
+Desktop ownership, lifetime, focus, move/resize, controls, keys, queue saturation and clipping passed
+clang -std=c11 -Wall -Wextra -Werror -Iinclude tests/setup.c installer/policy.c -o build/test-setup
+./build/test-setup
+Setup rejects self/unknown boot media, missing authority, wrong disk identity, malformed confirmation and invalid names
+clang -std=c11 -Wall -Wextra -Werror -Iinclude tests/graphics.c desktop/graphics/render.c desktop/graphics/primitives.c desktop/graphics/fontcache.c desktop/graphics/assets.S -o build/test-graphics
+./build/test-graphics
+Royale font validation, grayscale coverage, proportional metrics, roundrects, blend, clipped blit and firmware mode policy passed
+clang -std=c11 -Wall -Wextra -Werror -Iinclude tests/config.c kernel/config/format.c kernel/config/store.c filesystem/chfs.c -o build/test-config
+./build/test-config
+Configuration version/CRC/ranges/clock wrap and failed atomic save/reopen passed
+clang -std=c11 -Wall -Wextra -Werror -Iinclude tests/gui.c userspace/libraries/gui/widgets.c -o build/test-gui
+./build/test-gui
+GUI press/release cancellation, disabled controls, focus traversal, bounded editing, scrollbar drag and registry limits passed
+clang -std=c11 -Wall -Wextra -Werror -Iinclude tests/inventory.c installer/inventory.c installer/gpt.c -o build/test-inventory
+./build/test-inventory
+Read-only inventory, GPT CRC/name/capacity bounds, read failures and exact 512/4096 layout capacity thresholds passed
+clang -std=c11 -Wall -Wextra -Werror -Iinclude tests/gic.c drivers/interrupts/gicv3.c -o build/test-gic
+./build/test-gic
+GICv3 affinity/stride/Last, direct GICC frame, SPI routing, PPI masking/priority/trigger, invalid resources and RWP/wake timeouts passed
+clang -std=c11 -Wall -Wextra -Werror -Iinclude tests/usb.c drivers/usb/hid.c drivers/usb/ring.c -o build/test-usb
+./build/test-usb
+USB rings cycle/link/event wrap/DMA bounds; boot descriptor bounds/type/endpoint rejection, HID key/release/modifier/rollover/duplicates, signed mouse/buttons/wheel and event-capacity atomicity passed
+clang -std=c11 -Wall -Wextra -Werror -Iinclude tests/diagnostic.c kernel/diagnostics/buffer.c -o build/test-diagnostic
+./build/test-diagnostic
+Diagnostic append/export sanitation, line cap, offset/capacity bounds and saturation passed
+clang -std=c11 -Wall -Wextra -Werror -Iinclude tests/image.c boot/image.c -o build/test-image
+./build/test-image
+Image v1 header/version/size/reserved/entry/truncation validation and disjoint aligned bounded image/stack regions passed
+clang -std=c11 -Wall -Wextra -Werror -DCHOS_MMU_TEST -Iinclude tests/mmu.c kernel/memory/virtual.c kernel/memory/physical.c -o build/test-mmu
+./build/test-mmu
+Production MMU: 2/8 GiB block layout, high/sparse/many descriptors, fragmented page allocation, RO/NX/guards, bounds/overlap/coverage/granule/PA/capacity/refusal tests passed
+clang -std=c11 -Wall -Wextra -Werror -Iinclude scripts/mkdisk.c installer/gpt.c installer/fat32.c -o build/mkdisk
+mkdir -p build/kernel/memory/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -DCHOS_MMU_TABLE_CAPACITY=1024 -c kernel/memory/virtual.c -o build/kernel/memory/virtual.o
+mkdir -p build/kernel/arch/arm64/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -DCHOS_TEST_RO=0 -DCHOS_TEST_BSS=0 -c kernel/arch/arm64/growth.S -o build/kernel/arch/arm64/growth.o
+ld.lld -T build/kernel.ld --no-undefined -o build/kernel.elf build/kernel/memory/report.o build/boot/image.o build/kernel/image_test.o build/drivers/usb/ring.o build/drivers/usb/hid.o build/drivers/usb/xhci.o build/kernel/diagnostics/buffer.o build/kernel/diagnostics/native.o build/kernel/arch/arm64/hardware.o build/kernel/config/format.o build/kernel/config/store.o build/installer/inventory.o build/installer/policy.o build/installer/service.o build/installer/gpt.o build/installer/fat32.o build/filesystem/ram.o build/kernel/arch/arm64/power.o build/desktop/desktop.o build/desktop/window-manager/model.o build/desktop/graphics/render.o build/desktop/graphics/primitives.o build/desktop/graphics/fontcache.o build/desktop/graphics/font.o build/drivers/input/virtio.o build/drivers/input/events.o build/filesystem/vfs.o build/filesystem/chfs.o build/drivers/storage/nvme.o build/kernel/storage_test.o build/kernel/runtime.o build/kernel/main.o build/kernel/console.o build/kernel/process/elf.o build/kernel/process/process.o build/kernel/syscall/syscall.o build/kernel/arch/arm64/acpi.o build/kernel/memory/physical.o build/kernel/memory/heap.o build/kernel/memory/virtual.o build/kernel/interrupts/exception.o build/kernel/scheduler/scheduler.o build/drivers/interrupts/gicv3.o build/drivers/interrupts/gicv2_timer.o build/kernel/arch/arm64/growth.o build/desktop/graphics/assets.o build/kernel/arch/arm64/entry.o build/kernel/arch/arm64/vectors.o build/kernel/arch/arm64/mmu.o build/kernel/arch/arm64/test_worker.o build/kernel/process/image.o
+llvm-objcopy -O binary build/kernel.elf build/KERNEL.BIN
+mkdir -p build/installer
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -c installer/gpt.c -o build/installer/gpt.o
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -c installer/fat32.c -o build/installer/fat32.o
+clang -std=c11 -Wall -Wextra -Werror -Iinclude tests/installer.c installer/gpt.c -o build/test-installer
+clang -std=c11 -Wall -Wextra -Werror -Iinclude tests/fat32.c installer/gpt.c installer/fat32.c -o build/test-fat32
+./build/test-fat32
+FAT32 bounds, confirmation, 512/4096 sectors, mirrored metadata, payload integrity, read-only verification and write/flush errors passed
+python3 tests/installer.py
+GPT planning, unconfirmed/changed-geometry refusal, 512/4096 sectors, write/flush errors and read-back verification passed
+{
+  "passed": true,
+  "scope": "GPT encoder only; no ESP formatting, installation or installed boot",
+  "cases": [
+    {
+      "logical_sector_bytes": 512,
+      "disk_bytes": 134217728,
+      "passed": true,
+      "checks": [
+        "protective MBR",
+        "primary and backup header CRC32",
+        "reciprocal LBA geometry",
+        "entry-array CRC32 and identity",
+        "partition GUIDs, alignment, limits, names and nonoverlap"
+      ]
+    },
+    {
+      "logical_sector_bytes": 4096,
+      "disk_bytes": 536870912,
+      "passed": true,
+      "checks": [
+        "protective MBR",
+        "primary and backup header CRC32",
+        "reciprocal LBA geometry",
+        "entry-array CRC32 and identity",
+        "partition GUIDs, alignment, limits, names and nonoverlap"
+      ]
+    }
+  ]
+}
+python3 tests/fat32.py
+Verified new GPT/FAT32 image: /src/build/fat32-test-xydo1dmx/chos-512.img, 134217728 bytes, logical sector 512
+Verified new GPT/FAT32 image: /src/build/fat32-test-xydo1dmx/chos-512-repeat.img, 134217728 bytes, logical sector 512
+Verified new GPT/FAT32 image: /src/build/fat32-test-xydo1dmx/chos-4096.img, 536870912 bytes, logical sector 4096
+Verified new GPT/FAT32 image: /src/build/fat32-test-xydo1dmx/chos-4096-repeat.img, 536870912 bytes, logical sector 4096
+{
+  "passed": true,
+  "scope": "Build-time disk construction; not guest installation",
+  "cases": [
+    {
+      "passed": true,
+      "sector_bytes": 512,
+      "disk_image": "/src/build/fat32-test-xydo1dmx/chos-512.img",
+      "sha256": "b0eb908fd35c67286a7b942355b8c69f7893858ca0a758d03cef35a7ab4d06b0",
+      "files": {
+        "EFI/BOOT/BOOTAA64.EFI": "1efb1785023fd4cc2d4e20cbe4ce8ebb318bccc5b9afb67d3132ae4a1084a2e6",
+        "CHOS/KERNEL.BIN": "d383772321f780c434b34f1ffaf747e3911fa12fbb5138d349e62248d8d0d189"
+      },
+      "checks": [
+        "BPB and backup",
+        "FSInfo and backup",
+        "mirrored FATs",
+        "bounded non-cyclic non-crosslinked cluster chains",
+        "directory tree",
+        "exact original EFI/kernel bytes and zero padding",
+        "exclusive new-image creation",
+        "identical second fresh build"
+      ]
+    },
+    {
+      "passed": true,
+      "sector_bytes": 4096,
+      "disk_image": "/src/build/fat32-test-xydo1dmx/chos-4096.img",
+      "sha256": "c36e78f149a969076a9c3104a9201c2da7588bf14345ab72cae1a955076cd49e",
+      "files": {
+        "EFI/BOOT/BOOTAA64.EFI": "1efb1785023fd4cc2d4e20cbe4ce8ebb318bccc5b9afb67d3132ae4a1084a2e6",
+        "CHOS/KERNEL.BIN": "d383772321f780c434b34f1ffaf747e3911fa12fbb5138d349e62248d8d0d189"
+      },
+      "checks": [
+        "BPB and backup",
+        "FSInfo and backup",
+        "mirrored FATs",
+        "bounded non-cyclic non-crosslinked cluster chains",
+        "directory tree",
+        "exact original EFI/kernel bytes and zero padding",
+        "exclusive new-image creation",
+        "identical second fresh build"
+      ]
+    }
+  ]
+}
+3d792bd8352d3977cea00771175c1279ad7789396816af1c54822a87edfa9bfe  build/CHOS-ARM64.iso
+4443a6dc70f0a8a45034083383e82cbb4795c286d550b102d39d71b4768cf322  build/CHOS-ARM64-M7C.iso
+   text	   data	    bss	    dec	    hex	filename
+ 258778	    288	 225280	 484346	  763fa	build/kernel.elf
+  41104	    208	  25096	  66408	  10368	build/desktop.elf

@@ -1,0 +1,20 @@
+--- a/kernel/memory/virtual.c
++++ b/kernel/memory/virtual.c
+@@ -15,7 +15,7 @@
+ static const struct chos_boot_info *boot_memory;
+ static void clean_tables(void);
+ static uint64_t *new_table(void) {
+-    if(tables==TABLE_PAGES) return 0;
++    if(tables==TABLE_PAGES) panic("MMU TABLE CAPACITY 1024");
+     uint64_t *t=pool+512*tables++;
+     for(unsigned i=0;i<512;i++) t[i]=0;
+     return t;
+@@ -80,7 +80,7 @@
+ bool mmu_init(struct pmm *physical,const struct chos_boot_info *boot,uint64_t gicd,uint64_t gicc) {
+     boot_memory=boot;
+     uint64_t base=pmm_alloc(physical,TABLE_PAGES);
+-    if(!base) return false;
++    if(!base) panic("MMU CONTIGUOUS ALLOCATION FAILED");
+     pool=(void *)(uintptr_t)base; tables=0; active=false;
+     root=new_table();
+     for(uint64_t off=0;off<boot->memory_map_size;off+=boot->descriptor_size) {

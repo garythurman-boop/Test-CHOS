@@ -1,0 +1,30 @@
+{
+  "passed": true,
+  "scope": "GPT encoder only; no ESP formatting, installation or installed boot",
+  "cases": [
+    {
+      "logical_sector_bytes": 512,
+      "disk_bytes": 134217728,
+      "passed": true,
+      "checks": [
+        "protective MBR",
+        "primary and backup header CRC32",
+        "reciprocal LBA geometry",
+        "entry-array CRC32 and identity",
+        "partition GUIDs, alignment, limits, names and nonoverlap"
+      ]
+    },
+    {
+      "logical_sector_bytes": 4096,
+      "disk_bytes": 536870912,
+      "passed": true,
+      "checks": [
+        "protective MBR",
+        "primary and backup header CRC32",
+        "reciprocal LBA geometry",
+        "entry-array CRC32 and identity",
+        "partition GUIDs, alignment, limits, names and nonoverlap"
+      ]
+    }
+  ]
+}

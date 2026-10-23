@@ -16,6 +16,12 @@ contiguous allocation failure **for that QEMU instance**. The accompanying patch
 build log and native screenshot record this controlled experiment. It is not the
 Fusion memory map or proof of the same target root cause.
 
+To reproduce the instrumented baseline, extract `git archive b485976` into a new
+scratch directory, apply the published `baseline-instrumentation.patch`, build
+with the repository container, then run `tests/boot.py --ram 2048` against that
+scratch ISO. The validator exits nonzero intentionally on the explicit panic;
+inspect its captured framebuffer. Do not substitute this negative image for M7E.
+
 Old RAM mappings used only 4 KiB leaves: the block-mapping branch required AttrIndx
 bit 2 (the Device attribute), so Normal RAM never used blocks. Covering 2 GiB alone
 needs 1,024 L3 pages plus root/intermediate tables. The fixed 1,024-page pool cannot
@@ -123,7 +129,8 @@ serial or desktop. It displays numeric/name stage and reason, address, requested
 span/argument, descriptor index/type/attributes, pages requested, table count and
 capacity, PMM used/total/error/ranges, map entry count/highest end, MMFR0 and captured
 old TCR/TTBR0/SCTLR plus planned new TCR. Descriptor index/type `4294967295` means
-not associated with one descriptor. Uncaptured values are zero (notably an early
+not associated with one descriptor; descriptor attributes are meaningful only when
+a valid descriptor index is present. Uncaptured values are zero (notably an early
 PMM-map rejection before CPU register capture). For an unrepresentable descriptor
 span, size is saturated to UINT64_MAX and pages requested retains the original
 page count. The last stage also identifies a fault/hang inside the switch.
@@ -165,7 +172,10 @@ PMM error: 0 OK, 1 map shape, 2 zero-page descriptor, 3 alignment, 4 overflow,
 5 overlap, 6 range capacity, 7 no allocatable pages, 8 physical address.
 Diagnostic drawing reads only captured scalars and bounded static text; it does
 not chase the failing physical address. Firmware GOP still must be valid/readable.
-The report buffer logs codes too, but native serial is not assumed available before
+The current report targets 1024×768. At the supported 640×480 fallback, the
+lower register/attribute/footer rows clip; primary stage/reason/address/table/PMM
+fields remain visible. Capture all available fields. A paged compact fatal report
+is future work. The report buffer logs codes too, but native serial is not assumed available before
 mapping. An unexpected exception retains the existing separate ESR/FAR/ELR screen.
 
 ## Validation scope

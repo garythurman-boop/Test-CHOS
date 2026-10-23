@@ -1,7 +1,7 @@
 # Milestone 1 validation — 2026-10-22
 
 **Historical report for commit fec1183 (M1).** Current M2A results are in
-[milestone-2a.md](milestone-2a.md); current validation is recorded in [milestone-7d.md](milestone-7d.md).
+[milestone-2a.md](milestone-2a.md); current validation is recorded in [milestone-7e.md](milestone-7e.md).
 
 Executed in this cloud workspace using the repository Docker toolchain.
 

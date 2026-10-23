@@ -36,7 +36,7 @@ not an installer or desktop persistence environment.
   launch selects one embedded ELF entry role. FP/SIMD traps; general registers only.
 - All apps share one filesystem authority. No authentication, per-user permissions,
   encryption or signed payload. Logoff ends apps, not an authenticated login session.
-- PMM: 1 GiB/128 ranges; kernel heap 64 KiB; translation pool 4 MiB; no swapping or
+- PMM: 1 GiB/128 ranges; kernel heap 64 KiB; on-demand translation tables capped at 4 MiB; no swapping or
   demand paging. Single-CPU management calls require IRQ exclusion. Strict scheduler
   priorities can starve lower threads; dead desktop clients are safely reaped.
 - NVMe: one segment-0/bus-0 controller/namespace, 512/4096-byte sectors, polling and
@@ -59,7 +59,7 @@ not an installer or desktop persistence environment.
   not CPU percentage. Allocator figures exclude non-conventional reservations.
 - Native installation and installed CHFS persistence pass QEMU cold-boot tests.
   Full-screen Setup lacks account/password/DST/layout/mode configuration, cancellation of
-  an active writer, repair/fsck and full transactional rollback. No Fusion evidence.
+  an active writer, repair/fsck and full transactional rollback. No Fusion installation evidence.
 
 The preserved dedicated Setup sequence passed 35 QEMU cases, 13 portable host programs,
 ASan/UBSan and clean tracked-source ISO reproduction. Actual captures and hashes:
@@ -82,7 +82,8 @@ M7D replaces the fixed half-megabyte bootstrap limit with a bounded versioned
 image and independent guarded stack. File/BSS sizing, far RO/NX, loader-version
 refusal, optional-driver failure without disk/input and remaining-device operation
 after unplug are covered by the expanded sequence. [Architecture](kernel-image.md).
-Actual Fusion evidence remains pending; no speculative target driver was added.
+Actual M7D Fusion MMU failure is now reported; broader inventory and M7E retest
+remain pending. No speculative target driver was added.
 
 M7E preserves the 1,024-table safety ceiling but allocates individual pages and
 uses 2 MiB blocks outside managed RAM. All managed RAM remains page-granular for

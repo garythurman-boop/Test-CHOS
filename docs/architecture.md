@@ -49,18 +49,22 @@ requires interrupts masked if used after scheduling starts.
 A bounded 64 KiB heap uses aligned headers, splitting, exact-pointer free checks,
 and coalescing. It does not expand or tolerate corrupted kernel-owned metadata.
 
-CHOS installs its own 48-bit identity address space: 4 KiB normal-RAM pages,
+CHOS installs its own identity address space (up to 48-bit VA/PA): 4 KiB managed-RAM
+pages and aligned 2 MiB blocks outside managed ranges,
 EL1 read-only/executable text, read-only/NX rodata, and read-write/NX data/heap.
-All kernel-template pages deny EL0 access. MMIO framebuffer/GIC use Device-nGnRE. WXN is enabled;
-TTBR1 is disabled. Page-table storage reserves 4 MiB from the physical allocator.
+All kernel-template pages deny EL0 access. MMIO framebuffer/GIC use Device-nGnRE;
+RAM-backed GOP retains Normal WB. WXN is enabled; TTBR1 is disabled. Translation
+tables allocate individual pages on demand, with a 1,024-page (4 MiB) ceiling.
 Memory types/identity mappings are preserved across a short MMU-off trampoline;
 table cache cleans and TLB/barrier operations precede use. QEMU does not validate
-all real-hardware cache/coherency behavior; Fusion/physical ARM remain untested.
+all real-hardware cache/coherency behavior. M7D reached an MMU initialization
+failure in the user-reported Fusion test; M7E target retest remains pending.
 
 Null, bootstrap stack guard and thread stack guard pages are absent. Normal RAM
-uses page mappings before activation, so adding guards never splits a live mapping
+managed by the allocator uses page mappings before activation, so adding guards
+never splits a live mapping
 covering page-table storage. Live block splitting is deliberately rejected until
-an alias-based, break-before-make path exists. Current mappings and pool are bounded;
+an alias-based, break-before-make path exists. Current mappings and table allocation are bounded;
 private process spaces are bounded, with no general mmap/demand-paging API.
 
 ## Hardware discovery, timer and scheduling
