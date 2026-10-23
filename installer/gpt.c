@@ -93,3 +93,11 @@ bool install_gpt_verify(struct block_device d,uint32_t sector,const struct insta
     }
     return true;
 }
+
+bool install_gpt_probe(struct block_device d,uint32_t sector,struct install_plan *p,struct gpt_workspace *w) {
+    if(!p || !w || !d.read || (sector!=512 && sector!=4096))return false;
+    if(!d.read(d.context,sector==4096?1:0,w->scratch))return false;
+    uint8_t *h=w->scratch+(sector==4096?0:512);uint8_t guid[16];bytes(guid,h+56,16);
+    if(!install_plan_make(d.blocks,sector,guid,p))return false;
+    return install_gpt_verify(d,sector,p,w);
+}

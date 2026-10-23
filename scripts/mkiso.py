@@ -28,6 +28,7 @@ def main():
               (BUILD / 'KERNEL.BIN', '::/CHOS/KERNEL.BIN')]
     if os.environ.get('CHOS_TEST_MISSING_KERNEL'):
         inputs = inputs[:1]
+    inputs.append((ROOT / 'LICENSE', '::/CHOS/LICENSE.TXT'))
     if os.environ.get('CHOS_TEST_STORAGE'):
         config=BUILD/'storage-test.cfg'
         config.write_text('CHOS STORAGE TEST V1')

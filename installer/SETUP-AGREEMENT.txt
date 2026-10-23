@@ -1,0 +1,11 @@
+CHOS Setup Agreement 1
+
+CHOS is licensed under the MIT License. Keep its copyright and license notices.
+The full existing software license is supplied as LICENSE.TXT on the ISO and
+/system/license on an installed CHOS volume. This setup notice does not replace
+or restrict the MIT License.
+
+CHOS is supplied without warranty. Setup erases only a confirmed destination.
+Back up files before choosing a disk. Review its exact identity and capacity.
+Installation is still under development. Account/password and other unfinished
+configuration features are explicitly identified by Setup.

@@ -11,5 +11,8 @@ struct chos_boot_info {
     uint64_t rsdp;
     uint64_t clock_seconds,clock_counter;
     uint32_t clock_valid,clock_reserved;
+    uint64_t kernel_source,kernel_size;
+    uint32_t boot_medium,boot_reserved;
+    uint8_t esp_guid[16];
 };
 #endif

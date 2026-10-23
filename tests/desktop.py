@@ -11,7 +11,7 @@ import time
 from boot import BUILD, read_ppm, save_png
 
 class Guest:
-    def __init__(self,label='desktop',ram=512,disk=None,sector_bytes=512):
+    def __init__(self,label='desktop',ram=512,disk=None,sector_bytes=512,optical=False):
         self.label=label
         self.lock=(BUILD/'boot-test.lock').open('w')
         fcntl.flock(self.lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
@@ -26,8 +26,8 @@ class Guest:
         if disk:
             self.command += ['-drive',f'if=none,id=nvme0,format=raw,file={disk}',
                 '-device',f'nvme,drive=nvme0,serial=CHOS-GPT-BOOT,logical_block_size={sector_bytes},physical_block_size={sector_bytes}',
-                '-boot','order=c']
-        else:
+                '-boot','order=d' if optical else 'order=c']
+        if not disk or optical:
             self.command += ['-device','virtio-scsi-pci','-drive',f'if=none,id=cd,media=cdrom,readonly=on,file={self.iso}',
                 '-device','scsi-cd,drive=cd','-boot','order=d']
         self.log=(BUILD/f'{label}.qemu.log').open('w')

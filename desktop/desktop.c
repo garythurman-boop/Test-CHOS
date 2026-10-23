@@ -5,6 +5,7 @@
 #include "input.h"
 #include "console.h"
 #include "platform.h"
+#include "setup.h"
 static struct wm model;
 static struct pmm *physical;
 static struct chos_boot_info *boot;
@@ -21,7 +22,7 @@ static void decimal(char *s,uint64_t n) {
 }
 bool desktop_active(void) { return active; }
 int desktop_launch(unsigned app) {
-    if(!active || app<1 || app>6) return -22;
+    if(!active || app<1 || app>7) return -22;
     extern const unsigned char desktop_elf[],desktop_elf_end[];
     int pid=process_create(desktop_elf,(size_t)(desktop_elf_end-desktop_elf),app,0);
     if(pid>0)process_find((uint64_t)pid)->application=app;
@@ -55,6 +56,8 @@ int64_t desktop_syscall(struct process *p,struct exception_frame *f) {
     if(op==SYS_INFO) {
         struct chos_info info={.ticks=timer_ticks(),.total_pages=physical->total,.used_pages=physical->used,.switches=scheduler_switches(),.width=(uint32_t)screen.width,.height=(uint32_t)screen.height,.theme=model.theme};
         for(unsigned i=0;i<PROCESS_MAX;i++) { struct process *q=process_at(i);if(q && !q->exited) info.processes++; }
+        info.persistent=setup_persistent();
+        const char *name=setup_computer();for(unsigned i=0;i<31 && name[i];i++)info.computer[i]=name[i];
         return user_copy(p,a,&info,sizeof(info),true)?0:-14;
     }
     if(op==SYS_POWER)return a>2?-22:platform_power(boot,(unsigned)a);
@@ -64,7 +67,7 @@ int64_t desktop_syscall(struct process *p,struct exception_frame *f) {
         struct chos_task task={.pid=q->pid,.ticks=scheduler_samples(q->pid),.application=q->application,.state=1};
         return user_copy(p,b,&task,sizeof(task),true)?0:-14;
     }
-    if(op==SYS_LAUNCH) return a>6?-22:desktop_launch((unsigned)a);
+    if(op==SYS_LAUNCH) return a>7?-22:desktop_launch((unsigned)a);
     if(op==SYS_THEME) { if(a>1) return -22;model.theme=(unsigned)a;model.dirty=true;return 0; }
     if(a>0x7fffffff) return -22;
     struct wm_window *w=wm_owned(&model,p->pid,(uint32_t)a);
@@ -122,9 +125,9 @@ static void render(void) {
         rect(0,y,screen.width,1,base+(shade<<16)+(shade<<8)+shade);
     }
     text(screen.width-248,34,"CHOS Desktop",0x80bee8);
-    text(screen.width-248,56,"RAM volume - volatile",0x80bee8);
-    static const char names[6][16]={"Explorer","Notepad","Terminal","Control Panel","Task Manager","About CHOS"};
-    for(unsigned i=0;i<6;i++) {
+    text(screen.width-248,56,setup_persistent()?"System disk - persistent":"RAM volume - volatile",0x80bee8);
+    static const char names[7][16]={"Explorer","Notepad","Terminal","Control Panel","Task Manager","About CHOS","CHOS Setup"};
+    for(unsigned i=0;i<7;i++) {
         int y=60+(int)i*66;rect(34,y,28,28,0x7bb6df);rect(38,y+4,20,20,0x245a9a);
         text(10,y+36,names[i],0xe3f2ff);
     }
@@ -151,7 +154,7 @@ static void render(void) {
     if(model.menu) {
         static const char items[12][18]={"Applications","Documents","Computer","Control Panel","Settings","Search","Run","Help","Log Off","Restart","Shut Down","Close menu"};
         int top=task_y-340;rect(8,top,260,340,0xe2eefa);rect(8,top,260,34,0x286caf);text(24,top+9,"CHOS",0xffffff);
-        unsigned count=model.applications?6:12;
+        unsigned count=model.applications?7:12;
         for(unsigned i=0;i<count;i++) {
             if(i==model.selection)rect(12,top+40+(int)i*25,252,24,0xadcfe9);
             text(22,top+44+(int)i*25,model.applications?names[i]:items[i],0x183b64);
@@ -184,12 +187,13 @@ void desktop_start(struct pmm *p,struct chos_boot_info *b) {
     model.mouse_x=input_get()->x;model.mouse_y=input_get()->y;
     struct input_event event;while(input_next(&event)) {} /* discard diagnostic input */
     extern bool ram_volume_start(struct pmm *);
-    if(!ram_volume_start(p))panic("RAM VOLUME START FAILED");
+    if(!setup_persistent() && !ram_volume_start(p))panic("RAM VOLUME START FAILED");
     active=true;
     if(desktop_launch(6)<0) panic("DESKTOP CLIENT LOAD FAILED");
     render();
 }
 void desktop_step(void) {
+    setup_step();
     input_poll();struct input_event event;
     while(input_next(&event)) {
         if(event.type==2) {

@@ -137,9 +137,24 @@ operate on an explicit 4 KiB block-device abstraction, with separately declared
 read-back and propagate every write/flush error. GPT backup metadata is written
 first; complete installations are not transactionally atomic.
 
-These modules are compiled for AArch64 but are not yet linked into/called by the
-live kernel. The host mkdisk tool creates only new regular fixture files. Real
+These modules are compiled for AArch64 and linked into the live kernel by
+milestone 6B. The separate host mkdisk tool creates only new regular fixture files. Real
 UEFI disk boot verifies firmware consumption independently of the host parsers.
 Guest installer authority, boot-medium exclusion, disk identity binding and system
-partition mounting remain separate requirements; library confirmation alone does
-not fulfill them. See milestone-6a.md for the native integration sequence.
+partition mounting are enforced by the separate native service; library confirmation
+alone does not fulfill them. See milestone-6b.md for integration and remaining limits.
+
+## Native installer integration
+
+Milestone 6B links the original GPT/FAT32 modules into the kernel. A trusted native
+EL0 Setup role requests read-only disk inventory, then a process-bound typed
+confirmation. Optical boot and fresh NVMe identity/geometry checks gate writes.
+A preemptible kernel worker owns disk I/O while the live VFS remains RAM backed.
+The kernel retains pristine payload bytes before first execution, rather than
+installing a mutated running image. The ELF applications are inside that payload.
+
+Installed boot matches the firmware ESP GUID against verified CHOS GPT metadata,
+then mounts a bounded CHFS partition and reads the saved computer name. The ISO
+uses RAM by default; installed disk sessions use persistent native file APIs. No
+login or per-user authority is implied by a saved computer name. Incomplete or
+unmountable volumes must not be reported as successfully mounted installations.

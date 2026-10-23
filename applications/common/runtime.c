@@ -1,5 +1,7 @@
 #include "app.h"
 unsigned app_role;
+bool app_persistent;
+const char *volume_status(void){return app_persistent?"System disk: persistent files":"RAM volume: files lost at shutdown";}
 int app_window,app_width=592,app_height=384;
 char app_status[80],prompt_value[120];
 bool prompting;

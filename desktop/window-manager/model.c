@@ -72,7 +72,7 @@ static void maximize(struct wm *m,struct wm_window *w) {
     post(w,(struct chos_event){.type=EVENT_RESIZE,.width=w->w-8,.height=w->h-36});
 }
 static void menu_activate(struct wm *m,unsigned item) {
-    if(m->applications) {if(item<6)m->launch=item+1;m->applications=false;m->menu=false;return;}
+    if(m->applications) {if(item<7)m->launch=item+1;m->applications=false;m->menu=false;return;}
     if(item==0){m->applications=true;m->selection=0;return;}
     static const unsigned apps[12]={0,1,1,4,4,1,3,6,0,0,0,0};
     if(item<12)m->launch=apps[item];
@@ -142,7 +142,7 @@ void wm_mouse(struct wm *m,int x,int y,int button) {
         } else post(w,(struct chos_event){.type=EVENT_CLICK,.x=x-w->x-4,.y=y-w->y-32});
         return;
     }
-    if(x<112 && y>=60 && y<60+6*66) m->launch=(unsigned)(y-60)/66+1;
+    if(x<112 && y>=60 && y<60+7*66) m->launch=(unsigned)(y-60)/66+1;
 }
 void wm_key(struct wm *m,unsigned code,int value) {
     if(code==56 || code==100) { m->alt=value!=0; return; }
@@ -156,7 +156,7 @@ void wm_key(struct wm *m,unsigned code,int value) {
     }
     if(code==125) { m->menu=!m->menu;m->applications=false;m->selection=0;m->dirty=true;return; }
     if(m->menu && (code==103 || code==108 || code==28 || code==1)) {
-        unsigned count=m->applications?6:12;
+        unsigned count=m->applications?7:12;
         if(code==103)m->selection=(m->selection+count-1)%count;
         if(code==108)m->selection=(m->selection+1)%count;
         if(code==28)menu_activate(m,m->selection);
@@ -170,7 +170,7 @@ void wm_key(struct wm *m,unsigned code,int value) {
         }
         return;
     }
-    if(m->menu && code>=2 && code<=7) { m->launch=code-1;m->menu=false;m->dirty=true;return; }
+    if(m->menu && code>=2 && code<=8) { m->launch=code-1;m->menu=false;m->dirty=true;return; }
     unsigned key=0;
     static const uint8_t codes[26]={30,48,46,32,18,33,34,35,23,36,37,38,50,49,24,25,16,19,31,20,22,47,17,45,21,44};
     for(unsigned i=0;i<26;i++) if(code==codes[i]) key=(m->shift?'A':'a')+i;

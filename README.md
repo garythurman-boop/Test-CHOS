@@ -7,16 +7,18 @@ is used only as a build/test host. No Microsoft code, artwork or fonts are used.
 The current checkpoint boots an original graphical desktop and six native EL0
 applications: Explorer, Notepad, Terminal, Control Panel, Task Manager and About.
 Protected memory, preemptive scheduling, ELF/syscalls/IPC, NVMe/CHFS and Virtio
-input are implemented and tested. **Desktop files live on a volatile RAM volume
-and are lost at restart/shutdown.** Attached disks are not modified by normal images.
+input are implemented and tested. **Live ISO files use volatile RAM. Installed sessions use a persistent CHFS
+system volume.** Native Setup writes a selected NVMe disk only after explicit
+identity/capacity review and typed destructive confirmation.
 
 **VMware Fusion compatibility remains unverified.** GICv3, USB/xHCI input and EL2
-entry are unsupported. No GPT/ESP installer, installed-disk boot, networking or
-CHOS 0.1 release is delivered yet.
+entry are unsupported. A native installation core and disk reboot are tested under QEMU; account/password
+and timezone/layout/mode setup, networking and CHOS 0.1 remain unfinished.
 
 ## Download testing images
 
-- [Current native desktop/application ISO](artifacts/milestone-5/CHOS-ARM64.iso).
+- [Current native installation ISO](artifacts/milestone-6b/CHOS-ARM64.iso).
+- [Earlier live desktop/application ISO](artifacts/milestone-5/CHOS-ARM64.iso).
 - [Desktop core checkpoint](artifacts/milestone-4/CHOS-ARM64.iso).
 - [Earlier milestone 3 ISO](artifacts/milestone-3/CHOS-ARM64.iso): ordinary boot
   diagnostics and keyboard/mouse input; **no disk writes**.
@@ -25,7 +27,7 @@ CHOS 0.1 release is delivered yet.
 - [Older M2A ISO](artifacts/milestone-2a/CHOS-ARM64.iso).
 
 On GitHub choose **Download raw file**, then verify the adjacent SHA256SUMS.
-Read [current image notes](artifacts/milestone-5/README.md) before testing. The
+Read [current image notes](artifacts/milestone-6b/README.md) before testing. The
 separate STORAGE-TEST ISO is for the automated disposable-disk tests only, with
 an explicit boot-volume opt-in and exact device identity gate. It is not an installer.
 
@@ -45,13 +47,15 @@ El Torito FAT boot volume. Secure Boot must be off. The FAT volume is not an
 installed ESP. `kernel.elf` is a debug artifact; the separate static ELF loader
 runs original acceptance and application programs embedded in the kernel.
 
-Validation runs eight host C test programs (both ELF payloads) and fourteen real
+Validation runs nine host C test programs (both ELF payloads) and twenty real
 AArch64 UEFI QEMU cases, including 512 MiB/1 GiB boots, protection/IPC, keyboard/
 mouse window and application interactions, native restart/shutdown, three cold
 NVMe/CHFS boots, two GPT/ESP disk-only boots and expected error/safety cases.
-Independent Python code checks disk CRCs/content and original GPT/FAT32 payload
+Native graphical installs and two installed cold boots per sector geometry
+verify persistent file saves and self-erasure refusal. Independent Python code
+checks disk CRCs/content and original GPT/FAT32 payload
 formats. ISO and builder-created disk variants are checked for reproducibility. Tests use
-only disposable image files, never host block devices. Evidence: docs/evidence/m6a.
+only disposable image files, never host block devices. Evidence: docs/evidence/m6b.
 `bash scripts/sanitize.sh` additionally runs the portable modules with ASan/UBSan
 when host GCC/Clang supports them.
 
@@ -62,6 +66,8 @@ after toolchain installation. Tests start/stop their own QEMU processes.
 
 ## Documentation
 
+- [Acceptance criteria and evidence](docs/acceptance.md)
+- [Native installation results and limits](docs/milestone-6b.md)
 - [Installer-format foundations and disk boot](docs/milestone-6a.md)
 - [Desktop/application sequence results](docs/milestone-5.md)
 - [Desktop/application controls and limits](docs/desktop.md)

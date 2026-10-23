@@ -12,7 +12,7 @@ static void refresh(void) {
     count=0;
     for(unsigned i=0;i<40;i++){struct chos_dirent entry;if(api(SYS_LIST,i,(uintptr_t)&entry,0)==0 && child(entry.path))entries[count++]=entry;}
 }
-void explorer_init(void) { refresh();status("RAM volume. Click a folder to enter."); }
+void explorer_init(void) { refresh();status(volume_status()); }
 static void action(unsigned op) {
     if(op<1 || op>5)return;
     operation=op;
@@ -30,7 +30,7 @@ void explorer_key(unsigned key) {
             if(operation==4)result=api(SYS_RENAME,(uintptr_t)selected,(uintptr_t)prompt_value,0);
             if(operation==5 && equal(prompt_value,"YES"))result=api(SYS_UNLINK,(uintptr_t)selected,0,0);
             if(operation==3){static char bytes[4096];int n=read_file(selected,bytes,sizeof(bytes));if(n>=0)result=write_file(prompt_value,bytes,(unsigned)n);}
-            status(result==0?"Operation completed on RAM volume":"Operation failed or cancelled");selected[0]=0;refresh();
+            status(result==0?"Operation completed":"Operation failed or cancelled");selected[0]=0;refresh();
         }
         return;
     }

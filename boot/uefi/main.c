@@ -1,6 +1,7 @@
 #include "efi.h"
 #include "boot.h"
 static const struct guid acpi_guid={0x8868e871,0xe4f1,0x11d3,{0xbc,0x22,0,0x80,0xc7,0x3c,0x88,0x81}};
+static struct guid path_guid={0x09576e91,0x6d3f,0x11d2,{0x8e,0x39,0,0xa0,0xc9,0x69,0x72,0x3b}};
 static struct guid loaded_guid={0x5b1b31a1,0x9562,0x11d2,{0x8e,0x3f,0,0xa0,0xc9,0x69,0x72,0x3b}};
 static struct guid fs_guid={0x964e5b22,0x6459,0x11d2,{0x8e,0x39,0,0xa0,0xc9,0x69,0x72,0x3b}};
 static struct guid info_guid={0x09576e92,0x6d3f,0x11d2,{0x8e,0x39,0,0xa0,0xc9,0x69,0x72,0x3b}};
@@ -54,6 +55,24 @@ status efi_main(handle image,struct system_table *st) {
     if (EFI_ERROR(s)) return fail(st,(char16 *)u"CHOS: boot information allocation failed\r\n",s);
     for (uint64_t i=0;i<sizeof(*bi);i++) ((uint8_t *)bi)[i]=0;
     bi->magic=CHOS_BOOT_MAGIC; bi->reserved=test_flags;
+    void *pristine=0;
+    s=bs->allocate_pool(2,file_size,&pristine);
+    if(EFI_ERROR(s))return fail(st,(char16 *)u"CHOS: payload snapshot allocation failed\r\n",s);
+    for(uint64_t i=0;i<file_size;i++)((uint8_t *)pristine)[i]=((const uint8_t *)(uintptr_t)base)[i];
+    bi->kernel_source=(uintptr_t)pristine;bi->kernel_size=file_size;
+    const uint8_t *path=0;
+    if(!EFI_ERROR(bs->handle_protocol(loaded->device,&path_guid,(void **)&path)) && path) {
+        for(unsigned at=0;at+4<=4096;) {
+            unsigned length=(unsigned)path[at+2]|((unsigned)path[at+3]<<8);
+            if(length<4 || length>4096-at || path[at]==0x7f)break;
+            if(path[at]==4 && path[at+1]==2)bi->boot_medium=2;
+            if(path[at]==4 && path[at+1]==1 && length>=42 && path[at+40]==2 && path[at+41]==2) {
+                if(!bi->boot_medium)bi->boot_medium=1;
+                for(unsigned j=0;j<16;j++)bi->esp_guid[j]=path[at+24+j];
+            }
+            at+=length;
+        }
+    }
     struct efi_time time;
     if(st->runtime_services && !EFI_ERROR(st->runtime_services->get_time(&time,0)) && time.hour<24 && time.minute<60 && time.second<60) {
         bi->clock_seconds=(uint64_t)time.hour*3600+(uint64_t)time.minute*60+time.second;

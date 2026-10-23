@@ -96,3 +96,18 @@ process slot 0–7 plus writable `chos_task` and reports PID/app ID/timer sample
 All structures are in include/abi.h. The extension returns -19 before desktop
 startup. Public file replacement works on the mounted acceptance/desktop volume.
 Counters describe managed conventional RAM, not the entire physical footprint.
+
+## Native setup service
+
+30 SETUP uses x0=operation, x1=user structure, x2=confirmation token. Only the
+trusted built-in Setup role (app 7) may invoke it; other processes receive -13.
+Operation 0 copies `chos_setup`: selected serial/capacity/logical-sector size,
+boot medium (0 unknown, 1 GPT disk, 2 optical), eligibility, token and progress/
+error state. Operation 1 copies `chos_confirm`, verifies owner/token, exact
+`ERASE <serial>` text and computer-name syntax, then starts the single kernel
+writer. Writes are disabled from disk/unknown boot media. NVMe identity/geometry
+is rechecked before destructive work. Invalid confirmations do not write.
+
+INFO now includes the persistent-volume flag and saved computer name. LAUNCH
+accepts app 7 for the native installer. These are development ABI extensions;
+applications and kernel must be built together.

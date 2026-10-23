@@ -40,6 +40,9 @@ int main(int argc,char **argv) {
         assert(!install_gpt_write(d,bytes==512?4096:512,&p,true,&workspace) && !f->count);
         assert(install_gpt_write(d,bytes,&p,true,&workspace));
         assert(install_gpt_verify(d,bytes,&p,&workspace));
+        struct install_plan recovered;
+        assert(install_gpt_probe(d,bytes,&recovered,&workspace));
+        assert(recovered.blocks==p.blocks && recovered.esp_first==p.esp_first && recovered.system_first==p.system_first);
         struct block_device readonly=d;readonly.write=0;readonly.flush=0;
         assert(install_gpt_verify(readonly,bytes,&p,&workspace));
         assert(!install_gpt_write(readonly,bytes,&p,true,&workspace));
@@ -52,7 +55,7 @@ int main(int argc,char **argv) {
         FILE *out=fopen(name,"wx");assert(out);assert(fseek(out,(long)(blocks*4096-1),SEEK_SET)==0 && fputc(0,out)!=EOF);
         for(unsigned i=0;i<f->count;i++){assert(fseek(out,(long)(f->sectors[i].index*4096),SEEK_SET)==0);assert(fwrite(f->sectors[i].bytes,1,4096,out)==4096);}
         assert(fclose(out)==0);
-        f->sectors[0].bytes[200]^=1;assert(!install_gpt_verify(d,bytes,&p,&workspace));
+        f->sectors[0].bytes[200]^=1;assert(!install_gpt_verify(d,bytes,&p,&workspace));assert(!install_gpt_probe(d,bytes,&recovered,&workspace));
         for(int failure=0;failure<11;failure++) {
             reset(f);f->fail_write=failure;
             assert(!install_gpt_write(d,bytes,&p,true,&workspace));

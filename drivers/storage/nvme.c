@@ -5,6 +5,7 @@
 #include "mmu.h"
 struct queue { uint64_t sq,cq; unsigned tail,head,phase,id; uint16_t cid; };
 static const char *error;
+static char serial_number[21];
 const char *nvme_error(void) { return error; }
 static struct { uint64_t bar,buffer,frequency,sectors; unsigned sector_size,stride; struct queue admin,io; bool ready; } controller;
 static volatile uint32_t *reg(unsigned n) { return (void *)(uintptr_t)(controller.bar+n); }
@@ -116,6 +117,8 @@ bool nvme_init(struct pmm *physical,const struct chos_boot_info *boot,struct blo
     *reg(0x14)=(6u<<16)|(4u<<20)|1;
     if(!wait_ready(true) || !identify(0,1)) return false;
     const uint8_t *buffer=(void *)(uintptr_t)controller.buffer;
+    for(unsigned i=0;i<20;i++)serial_number[i]=(char)buffer[4+i];
+    serial_number[20]=0;for(unsigned i=20;i && serial_number[i-1]==' ';i--)serial_number[i-1]=0;
     const char serial[]="CHOS-TEST-0001"; bool match=true;
     for(unsigned i=0;i<20;i++) if(buffer[4+i]!=(uint8_t)(i<sizeof(serial)-1?serial[i]:' ')) match=false;
     *identity=match;
@@ -141,3 +144,15 @@ bool nvme_init(struct pmm *physical,const struct chos_boot_info *boot,struct blo
 }
 
 uint64_t nvme_bar(void) { return controller.bar; }
+
+unsigned nvme_sector_size(void){return controller.ready?controller.sector_size:0;}
+const char *nvme_serial(void){return serial_number;}
+bool nvme_recheck(void){
+    if(!controller.ready || !identify(0,1))return false;
+    const uint8_t *b=(void *)(uintptr_t)controller.buffer;
+    unsigned n=0;while(serial_number[n])n++;
+    for(unsigned i=0;i<20;i++)if(b[4+i]!=(uint8_t)(i<n?serial_number[i]:' '))return false;
+    if(!identify(1,0) || *(const uint64_t *)b!=controller.sectors)return false;
+    unsigned format=b[26]&15;uint32_t lbaf=*(const uint32_t *)(b+128+format*4);
+    return !(lbaf&0xffff) && ((lbaf>>16)&255)==(controller.sector_size==512?9:12);
+}

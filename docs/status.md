@@ -7,13 +7,14 @@
 | 3: display/input/NVMe/CHFS persistent operations | QEMU GOP + Virtio PCI + NVMe tested; three cold storage boots |
 | 4: CHOS Desktop/window manager/taskbar/Start | Working core; dedicated Search/Run/Help and image wallpaper remain |
 | 5: six native applications | Functional bounded live-session versions; see desktop.md |
-| 6: graphical installer/GPT/ESP/installed boot | GPT/FAT32 encoders and builder-created disk boot tested; guest installer and installed system volume unfinished |
+| 6: graphical installer/GPT/ESP/installed boot | Native graphical installation core, disk boot and persistent system volume tested; account/password/timezone/layout/mode configuration unfinished |
 | 7: VMware Fusion validation | Not run: no Apple Silicon/Fusion host available |
 | 8: CHOS 0.1 | Not ready |
 
-Current ISO: [milestone 5](milestone-5.md). New installation foundations: [milestone 6A](milestone-6a.md). Ordinary images
-start a genuine original desktop and native EL0 apps after kernel tests. Their
-CHFS volume is RAM backed, explicitly volatile, and does not write attached disks.
+Current ISO/results: [milestone 6B](milestone-6b.md). Earlier foundations: [milestone 6A](milestone-6a.md). Ordinary images
+start a genuine original desktop and native EL0 apps after kernel tests. Their live
+CHFS volume is RAM backed. Native Setup requires explicit destructive confirmation.
+Installed sessions mount the verified CHFS system partition and persist files.
 The separately gated storage-test ISO verifies persistent NVMe/CHFS data but is
 not an installer or desktop persistence environment.
 
@@ -32,7 +33,7 @@ not an installer or desktop persistence environment.
 - NVMe: one segment-0/bus-0 controller/namespace, 512/4096-byte sectors, polling and
   4 KiB transfers, bounded queues/timeouts. No hotplug/IOMMU/advanced recovery.
 - CHFS: raw volume up to 4 MiB, 40 entries, 59-byte ASCII paths, 32 KiB files. No
-  GPT/ESP, FAT runtime layer, timestamps, links, fsck or directory rename. Cold-boot,
+  general GPT mounting, FAT runtime layer, timestamps, links, fsck or directory rename. Cold-boot,
   integrity and injected failure-model tests pass; production reliability is open.
 - Native handles are path based; rename/unlink invalidates old path handles. File
   calls cap transfers at 4 KiB. Notepad/GUI copy/cat cap files at 4095 bytes. Text
@@ -45,5 +46,6 @@ not an installer or desktop persistence environment.
   persistence. Settings only change the actual session color theme/display report.
 - Task Manager uses real process IDs, memory counters and scheduled timer samples,
   not CPU percentage. Allocator figures exclude non-conventional reservations.
-- UEFI disk boot is verified only from build-created GPT/ESP fixtures. No guest
-  installation/installed system volume, graphical installer, network or Fusion evidence.
+- Native installation and installed CHFS persistence pass QEMU cold-boot tests.
+  Setup lacks account/password/timezone/layout/mode configuration, cancellation of
+  an active writer, repair/fsck and full transactional rollback. No Fusion evidence.

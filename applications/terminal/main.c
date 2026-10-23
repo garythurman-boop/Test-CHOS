@@ -23,7 +23,7 @@ static void execute(void) {
     char a[60],b[60];bool pa=absolute(words[1],a),pb=absolute(words[2],b);
     if(!words[0][0])return;
     if(equal(words[0],"help")) {
-        line("help dir cd mkdir copy move del cls");line("cat systeminfo reboot shutdown");line("run explorer|notepad|terminal|settings");line("run tasks|about");line("Files live on a volatile RAM volume.");return;
+        line("help dir cd mkdir copy move del cls");line("cat systeminfo reboot shutdown");line("run explorer|notepad|terminal|settings");line("run tasks|about");line(volume_status());return;
     }
     if(equal(words[0],"cls")){lines=0;return;}
     if(equal(words[0],"pwd")){line(cwd);return;}
@@ -78,7 +78,7 @@ static void execute(void) {
     } else {line("Unknown command or missing arguments");return;}
     line(result==0?"OK":"Operation failed");
 }
-void terminal_init(void) {line("CHOS Terminal. Type help.");status("RAM volume. Commands execute through native APIs.");}
+void terminal_init(void) {line("CHOS Terminal. Type help.");status(volume_status());}
 void terminal_key(unsigned key) {
     if(prompting) {
         if(prompt_key(key)) {

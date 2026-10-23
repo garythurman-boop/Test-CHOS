@@ -19,3 +19,6 @@ cc "${flags[@]}" tests/fat32.c installer/gpt.c installer/fat32.c -o build/saniti
 build/sanitized/fat32
 gpt_test_dir=$(mktemp -d "$PWD/build/gpt-sanitized-XXXXXX")
 build/sanitized/installer "$gpt_test_dir/disk"
+
+cc "${flags[@]}" tests/setup.c installer/policy.c -o build/sanitized/setup
+build/sanitized/setup

@@ -7,10 +7,10 @@ static void action(unsigned op) {
     operation=op;
     prompt(op==1?"Open file (absolute path)":"Save as (absolute path)",filename[0]?filename:"/documents/note.txt");
 }
-void notepad_init(void) { status("RAM volume. Ctrl-O open, Ctrl-S save."); }
+void notepad_init(void) { status(app_persistent?"System disk. Ctrl-O open, Ctrl-S save.":"RAM volume. Ctrl-O open, Ctrl-S save."); }
 static void save(void) {
     if(!filename[0]){action(2);return;}
-    if(write_file(filename,document,size)==0){modified=false;status("Saved to RAM volume. Lost at shutdown.");}
+    if(write_file(filename,document,size)==0){modified=false;status(app_persistent?"Saved to persistent system disk":"Saved to RAM volume. Lost at shutdown.");}
     else status("Save failed. Original file retained.");
 }
 void notepad_key(unsigned key) {
@@ -25,7 +25,7 @@ void notepad_key(unsigned key) {
                 if(n<0){status("Open failed (file absent or over 4095 bytes)");return;}
                 for(int i=0;i<n;i++)if(incoming[i]!='\n' && incoming[i]!='\t' && (incoming[i]<32 || incoming[i]>126)){status("Only plain ASCII text is supported");return;}
                 copy(document,incoming,sizeof(document));size=(unsigned)n;cursor=size;modified=false;
-                copy(filename,prompt_value,sizeof(filename));status("Opened file from RAM volume");
+                copy(filename,prompt_value,sizeof(filename));status(app_persistent?"Opened file from system disk":"Opened file from RAM volume");
             } else {copy(filename,prompt_value,sizeof(filename));save();}
         }
         return;

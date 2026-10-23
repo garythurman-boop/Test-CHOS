@@ -1,3 +1,22 @@
+# CHOS native installation core (milestone 6B)
+
+Adds original EL0 graphical Setup with identity/capacity review and typed erase
+confirmation. A preemptible kernel worker installs GPT/FAT32 boot files and a CHFS
+system partition from pristine original payloads. Installed boot matches the EFI
+partition identity and mounts persistent files. The existing MIT license is retained
+and included in the ISO/installed volume; the wizard has a separate setup agreement.
+
+Twenty QEMU boots and nine host programs pass, including native installations to
+512/4096-byte NVMe devices, two installed cold boots per geometry, independent file/
+configuration/license checks, rejected confirmation and self-erasure refusal.
+ASan/UBSan and ISO/builder-disk repeatability checks also pass.
+
+This is an installation-core checkpoint, not CHOS 0.1. Accounts/passwords, timezone/
+keyboard/display configuration, recovery tooling and Fusion validation remain open.
+See milestone-6b.md and artifacts/milestone-6b for the current ISO and exact evidence.
+
+---
+
 # CHOS installation-format foundations (milestone 6A)
 
 Original GPT/FAT32 ESP encoders and an exclusive-new-file build utility now create

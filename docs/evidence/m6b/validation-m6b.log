@@ -1,0 +1,1370 @@
+clang -std=c11 -Wall -Wextra -Werror -Iinclude tests/memory.c kernel/memory/physical.c kernel/memory/heap.c -o build/test-memory
+./build/test-memory
+PASS: PMM reserved ranges, fragmentation, exhaustion, overflow, stride, >4GiB; heap alignment, integrity, invalid/double free and coalescing
+clang -std=c11 -Wall -Wextra -Werror -Iinclude tests/acpi.c kernel/arch/arm64/acpi.c -o build/test-acpi
+./build/test-acpi
+PASS: ACPI discovery, checksums, MPIDR selection, malformed entries, IRQ ranges, out-of-map pointers, reserved/MMIO exclusion and oversized RSDP
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -mno-outline-atomics -c userspace/init/main.c -o build/user-main.o
+ld.lld -T userspace/init/user.ld -z max-page-size=4096 --no-undefined -o build/init.elf build/user-entry.o build/user-main.o
+mkdir -p build/app/applications/setup/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude -Iapplications/common --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -mno-outline-atomics -c applications/setup/main.c -o build/app/applications/setup/main.o
+mkdir -p build/app/applications/common/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude -Iapplications/common --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -mno-outline-atomics -c applications/common/runtime.c -o build/app/applications/common/runtime.o
+mkdir -p build/app/applications/desktop/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude -Iapplications/common --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -mno-outline-atomics -c applications/desktop/main.c -o build/app/applications/desktop/main.o
+mkdir -p build/app/applications/explorer/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude -Iapplications/common --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -mno-outline-atomics -c applications/explorer/main.c -o build/app/applications/explorer/main.o
+mkdir -p build/app/applications/notepad/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude -Iapplications/common --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -mno-outline-atomics -c applications/notepad/main.c -o build/app/applications/notepad/main.o
+mkdir -p build/app/applications/terminal/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude -Iapplications/common --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -mno-outline-atomics -c applications/terminal/main.c -o build/app/applications/terminal/main.o
+mkdir -p build/app/applications/control-panel/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude -Iapplications/common --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -mno-outline-atomics -c applications/control-panel/main.c -o build/app/applications/control-panel/main.o
+mkdir -p build/app/applications/task-manager/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude -Iapplications/common --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -mno-outline-atomics -c applications/task-manager/main.c -o build/app/applications/task-manager/main.o
+mkdir -p build/app/applications/about/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude -Iapplications/common --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -mno-outline-atomics -c applications/about/main.c -o build/app/applications/about/main.o
+mkdir -p build/app/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -c kernel/runtime.c -o build/app/runtime.o
+ld.lld -T userspace/init/user.ld -z max-page-size=4096 --no-undefined -o build/desktop.elf build/user-entry.o build/app/applications/setup/main.o build/app/applications/common/runtime.o build/app/applications/desktop/main.o build/app/applications/explorer/main.o build/app/applications/notepad/main.o build/app/applications/terminal/main.o build/app/applications/control-panel/main.o build/app/applications/task-manager/main.o build/app/applications/about/main.o build/app/runtime.o
+clang -std=c11 -Wall -Wextra -Werror -Iinclude tests/elf.c kernel/process/elf.c -o build/test-elf
+./build/test-elf build/init.elf
+PASS: actual AArch64 ELF, truncated headers, architecture/type/endianness, overflow, W+X, entry bounds, overlapping segments and metadata mutation sweep
+./build/test-elf build/desktop.elf
+PASS: actual AArch64 ELF, truncated headers, architecture/type/endianness, overflow, W+X, entry bounds, overlapping segments and metadata mutation sweep
+clang -std=c11 -Wall -Wextra -Werror -Iinclude tests/filesystem.c filesystem/chfs.c -o build/test-filesystem
+./build/test-filesystem
+PASS: CHFS directories, create/read/write/rename/delete, cross-block reads, remount, data CRC, metadata fallback, torn-write/flush failure recovery and capacity limits
+clang -std=c11 -Wall -Wextra -Werror -Iinclude tests/input.c drivers/input/events.c -o build/test-input
+./build/test-input
+PASS: input decoding, key releases, signed motion/clamping, buttons, FIFO ordering and bounded overflow
+clang -std=c11 -Wall -Wextra -Werror -Iinclude tests/desktop.c desktop/window-manager/model.c desktop/graphics/render.c desktop/graphics/font.c -o build/test-desktop
+./build/test-desktop
+Desktop ownership, lifetime, focus, move/resize, controls, keys, queue saturation and clipping passed
+clang -std=c11 -Wall -Wextra -Werror -Iinclude tests/setup.c installer/policy.c -o build/test-setup
+./build/test-setup
+Setup rejects self/unknown boot media, missing authority, wrong disk identity, malformed confirmation and invalid names
+mkdir -p build/installer/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -c installer/policy.c -o build/installer/policy.o
+mkdir -p build/installer/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -c installer/service.c -o build/installer/service.o
+mkdir -p build/installer/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -c installer/gpt.c -o build/installer/gpt.o
+mkdir -p build/installer/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -c installer/fat32.c -o build/installer/fat32.o
+mkdir -p build/filesystem/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -c filesystem/ram.c -o build/filesystem/ram.o
+mkdir -p build/kernel/arch/arm64/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -c kernel/arch/arm64/power.c -o build/kernel/arch/arm64/power.o
+mkdir -p build/desktop/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -c desktop/desktop.c -o build/desktop/desktop.o
+mkdir -p build/desktop/window-manager/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -c desktop/window-manager/model.c -o build/desktop/window-manager/model.o
+mkdir -p build/desktop/graphics/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -c desktop/graphics/render.c -o build/desktop/graphics/render.o
+mkdir -p build/desktop/graphics/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -c desktop/graphics/font.c -o build/desktop/graphics/font.o
+mkdir -p build/drivers/input/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -c drivers/input/virtio.c -o build/drivers/input/virtio.o
+mkdir -p build/drivers/input/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -c drivers/input/events.c -o build/drivers/input/events.o
+mkdir -p build/filesystem/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -c filesystem/vfs.c -o build/filesystem/vfs.o
+mkdir -p build/filesystem/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -c filesystem/chfs.c -o build/filesystem/chfs.o
+mkdir -p build/drivers/storage/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -c drivers/storage/nvme.c -o build/drivers/storage/nvme.o
+mkdir -p build/kernel/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -c kernel/storage_test.c -o build/kernel/storage_test.o
+mkdir -p build/kernel/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -c kernel/runtime.c -o build/kernel/runtime.o
+mkdir -p build/kernel/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -c kernel/main.c -o build/kernel/main.o
+mkdir -p build/kernel/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -c kernel/console.c -o build/kernel/console.o
+mkdir -p build/kernel/process/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -c kernel/process/elf.c -o build/kernel/process/elf.o
+mkdir -p build/kernel/process/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -c kernel/process/process.c -o build/kernel/process/process.o
+mkdir -p build/kernel/syscall/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -c kernel/syscall/syscall.c -o build/kernel/syscall/syscall.o
+mkdir -p build/kernel/arch/arm64/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -c kernel/arch/arm64/acpi.c -o build/kernel/arch/arm64/acpi.o
+mkdir -p build/kernel/memory/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -c kernel/memory/physical.c -o build/kernel/memory/physical.o
+mkdir -p build/kernel/memory/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -c kernel/memory/heap.c -o build/kernel/memory/heap.o
+mkdir -p build/kernel/memory/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -c kernel/memory/virtual.c -o build/kernel/memory/virtual.o
+mkdir -p build/kernel/interrupts/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -c kernel/interrupts/exception.c -o build/kernel/interrupts/exception.o
+mkdir -p build/kernel/scheduler/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -c kernel/scheduler/scheduler.c -o build/kernel/scheduler/scheduler.o
+mkdir -p build/drivers/interrupts/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -c drivers/interrupts/gicv2_timer.c -o build/drivers/interrupts/gicv2_timer.o
+mkdir -p build/kernel/arch/arm64/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -c kernel/arch/arm64/entry.S -o build/kernel/arch/arm64/entry.o
+mkdir -p build/kernel/arch/arm64/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -c kernel/arch/arm64/vectors.S -o build/kernel/arch/arm64/vectors.o
+mkdir -p build/kernel/arch/arm64/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -c kernel/arch/arm64/mmu.S -o build/kernel/arch/arm64/mmu.o
+mkdir -p build/kernel/arch/arm64/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -c kernel/arch/arm64/test_worker.S -o build/kernel/arch/arm64/test_worker.o
+mkdir -p build/kernel/process/
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -c kernel/process/image.S -o build/kernel/process/image.o
+ld.lld -T kernel/arch/arm64/kernel.ld --no-undefined -o build/kernel.elf build/installer/policy.o build/installer/service.o build/installer/gpt.o build/installer/fat32.o build/filesystem/ram.o build/kernel/arch/arm64/power.o build/desktop/desktop.o build/desktop/window-manager/model.o build/desktop/graphics/render.o build/desktop/graphics/font.o build/drivers/input/virtio.o build/drivers/input/events.o build/filesystem/vfs.o build/filesystem/chfs.o build/drivers/storage/nvme.o build/kernel/storage_test.o build/kernel/runtime.o build/kernel/main.o build/kernel/console.o build/kernel/process/elf.o build/kernel/process/process.o build/kernel/syscall/syscall.o build/kernel/arch/arm64/acpi.o build/kernel/memory/physical.o build/kernel/memory/heap.o build/kernel/memory/virtual.o build/kernel/interrupts/exception.o build/kernel/scheduler/scheduler.o build/drivers/interrupts/gicv2_timer.o build/kernel/arch/arm64/entry.o build/kernel/arch/arm64/vectors.o build/kernel/arch/arm64/mmu.o build/kernel/arch/arm64/test_worker.o build/kernel/process/image.o
+llvm-objcopy -O binary build/kernel.elf build/KERNEL.BIN
+python3 scripts/mkiso.py
+xorriso 1.5.6 : RockRidge filesystem manipulator, libburnia project.
+
+xorriso : NOTE : Environment variable SOURCE_DATE_EPOCH encountered with value 1767225600
+690f76a2a5caa77d1ed39025412ba5a85eb92de58892f5311431ef13d6447789  /src/build/CHOS-ARM64.iso
+python3 scripts/mkiso.py
+xorriso 1.5.6 : RockRidge filesystem manipulator, libburnia project.
+
+xorriso : NOTE : Environment variable SOURCE_DATE_EPOCH encountered with value 1767225600
+690f76a2a5caa77d1ed39025412ba5a85eb92de58892f5311431ef13d6447789  /src/build/CHOS-ARM64.iso
+{
+  "passed": true,
+  "ram_mib": 512,
+  "command": [
+    "qemu-system-aarch64",
+    "-machine",
+    "virt,gic-version=2",
+    "-cpu",
+    "cortex-a72",
+    "-accel",
+    "tcg",
+    "-m",
+    "512",
+    "-smp",
+    "1",
+    "-bios",
+    "/usr/share/qemu-efi-aarch64/QEMU_EFI.fd",
+    "-device",
+    "ramfb",
+    "-device",
+    "virtio-keyboard-pci",
+    "-device",
+    "virtio-mouse-pci",
+    "-device",
+    "virtio-scsi-pci",
+    "-drive",
+    "if=none,id=cd,media=cdrom,readonly=on,file=/src/build/CHOS-ARM64.iso",
+    "-device",
+    "scsi-cd,drive=cd",
+    "-boot",
+    "order=d",
+    "-display",
+    "none",
+    "-serial",
+    "file:/src/build/boot-512.serial.log",
+    "-qmp",
+    "unix:/tmp/chos-199.sock,server=on,wait=off",
+    "-no-reboot",
+    "-net",
+    "none"
+  ],
+  "test": "boot-512",
+  "iso_sha256": "690f76a2a5caa77d1ed39025412ba5a85eb92de58892f5311431ef13d6447789",
+  "milestone": "3",
+  "result_kind": "functional_boot",
+  "kernel_checks": [
+    "BRK exception return",
+    "physical page integrity and double-free rejection",
+    "heap allocate/free",
+    "null translation fault",
+    "stack guard translation fault",
+    "read-only code permission fault",
+    "NX heap instruction fault",
+    "ACPI GICv2/GTDT discovery",
+    "timer-driven non-yielding worker preemption",
+    "register context canaries",
+    "strict priority and round-robin selection",
+    "thread exit and continued scheduling",
+    "EL0 static ELF execution and syscalls",
+    "per-process private mappings and IPC",
+    "invalid user buffer rejection",
+    "kernel/text/NX-stack violation termination",
+    "deferred process and thread reclamation",
+    "Virtio PCI keyboard/mouse events injected over QMP"
+  ],
+  "elapsed_seconds": 7.22
+}
+{
+  "passed": true,
+  "ram_mib": 1024,
+  "command": [
+    "qemu-system-aarch64",
+    "-machine",
+    "virt,gic-version=2",
+    "-cpu",
+    "cortex-a72",
+    "-accel",
+    "tcg",
+    "-m",
+    "1024",
+    "-smp",
+    "1",
+    "-bios",
+    "/usr/share/qemu-efi-aarch64/QEMU_EFI.fd",
+    "-device",
+    "ramfb",
+    "-device",
+    "virtio-keyboard-pci",
+    "-device",
+    "virtio-mouse-pci",
+    "-device",
+    "virtio-scsi-pci",
+    "-drive",
+    "if=none,id=cd,media=cdrom,readonly=on,file=/src/build/CHOS-ARM64.iso",
+    "-device",
+    "scsi-cd,drive=cd",
+    "-boot",
+    "order=d",
+    "-display",
+    "none",
+    "-serial",
+    "file:/src/build/boot-1024.serial.log",
+    "-qmp",
+    "unix:/tmp/chos-205.sock,server=on,wait=off",
+    "-no-reboot",
+    "-net",
+    "none"
+  ],
+  "test": "boot-1024",
+  "iso_sha256": "690f76a2a5caa77d1ed39025412ba5a85eb92de58892f5311431ef13d6447789",
+  "milestone": "3",
+  "result_kind": "functional_boot",
+  "kernel_checks": [
+    "BRK exception return",
+    "physical page integrity and double-free rejection",
+    "heap allocate/free",
+    "null translation fault",
+    "stack guard translation fault",
+    "read-only code permission fault",
+    "NX heap instruction fault",
+    "ACPI GICv2/GTDT discovery",
+    "timer-driven non-yielding worker preemption",
+    "register context canaries",
+    "strict priority and round-robin selection",
+    "thread exit and continued scheduling",
+    "EL0 static ELF execution and syscalls",
+    "per-process private mappings and IPC",
+    "invalid user buffer rejection",
+    "kernel/text/NX-stack violation termination",
+    "deferred process and thread reclamation",
+    "Virtio PCI keyboard/mouse events injected over QMP"
+  ],
+  "elapsed_seconds": 7.233
+}
+{
+  "passed": true,
+  "iso_sha256": "690f76a2a5caa77d1ed39025412ba5a85eb92de58892f5311431ef13d6447789",
+  "command": [
+    "qemu-system-aarch64",
+    "-machine",
+    "virt,gic-version=2",
+    "-cpu",
+    "cortex-a72",
+    "-accel",
+    "tcg",
+    "-m",
+    "512",
+    "-smp",
+    "1",
+    "-bios",
+    "/usr/share/qemu-efi-aarch64/QEMU_EFI.fd",
+    "-device",
+    "ramfb",
+    "-device",
+    "virtio-keyboard-pci",
+    "-device",
+    "virtio-mouse-pci",
+    "-display",
+    "none",
+    "-serial",
+    "file:/src/build/desktop.serial.log",
+    "-qmp",
+    "unix:/tmp/chos-desktop-211.sock,server=on,wait=off",
+    "-no-reboot",
+    "-net",
+    "none",
+    "-device",
+    "virtio-scsi-pci",
+    "-drive",
+    "if=none,id=cd,media=cdrom,readonly=on,file=/src/build/CHOS-ARM64.iso",
+    "-device",
+    "scsi-cd,drive=cd",
+    "-boot",
+    "order=d"
+  ],
+  "checks": [
+    "EL0 draw/event boundary",
+    "keyboard update",
+    "move",
+    "maximize/restore",
+    "minimize/taskbar restore",
+    "resize",
+    "close/reap",
+    "keyboard Start launcher and relaunch"
+  ],
+  "elapsed_seconds": 16.862
+}
+{
+  "passed": true,
+  "iso_sha256": "690f76a2a5caa77d1ed39025412ba5a85eb92de58892f5311431ef13d6447789",
+  "command": [
+    "qemu-system-aarch64",
+    "-machine",
+    "virt,gic-version=2",
+    "-cpu",
+    "cortex-a72",
+    "-accel",
+    "tcg",
+    "-m",
+    "512",
+    "-smp",
+    "1",
+    "-bios",
+    "/usr/share/qemu-efi-aarch64/QEMU_EFI.fd",
+    "-device",
+    "ramfb",
+    "-device",
+    "virtio-keyboard-pci",
+    "-device",
+    "virtio-mouse-pci",
+    "-display",
+    "none",
+    "-serial",
+    "file:/src/build/applications.serial.log",
+    "-qmp",
+    "unix:/tmp/chos-desktop-217.sock,server=on,wait=off",
+    "-no-reboot",
+    "-net",
+    "none",
+    "-device",
+    "virtio-scsi-pci",
+    "-drive",
+    "if=none,id=cd,media=cdrom,readonly=on,file=/src/build/CHOS-ARM64.iso",
+    "-device",
+    "scsi-cd,drive=cd",
+    "-boot",
+    "order=d"
+  ],
+  "checks": [
+    "Notepad edit/backspace, save/save-as, new/open, unsaved-close cancellation and exact text round trip",
+    "Terminal mkdir/copy/move/cat/del through native file APIs",
+    "cross-process file contents",
+    "failed open preserves edits",
+    "Explorer navigation, mkdir/copy/move/confirmed deletion and metadata refresh",
+    "Control Panel changes desktop theme",
+    "Task Manager queries live process and memory instrumentation",
+    "confirmed session termination and fresh native About",
+    "confirmed Terminal shutdown via ACPI-discovered PSCI conduit"
+  ],
+  "managed_conventional_ram_kib": 489428,
+  "desktop_ready_seconds": 14.765,
+  "allocated_conventional_ram_kib_two_apps": 10396,
+  "elapsed_seconds": 42.618
+}
+{
+  "passed": true,
+  "iso_sha256": "690f76a2a5caa77d1ed39025412ba5a85eb92de58892f5311431ef13d6447789",
+  "command": [
+    "qemu-system-aarch64",
+    "-machine",
+    "virt,gic-version=2",
+    "-cpu",
+    "cortex-a72",
+    "-accel",
+    "tcg",
+    "-m",
+    "512",
+    "-smp",
+    "1",
+    "-bios",
+    "/usr/share/qemu-efi-aarch64/QEMU_EFI.fd",
+    "-device",
+    "ramfb",
+    "-device",
+    "virtio-keyboard-pci",
+    "-device",
+    "virtio-mouse-pci",
+    "-display",
+    "none",
+    "-serial",
+    "file:/src/build/restart.serial.log",
+    "-qmp",
+    "unix:/tmp/chos-desktop-223.sock,server=on,wait=off",
+    "-no-reboot",
+    "-net",
+    "none",
+    "-device",
+    "virtio-scsi-pci",
+    "-drive",
+    "if=none,id=cd,media=cdrom,readonly=on,file=/src/build/CHOS-ARM64.iso",
+    "-device",
+    "scsi-cd,drive=cd",
+    "-boot",
+    "order=d"
+  ],
+  "check": "Native Terminal confirmed restart; ACPI PSCI; QMP guest-reset event",
+  "elapsed_seconds": 16.384
+}
+{
+  "passed": true,
+  "ram_mib": 512,
+  "command": [
+    "qemu-system-aarch64",
+    "-machine",
+    "virt,gic-version=3",
+    "-cpu",
+    "cortex-a72",
+    "-accel",
+    "tcg",
+    "-m",
+    "512",
+    "-smp",
+    "1",
+    "-bios",
+    "/usr/share/qemu-efi-aarch64/QEMU_EFI.fd",
+    "-device",
+    "ramfb",
+    "-device",
+    "virtio-keyboard-pci",
+    "-device",
+    "virtio-mouse-pci",
+    "-device",
+    "virtio-scsi-pci",
+    "-drive",
+    "if=none,id=cd,media=cdrom,readonly=on,file=/src/build/CHOS-ARM64.iso",
+    "-device",
+    "scsi-cd,drive=cd",
+    "-boot",
+    "order=d",
+    "-display",
+    "none",
+    "-serial",
+    "file:/src/build/platform-reject.serial.log",
+    "-qmp",
+    "unix:/tmp/chos-229.sock,server=on,wait=off",
+    "-no-reboot",
+    "-net",
+    "none"
+  ],
+  "test": "platform-reject",
+  "iso_sha256": "690f76a2a5caa77d1ed39025412ba5a85eb92de58892f5311431ef13d6447789",
+  "milestone": "3",
+  "result_kind": "expected_rejection",
+  "elapsed_seconds": 6.226
+}
+xorriso 1.5.6 : RockRidge filesystem manipulator, libburnia project.
+
+38b15d9d89e6dfd143b9369308368451bb5e35c2bedeb41d73c9a372a4f91446  /src/build/CHOS-missing-kernel.iso
+{
+  "passed": true,
+  "ram_mib": 512,
+  "command": [
+    "qemu-system-aarch64",
+    "-machine",
+    "virt,gic-version=2",
+    "-cpu",
+    "cortex-a72",
+    "-accel",
+    "tcg",
+    "-m",
+    "512",
+    "-smp",
+    "1",
+    "-bios",
+    "/usr/share/qemu-efi-aarch64/QEMU_EFI.fd",
+    "-device",
+    "ramfb",
+    "-device",
+    "virtio-keyboard-pci",
+    "-device",
+    "virtio-mouse-pci",
+    "-device",
+    "virtio-scsi-pci",
+    "-drive",
+    "if=none,id=cd,media=cdrom,readonly=on,file=/src/build/CHOS-missing-kernel.iso",
+    "-device",
+    "scsi-cd,drive=cd",
+    "-boot",
+    "order=d",
+    "-display",
+    "none",
+    "-serial",
+    "file:/src/build/missing-kernel.serial.log",
+    "-qmp",
+    "unix:/tmp/chos-244.sock,server=on,wait=off",
+    "-no-reboot",
+    "-net",
+    "none"
+  ],
+  "test": "missing-kernel",
+  "iso_sha256": "38b15d9d89e6dfd143b9369308368451bb5e35c2bedeb41d73c9a372a4f91446",
+  "milestone": "3",
+  "result_kind": "expected_rejection",
+  "elapsed_seconds": 6.667
+}
+python3 scripts/mkiso.py
+xorriso 1.5.6 : RockRidge filesystem manipulator, libburnia project.
+
+xorriso : NOTE : Environment variable SOURCE_DATE_EPOCH encountered with value 1767225600
+690f76a2a5caa77d1ed39025412ba5a85eb92de58892f5311431ef13d6447789  /src/build/CHOS-ARM64.iso
+xorriso 1.5.6 : RockRidge filesystem manipulator, libburnia project.
+
+6b0bcd1ebdc8748be8104b02f884b1c60d0b69e27d9d61353204109729e87eb1  /src/build/CHOS-STORAGE-TEST.iso
+xorriso 1.5.6 : RockRidge filesystem manipulator, libburnia project.
+
+6b0bcd1ebdc8748be8104b02f884b1c60d0b69e27d9d61353204109729e87eb1  /src/build/CHOS-STORAGE-TEST.iso
+{
+  "passed": true,
+  "ram_mib": 512,
+  "command": [
+    "qemu-system-aarch64",
+    "-machine",
+    "virt,gic-version=2",
+    "-cpu",
+    "cortex-a72",
+    "-accel",
+    "tcg",
+    "-m",
+    "512",
+    "-smp",
+    "1",
+    "-bios",
+    "/usr/share/qemu-efi-aarch64/QEMU_EFI.fd",
+    "-device",
+    "ramfb",
+    "-device",
+    "virtio-keyboard-pci",
+    "-device",
+    "virtio-mouse-pci",
+    "-device",
+    "virtio-scsi-pci",
+    "-drive",
+    "if=none,id=cd,media=cdrom,readonly=on,file=/src/build/CHOS-STORAGE-TEST.iso",
+    "-device",
+    "scsi-cd,drive=cd",
+    "-boot",
+    "order=d",
+    "-display",
+    "none",
+    "-serial",
+    "file:/src/build/storage-1.serial.log",
+    "-qmp",
+    "unix:/tmp/chos-288.sock,server=on,wait=off",
+    "-no-reboot",
+    "-net",
+    "none",
+    "-drive",
+    "if=none,id=nvme0,format=raw,cache=writeback,file=/src/build/storage-run-es8dqyoy/storage-test.img",
+    "-device",
+    "nvme,drive=nvme0,serial=CHOS-TEST-0001"
+  ],
+  "test": "storage-1",
+  "iso_sha256": "6b0bcd1ebdc8748be8104b02f884b1c60d0b69e27d9d61353204109729e87eb1",
+  "milestone": "3",
+  "storage_phase": 1,
+  "result_kind": "functional_boot",
+  "kernel_checks": [
+    "BRK exception return",
+    "physical page integrity and double-free rejection",
+    "heap allocate/free",
+    "null translation fault",
+    "stack guard translation fault",
+    "read-only code permission fault",
+    "NX heap instruction fault",
+    "ACPI GICv2/GTDT discovery",
+    "timer-driven non-yielding worker preemption",
+    "register context canaries",
+    "strict priority and round-robin selection",
+    "thread exit and continued scheduling",
+    "EL0 static ELF execution and syscalls",
+    "per-process private mappings and IPC",
+    "invalid user buffer rejection",
+    "kernel/text/NX-stack violation termination",
+    "deferred process and thread reclamation",
+    "Virtio PCI keyboard/mouse events injected over QMP"
+  ],
+  "storage_checks": [
+    "NVMe block read/write/flush",
+    "CHFS format/create/read/rename",
+    "EL0 file-handle and invalid-buffer tests"
+  ],
+  "elapsed_seconds": 7.842
+}
+{
+  "passed": true,
+  "ram_mib": 512,
+  "command": [
+    "qemu-system-aarch64",
+    "-machine",
+    "virt,gic-version=2",
+    "-cpu",
+    "cortex-a72",
+    "-accel",
+    "tcg",
+    "-m",
+    "512",
+    "-smp",
+    "1",
+    "-bios",
+    "/usr/share/qemu-efi-aarch64/QEMU_EFI.fd",
+    "-device",
+    "ramfb",
+    "-device",
+    "virtio-keyboard-pci",
+    "-device",
+    "virtio-mouse-pci",
+    "-device",
+    "virtio-scsi-pci",
+    "-drive",
+    "if=none,id=cd,media=cdrom,readonly=on,file=/src/build/CHOS-STORAGE-TEST.iso",
+    "-device",
+    "scsi-cd,drive=cd",
+    "-boot",
+    "order=d",
+    "-display",
+    "none",
+    "-serial",
+    "file:/src/build/storage-2.serial.log",
+    "-qmp",
+    "unix:/tmp/chos-294.sock,server=on,wait=off",
+    "-no-reboot",
+    "-net",
+    "none",
+    "-drive",
+    "if=none,id=nvme0,format=raw,cache=writeback,file=/src/build/storage-run-es8dqyoy/storage-test.img",
+    "-device",
+    "nvme,drive=nvme0,serial=CHOS-TEST-0001"
+  ],
+  "test": "storage-2",
+  "iso_sha256": "6b0bcd1ebdc8748be8104b02f884b1c60d0b69e27d9d61353204109729e87eb1",
+  "milestone": "3",
+  "storage_phase": 2,
+  "result_kind": "functional_boot",
+  "kernel_checks": [
+    "BRK exception return",
+    "physical page integrity and double-free rejection",
+    "heap allocate/free",
+    "null translation fault",
+    "stack guard translation fault",
+    "read-only code permission fault",
+    "NX heap instruction fault",
+    "ACPI GICv2/GTDT discovery",
+    "timer-driven non-yielding worker preemption",
+    "register context canaries",
+    "strict priority and round-robin selection",
+    "thread exit and continued scheduling",
+    "EL0 static ELF execution and syscalls",
+    "per-process private mappings and IPC",
+    "invalid user buffer rejection",
+    "kernel/text/NX-stack violation termination",
+    "deferred process and thread reclamation",
+    "Virtio PCI keyboard/mouse events injected over QMP"
+  ],
+  "storage_checks": [
+    "cold boot generation 1 integrity",
+    "persistent delete/rewrite",
+    "EL0 file persistence"
+  ],
+  "elapsed_seconds": 7.941
+}
+{
+  "passed": true,
+  "ram_mib": 512,
+  "command": [
+    "qemu-system-aarch64",
+    "-machine",
+    "virt,gic-version=2",
+    "-cpu",
+    "cortex-a72",
+    "-accel",
+    "tcg",
+    "-m",
+    "512",
+    "-smp",
+    "1",
+    "-bios",
+    "/usr/share/qemu-efi-aarch64/QEMU_EFI.fd",
+    "-device",
+    "ramfb",
+    "-device",
+    "virtio-keyboard-pci",
+    "-device",
+    "virtio-mouse-pci",
+    "-device",
+    "virtio-scsi-pci",
+    "-drive",
+    "if=none,id=cd,media=cdrom,readonly=on,file=/src/build/CHOS-STORAGE-TEST.iso",
+    "-device",
+    "scsi-cd,drive=cd",
+    "-boot",
+    "order=d",
+    "-display",
+    "none",
+    "-serial",
+    "file:/src/build/storage-3.serial.log",
+    "-qmp",
+    "unix:/tmp/chos-300.sock,server=on,wait=off",
+    "-no-reboot",
+    "-net",
+    "none",
+    "-drive",
+    "if=none,id=nvme0,format=raw,cache=writeback,file=/src/build/storage-run-es8dqyoy/storage-test.img",
+    "-device",
+    "nvme,drive=nvme0,serial=CHOS-TEST-0001"
+  ],
+  "test": "storage-3",
+  "iso_sha256": "6b0bcd1ebdc8748be8104b02f884b1c60d0b69e27d9d61353204109729e87eb1",
+  "milestone": "3",
+  "storage_phase": 3,
+  "result_kind": "functional_boot",
+  "kernel_checks": [
+    "BRK exception return",
+    "physical page integrity and double-free rejection",
+    "heap allocate/free",
+    "null translation fault",
+    "stack guard translation fault",
+    "read-only code permission fault",
+    "NX heap instruction fault",
+    "ACPI GICv2/GTDT discovery",
+    "timer-driven non-yielding worker preemption",
+    "register context canaries",
+    "strict priority and round-robin selection",
+    "thread exit and continued scheduling",
+    "EL0 static ELF execution and syscalls",
+    "per-process private mappings and IPC",
+    "invalid user buffer rejection",
+    "kernel/text/NX-stack violation termination",
+    "deferred process and thread reclamation",
+    "Virtio PCI keyboard/mouse events injected over QMP"
+  ],
+  "storage_checks": [
+    "cold boot generation 2 integrity",
+    "EL0 file persistence",
+    "read-only verification boot"
+  ],
+  "elapsed_seconds": 7.356
+}
+{
+  "passed": true,
+  "ram_mib": 512,
+  "command": [
+    "qemu-system-aarch64",
+    "-machine",
+    "virt,gic-version=2",
+    "-cpu",
+    "cortex-a72",
+    "-accel",
+    "tcg",
+    "-m",
+    "512",
+    "-smp",
+    "1",
+    "-bios",
+    "/usr/share/qemu-efi-aarch64/QEMU_EFI.fd",
+    "-device",
+    "ramfb",
+    "-device",
+    "virtio-keyboard-pci",
+    "-device",
+    "virtio-mouse-pci",
+    "-device",
+    "virtio-scsi-pci",
+    "-drive",
+    "if=none,id=cd,media=cdrom,readonly=on,file=/src/build/CHOS-STORAGE-TEST.iso",
+    "-device",
+    "scsi-cd,drive=cd",
+    "-boot",
+    "order=d",
+    "-display",
+    "none",
+    "-serial",
+    "file:/src/build/disk-reject.serial.log",
+    "-qmp",
+    "unix:/tmp/chos-306.sock,server=on,wait=off",
+    "-no-reboot",
+    "-net",
+    "none",
+    "-drive",
+    "if=none,id=nvme0,format=raw,cache=writeback,file=/src/build/storage-run-es8dqyoy/refused-disk.img",
+    "-device",
+    "nvme,drive=nvme0,serial=ORDINARY-DISK"
+  ],
+  "test": "disk-reject",
+  "iso_sha256": "6b0bcd1ebdc8748be8104b02f884b1c60d0b69e27d9d61353204109729e87eb1",
+  "milestone": "3",
+  "result_kind": "expected_rejection",
+  "elapsed_seconds": 6.707
+}
+{
+  "passed": true,
+  "ram_mib": 512,
+  "command": [
+    "qemu-system-aarch64",
+    "-machine",
+    "virt,gic-version=2",
+    "-cpu",
+    "cortex-a72",
+    "-accel",
+    "tcg",
+    "-m",
+    "512",
+    "-smp",
+    "1",
+    "-bios",
+    "/usr/share/qemu-efi-aarch64/QEMU_EFI.fd",
+    "-device",
+    "ramfb",
+    "-device",
+    "virtio-keyboard-pci",
+    "-device",
+    "virtio-mouse-pci",
+    "-device",
+    "virtio-scsi-pci",
+    "-drive",
+    "if=none,id=cd,media=cdrom,readonly=on,file=/src/build/CHOS-ARM64.iso",
+    "-device",
+    "scsi-cd,drive=cd",
+    "-boot",
+    "order=d",
+    "-display",
+    "none",
+    "-serial",
+    "file:/src/build/normal-disk-no-write.serial.log",
+    "-qmp",
+    "unix:/tmp/chos-312.sock,server=on,wait=off",
+    "-no-reboot",
+    "-net",
+    "none",
+    "-drive",
+    "if=none,id=nvme0,format=raw,cache=writeback,file=/src/build/storage-run-es8dqyoy/normal-disk.img",
+    "-device",
+    "nvme,drive=nvme0,serial=CHOS-TEST-0001"
+  ],
+  "test": "normal-disk-no-write",
+  "iso_sha256": "690f76a2a5caa77d1ed39025412ba5a85eb92de58892f5311431ef13d6447789",
+  "milestone": "3",
+  "result_kind": "functional_boot",
+  "kernel_checks": [
+    "BRK exception return",
+    "physical page integrity and double-free rejection",
+    "heap allocate/free",
+    "null translation fault",
+    "stack guard translation fault",
+    "read-only code permission fault",
+    "NX heap instruction fault",
+    "ACPI GICv2/GTDT discovery",
+    "timer-driven non-yielding worker preemption",
+    "register context canaries",
+    "strict priority and round-robin selection",
+    "thread exit and continued scheduling",
+    "EL0 static ELF execution and syscalls",
+    "per-process private mappings and IPC",
+    "invalid user buffer rejection",
+    "kernel/text/NX-stack violation termination",
+    "deferred process and thread reclamation",
+    "Virtio PCI keyboard/mouse events injected over QMP"
+  ],
+  "elapsed_seconds": 7.252
+}
+{
+  "passed": true,
+  "workspace_disk": "/src/build/storage-run-es8dqyoy/storage-test.img",
+  "cold_boots": 3,
+  "generation": 18,
+  "disk_sha256": "78f2562d006caff43c1edb632c772b21706e594da7c8e56767bb15299a397ab7",
+  "data_checks": "independent Python little-endian parser and zlib CRC32",
+  "refused_identity_unchanged": true,
+  "normal_iso_disk_unchanged": true,
+  "third_boot_unchanged": true,
+  "files": {
+    "/documents/check.txt": "6ff375f6141946b3426550d1109f788d9be630c5ce88b19ad6b965d2ccc8f88b",
+    "/state": "d86e8112f3c4c4442126f8e9f44f16867da487f29052bf91b810457db34209a4",
+    "/user/renamed.txt": "ecff8c1d3417bff1e9a55d70d3496048fb09a73e9ca2fd2dd83a9b328071f593"
+  }
+}
+python3 scripts/mkiso.py
+xorriso 1.5.6 : RockRidge filesystem manipulator, libburnia project.
+
+xorriso : NOTE : Environment variable SOURCE_DATE_EPOCH encountered with value 1767225600
+690f76a2a5caa77d1ed39025412ba5a85eb92de58892f5311431ef13d6447789  /src/build/CHOS-ARM64.iso
+mkdir -p build/installer
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -c installer/gpt.c -o build/installer/gpt.o
+clang -O2 -Wall -Wextra -Werror -ffreestanding -fno-builtin -fno-stack-protector -Iinclude --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -fpie -fvisibility=hidden -include include/kernel_visibility.h -mno-outline-atomics -c installer/fat32.c -o build/installer/fat32.o
+clang -std=c11 -Wall -Wextra -Werror -Iinclude tests/installer.c installer/gpt.c -o build/test-installer
+clang -std=c11 -Wall -Wextra -Werror -Iinclude tests/fat32.c installer/gpt.c installer/fat32.c -o build/test-fat32
+./build/test-fat32
+FAT32 bounds, confirmation, 512/4096 sectors, mirrored metadata, payload integrity, read-only verification and write/flush errors passed
+python3 tests/installer.py
+GPT planning, unconfirmed/changed-geometry refusal, 512/4096 sectors, write/flush errors and read-back verification passed
+{
+  "passed": true,
+  "scope": "GPT encoder only; no ESP formatting, installation or installed boot",
+  "cases": [
+    {
+      "logical_sector_bytes": 512,
+      "disk_bytes": 134217728,
+      "passed": true,
+      "checks": [
+        "protective MBR",
+        "primary and backup header CRC32",
+        "reciprocal LBA geometry",
+        "entry-array CRC32 and identity",
+        "partition GUIDs, alignment, limits, names and nonoverlap"
+      ]
+    },
+    {
+      "logical_sector_bytes": 4096,
+      "disk_bytes": 536870912,
+      "passed": true,
+      "checks": [
+        "protective MBR",
+        "primary and backup header CRC32",
+        "reciprocal LBA geometry",
+        "entry-array CRC32 and identity",
+        "partition GUIDs, alignment, limits, names and nonoverlap"
+      ]
+    }
+  ]
+}
+python3 tests/fat32.py
+Verified new GPT/FAT32 image: /src/build/fat32-test-uu4xiee7/chos-512.img, 134217728 bytes, logical sector 512
+Verified new GPT/FAT32 image: /src/build/fat32-test-uu4xiee7/chos-512-repeat.img, 134217728 bytes, logical sector 512
+Verified new GPT/FAT32 image: /src/build/fat32-test-uu4xiee7/chos-4096.img, 536870912 bytes, logical sector 4096
+Verified new GPT/FAT32 image: /src/build/fat32-test-uu4xiee7/chos-4096-repeat.img, 536870912 bytes, logical sector 4096
+{
+  "passed": true,
+  "scope": "Build-time disk construction; not guest installation",
+  "cases": [
+    {
+      "passed": true,
+      "sector_bytes": 512,
+      "disk_image": "/src/build/fat32-test-uu4xiee7/chos-512.img",
+      "sha256": "408a4192ddd9203971e3e6976bb1dfeed8171a630a1ca7c0a9bb095e8e400f42",
+      "files": {
+        "EFI/BOOT/BOOTAA64.EFI": "f1df296ca110091ca13ace2864ace176c5c53857618cc96daac0404c27dfb3ed",
+        "CHOS/KERNEL.BIN": "5d53d11f20e4ba7b8655053305456932e9e8fe266801550578114cc48c58886d"
+      },
+      "checks": [
+        "BPB and backup",
+        "FSInfo and backup",
+        "mirrored FATs",
+        "bounded non-cyclic non-crosslinked cluster chains",
+        "directory tree",
+        "exact original EFI/kernel bytes and zero padding",
+        "exclusive new-image creation",
+        "identical second fresh build"
+      ]
+    },
+    {
+      "passed": true,
+      "sector_bytes": 4096,
+      "disk_image": "/src/build/fat32-test-uu4xiee7/chos-4096.img",
+      "sha256": "352f04409b3bbf33ac6834f5ea7357f61927695ab30bac39a8634a22f20ff2cd",
+      "files": {
+        "EFI/BOOT/BOOTAA64.EFI": "f1df296ca110091ca13ace2864ace176c5c53857618cc96daac0404c27dfb3ed",
+        "CHOS/KERNEL.BIN": "5d53d11f20e4ba7b8655053305456932e9e8fe266801550578114cc48c58886d"
+      },
+      "checks": [
+        "BPB and backup",
+        "FSInfo and backup",
+        "mirrored FATs",
+        "bounded non-cyclic non-crosslinked cluster chains",
+        "directory tree",
+        "exact original EFI/kernel bytes and zero padding",
+        "exclusive new-image creation",
+        "identical second fresh build"
+      ]
+    }
+  ]
+}
+{
+  "passed": true,
+  "scope": "UEFI boot from builder-created GPT/ESP disks, not a guest installer run",
+  "cases": [
+    {
+      "passed": true,
+      "logical_sector_bytes": 512,
+      "disk_sha256": "408a4192ddd9203971e3e6976bb1dfeed8171a630a1ca7c0a9bb095e8e400f42",
+      "command": [
+        "qemu-system-aarch64",
+        "-machine",
+        "virt,gic-version=2",
+        "-cpu",
+        "cortex-a72",
+        "-accel",
+        "tcg",
+        "-m",
+        "512",
+        "-smp",
+        "1",
+        "-bios",
+        "/usr/share/qemu-efi-aarch64/QEMU_EFI.fd",
+        "-device",
+        "ramfb",
+        "-device",
+        "virtio-keyboard-pci",
+        "-device",
+        "virtio-mouse-pci",
+        "-display",
+        "none",
+        "-serial",
+        "file:/src/build/gpt-boot-512.serial.log",
+        "-qmp",
+        "unix:/tmp/chos-desktop-352.sock,server=on,wait=off",
+        "-no-reboot",
+        "-net",
+        "none",
+        "-drive",
+        "if=none,id=nvme0,format=raw,file=/src/build/fat32-test-uu4xiee7/chos-512.img",
+        "-device",
+        "nvme,drive=nvme0,serial=CHOS-GPT-BOOT,logical_block_size=512,physical_block_size=512",
+        "-boot",
+        "order=c"
+      ],
+      "elapsed_seconds": 14.667,
+      "disk_unchanged": true
+    },
+    {
+      "passed": true,
+      "logical_sector_bytes": 4096,
+      "disk_sha256": "352f04409b3bbf33ac6834f5ea7357f61927695ab30bac39a8634a22f20ff2cd",
+      "command": [
+        "qemu-system-aarch64",
+        "-machine",
+        "virt,gic-version=2",
+        "-cpu",
+        "cortex-a72",
+        "-accel",
+        "tcg",
+        "-m",
+        "512",
+        "-smp",
+        "1",
+        "-bios",
+        "/usr/share/qemu-efi-aarch64/QEMU_EFI.fd",
+        "-device",
+        "ramfb",
+        "-device",
+        "virtio-keyboard-pci",
+        "-device",
+        "virtio-mouse-pci",
+        "-display",
+        "none",
+        "-serial",
+        "file:/src/build/gpt-boot-4096.serial.log",
+        "-qmp",
+        "unix:/tmp/chos-desktop-352.sock,server=on,wait=off",
+        "-no-reboot",
+        "-net",
+        "none",
+        "-drive",
+        "if=none,id=nvme0,format=raw,file=/src/build/fat32-test-uu4xiee7/chos-4096.img",
+        "-device",
+        "nvme,drive=nvme0,serial=CHOS-GPT-BOOT,logical_block_size=4096,physical_block_size=4096",
+        "-boot",
+        "order=c"
+      ],
+      "elapsed_seconds": 14.623,
+      "disk_unchanged": true
+    }
+  ]
+}
+
+{
+  "passed": true,
+  "disk": "/src/build/native-install-512-j6xuxxay/target.img",
+  "iso_sha256": "690f76a2a5caa77d1ed39025412ba5a85eb92de58892f5311431ef13d6447789",
+  "boots": [
+    {
+      "kind": "native_installer_from_iso",
+      "command": [
+        "qemu-system-aarch64",
+        "-machine",
+        "virt,gic-version=2",
+        "-cpu",
+        "cortex-a72",
+        "-accel",
+        "tcg",
+        "-m",
+        "512",
+        "-smp",
+        "1",
+        "-bios",
+        "/usr/share/qemu-efi-aarch64/QEMU_EFI.fd",
+        "-device",
+        "ramfb",
+        "-device",
+        "virtio-keyboard-pci",
+        "-device",
+        "virtio-mouse-pci",
+        "-display",
+        "none",
+        "-serial",
+        "file:/src/build/native-install-512.serial.log",
+        "-qmp",
+        "unix:/tmp/chos-desktop-363.sock,server=on,wait=off",
+        "-no-reboot",
+        "-net",
+        "none",
+        "-drive",
+        "if=none,id=nvme0,format=raw,file=/src/build/native-install-512-j6xuxxay/target.img",
+        "-device",
+        "nvme,drive=nvme0,serial=CHOS-GPT-BOOT,logical_block_size=512,physical_block_size=512",
+        "-boot",
+        "order=d",
+        "-device",
+        "virtio-scsi-pci",
+        "-drive",
+        "if=none,id=cd,media=cdrom,readonly=on,file=/src/build/CHOS-ARM64.iso",
+        "-device",
+        "scsi-cd,drive=cd",
+        "-boot",
+        "order=d"
+      ],
+      "passed": true,
+      "confirmation_no_write_checks": true
+    },
+    {
+      "kind": "installed_boot_and_native_file_save",
+      "command": [
+        "qemu-system-aarch64",
+        "-machine",
+        "virt,gic-version=2",
+        "-cpu",
+        "cortex-a72",
+        "-accel",
+        "tcg",
+        "-m",
+        "512",
+        "-smp",
+        "1",
+        "-bios",
+        "/usr/share/qemu-efi-aarch64/QEMU_EFI.fd",
+        "-device",
+        "ramfb",
+        "-device",
+        "virtio-keyboard-pci",
+        "-device",
+        "virtio-mouse-pci",
+        "-display",
+        "none",
+        "-serial",
+        "file:/src/build/installed-write-512.serial.log",
+        "-qmp",
+        "unix:/tmp/chos-desktop-363.sock,server=on,wait=off",
+        "-no-reboot",
+        "-net",
+        "none",
+        "-drive",
+        "if=none,id=nvme0,format=raw,file=/src/build/native-install-512-j6xuxxay/target.img",
+        "-device",
+        "nvme,drive=nvme0,serial=CHOS-GPT-BOOT,logical_block_size=512,physical_block_size=512",
+        "-boot",
+        "order=c"
+      ],
+      "passed": true
+    },
+    {
+      "kind": "installed_cold_boot_persistent_read_and_self_erase_refusal",
+      "command": [
+        "qemu-system-aarch64",
+        "-machine",
+        "virt,gic-version=2",
+        "-cpu",
+        "cortex-a72",
+        "-accel",
+        "tcg",
+        "-m",
+        "512",
+        "-smp",
+        "1",
+        "-bios",
+        "/usr/share/qemu-efi-aarch64/QEMU_EFI.fd",
+        "-device",
+        "ramfb",
+        "-device",
+        "virtio-keyboard-pci",
+        "-device",
+        "virtio-mouse-pci",
+        "-display",
+        "none",
+        "-serial",
+        "file:/src/build/installed-read-512.serial.log",
+        "-qmp",
+        "unix:/tmp/chos-desktop-363.sock,server=on,wait=off",
+        "-no-reboot",
+        "-net",
+        "none",
+        "-drive",
+        "if=none,id=nvme0,format=raw,file=/src/build/native-install-512-j6xuxxay/target.img",
+        "-device",
+        "nvme,drive=nvme0,serial=CHOS-GPT-BOOT,logical_block_size=512,physical_block_size=512",
+        "-boot",
+        "order=c"
+      ],
+      "passed": true
+    }
+  ],
+  "logical_sector_bytes": 512,
+  "filesystem_generation": 7,
+  "independent_disk_parser": true,
+  "disk_sha256": "cc1557799003eb26464fee7e212610adb5e35e4b2c5cecdeaf449be1aeac46f0",
+  "limitations": [
+    "accounts/password setup absent",
+    "timezone/keymap/display configuration incomplete",
+    "VMware Fusion unverified"
+  ]
+}
+{
+  "passed": true,
+  "disk": "/src/build/native-install-4096-mze9p3va/target.img",
+  "iso_sha256": "690f76a2a5caa77d1ed39025412ba5a85eb92de58892f5311431ef13d6447789",
+  "boots": [
+    {
+      "kind": "native_installer_from_iso",
+      "command": [
+        "qemu-system-aarch64",
+        "-machine",
+        "virt,gic-version=2",
+        "-cpu",
+        "cortex-a72",
+        "-accel",
+        "tcg",
+        "-m",
+        "512",
+        "-smp",
+        "1",
+        "-bios",
+        "/usr/share/qemu-efi-aarch64/QEMU_EFI.fd",
+        "-device",
+        "ramfb",
+        "-device",
+        "virtio-keyboard-pci",
+        "-device",
+        "virtio-mouse-pci",
+        "-display",
+        "none",
+        "-serial",
+        "file:/src/build/native-install-4096.serial.log",
+        "-qmp",
+        "unix:/tmp/chos-desktop-381.sock,server=on,wait=off",
+        "-no-reboot",
+        "-net",
+        "none",
+        "-drive",
+        "if=none,id=nvme0,format=raw,file=/src/build/native-install-4096-mze9p3va/target.img",
+        "-device",
+        "nvme,drive=nvme0,serial=CHOS-GPT-BOOT,logical_block_size=4096,physical_block_size=4096",
+        "-boot",
+        "order=d",
+        "-device",
+        "virtio-scsi-pci",
+        "-drive",
+        "if=none,id=cd,media=cdrom,readonly=on,file=/src/build/CHOS-ARM64.iso",
+        "-device",
+        "scsi-cd,drive=cd",
+        "-boot",
+        "order=d"
+      ],
+      "passed": true,
+      "confirmation_no_write_checks": true
+    },
+    {
+      "kind": "installed_boot_and_native_file_save",
+      "command": [
+        "qemu-system-aarch64",
+        "-machine",
+        "virt,gic-version=2",
+        "-cpu",
+        "cortex-a72",
+        "-accel",
+        "tcg",
+        "-m",
+        "512",
+        "-smp",
+        "1",
+        "-bios",
+        "/usr/share/qemu-efi-aarch64/QEMU_EFI.fd",
+        "-device",
+        "ramfb",
+        "-device",
+        "virtio-keyboard-pci",
+        "-device",
+        "virtio-mouse-pci",
+        "-display",
+        "none",
+        "-serial",
+        "file:/src/build/installed-write-4096.serial.log",
+        "-qmp",
+        "unix:/tmp/chos-desktop-381.sock,server=on,wait=off",
+        "-no-reboot",
+        "-net",
+        "none",
+        "-drive",
+        "if=none,id=nvme0,format=raw,file=/src/build/native-install-4096-mze9p3va/target.img",
+        "-device",
+        "nvme,drive=nvme0,serial=CHOS-GPT-BOOT,logical_block_size=4096,physical_block_size=4096",
+        "-boot",
+        "order=c"
+      ],
+      "passed": true
+    },
+    {
+      "kind": "installed_cold_boot_persistent_read_and_self_erase_refusal",
+      "command": [
+        "qemu-system-aarch64",
+        "-machine",
+        "virt,gic-version=2",
+        "-cpu",
+        "cortex-a72",
+        "-accel",
+        "tcg",
+        "-m",
+        "512",
+        "-smp",
+        "1",
+        "-bios",
+        "/usr/share/qemu-efi-aarch64/QEMU_EFI.fd",
+        "-device",
+        "ramfb",
+        "-device",
+        "virtio-keyboard-pci",
+        "-device",
+        "virtio-mouse-pci",
+        "-display",
+        "none",
+        "-serial",
+        "file:/src/build/installed-read-4096.serial.log",
+        "-qmp",
+        "unix:/tmp/chos-desktop-381.sock,server=on,wait=off",
+        "-no-reboot",
+        "-net",
+        "none",
+        "-drive",
+        "if=none,id=nvme0,format=raw,file=/src/build/native-install-4096-mze9p3va/target.img",
+        "-device",
+        "nvme,drive=nvme0,serial=CHOS-GPT-BOOT,logical_block_size=4096,physical_block_size=4096",
+        "-boot",
+        "order=c"
+      ],
+      "passed": true
+    }
+  ],
+  "logical_sector_bytes": 4096,
+  "filesystem_generation": 7,
+  "independent_disk_parser": true,
+  "disk_sha256": "e8646762bd6149c79d56b554f24454c4bf38cc90848bdc6550c8d23a595fc412",
+  "limitations": [
+    "accounts/password setup absent",
+    "timezone/keymap/display configuration incomplete",
+    "VMware Fusion unverified"
+  ]
+}
+Twenty QEMU cases, nine host programs (both ELF payloads checked), both ISO repeatability checks and independent disk verification passed.

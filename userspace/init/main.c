@@ -67,6 +67,7 @@ int user_main(uint64_t role,uint64_t peer) {
     struct chos_message message;
     if(role==6) {
     CHECK(call(SYS_ABI,0,0)==1 && call(999,0,0)==-38);
+    CHECK(call(SYS_SETUP,0,0)==-13);
     CHECK(call(SYS_WRITE,0,1)==-14 && call(SYS_WRITE,UINT64_MAX,8)==-14);
     CHECK(call(SYS_ALLOC,0,0)==-22 && call(SYS_ALLOC,UINT64_MAX,0)==-22);
     uint64_t pid=(uint64_t)call(SYS_PID,0,0);

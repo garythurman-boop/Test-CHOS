@@ -11,6 +11,7 @@
 #include "vfs.h"
 #include "input.h"
 #include "desktop.h"
+#include "setup.h"
 static struct pmm physical;
 static struct heap heap;
 static struct worker_state workers[3];
@@ -164,6 +165,7 @@ void kernel_main(struct chos_boot_info *info) {
         __asm__ volatile("msr daifclr, #2":::"memory");
     }
     __asm__ volatile("msr daifset, #2":::"memory");
+    if(!storage_phase)setup_initialize(disk_ready?&disk:0,boot,&physical);
     int input_devices=input_initialize(&physical,boot);
     if(input_devices<0) panic("VIRTIO INPUT SETUP FAILED");
     __asm__ volatile("msr daifclr, #2":::"memory");
@@ -177,7 +179,7 @@ void kernel_main(struct chos_boot_info *info) {
     console_text(32,352,"STARTING DESKTOP AFTER CORE TESTS",0xffffff);
     uint32_t signature[8]={0x32bbcd,0x6b45a1,0xf3ba20,0x18ad72,
                                         0xe14567,0x2998ef,0xcddc39,0x804020};
-    if(!storage_phase) console_text(32,380,disk_ready?"NVME DETECTED DISK WRITES DISABLED":"NVME NOT PRESENT OPTIONAL",0x8edbff);
+    if(!storage_phase) console_text(32,380,disk_ready?"NVME STORAGE READY":"NVME NOT PRESENT OPTIONAL",0x8edbff);
     if(storage_phase) {
         signature[0]=storage_phase==1?0x33ccdd:(storage_phase==2?0x33ddee:0x33eeff);
         console_rect(0,300,boot->width,84,0x071b36);

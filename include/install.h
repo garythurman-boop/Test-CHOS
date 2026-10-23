@@ -13,4 +13,5 @@ bool install_gpt_verify(struct block_device,uint32_t,const struct install_plan *
 struct install_payload { const uint8_t *loader,*kernel; size_t loader_size,kernel_size; };
 bool install_fat32_write(struct block_device,const struct install_plan *,const struct install_payload *,bool confirmed,struct gpt_workspace *);
 bool install_fat32_verify(struct block_device,const struct install_plan *,const struct install_payload *,struct gpt_workspace *);
+bool install_gpt_probe(struct block_device,uint32_t,struct install_plan *,struct gpt_workspace *);
 #endif

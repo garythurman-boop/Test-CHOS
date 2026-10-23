@@ -4,7 +4,8 @@
 This project has booted only on QEMU's ARM virt machine. Current core requires
 EL1 entry, ACPI 2.x, GICv2 and a GTDT timer; GICv3 is explicitly rejected. These
 requirements must be checked on Fusion before claiming compatibility. Current images contain real kernel/process/file/input tests followed by a native
-desktop and applications, not a graphical installer. Do not attach valuable disks or expect installation.
+desktop, applications and a native installer tested in QEMU. Fusion installation
+is still unverified. Use disposable virtual disks only.
 
 ## Evidence and open questions
 
@@ -47,8 +48,8 @@ x86 VMware device assumptions:
    boot workflow exists. If absent, record a blocker rather than selecting x86.
 2. Create a disposable ARM64 guest using that supported workflow; start with
    1 GiB RAM and one CPU. Disable Secure Boot for this unsigned development image.
-   Attach CHOS-ARM64.iso as a connected CD/DVD. A blank virtual disk is optional
-   for M1; it cannot be installed to by this milestone.
+   Attach CHOS-ARM64.iso as a connected CD/DVD. Attach a disposable NVMe virtual disk for eventual installation testing; the
+   native installer currently supports only one controller/namespace.
 3. Start the VM, select optical media in firmware if necessary, and record whether
    the EFI catalog is found, BOOTAA64.EFI executes, kernel load succeeds and
    core-test completion followed by the desktop appears (or record the explicit unsupported-platform error). Capture an actual screenshot and firmware
@@ -68,10 +69,15 @@ x86 VMware device assumptions:
    storage, actual installation, and installed reboot. Also record 512 MiB boot,
    1 GiB desktop footprint and idle CPU only when the desktop exists.
 
-Full user-facing Fusion installation instructions remain pending those tests and
-the real installer. This procedure currently targets boot/kernel-foundation behavior, not installation.
+Full verified user-facing Fusion instructions remain pending actual target tests.
+If the kernel and input work on the recorded Fusion version, open CHOS Setup
+(Meta-7), review the exact destination identity/capacity, accept the setup agreement,
+enter a computer name and provide the typed erase confirmation. Wait for success,
+detach the ISO and restart. Record every result; do not presume it works because
+the corresponding QEMU sequence passed.
 
-The latest ordinary ISO performs no NVM writes. Its storage-test companion is
+The latest ISO writes an installation destination only after explicit native
+Setup confirmation. Ordinary live operation uses RAM. Its storage-test companion is
 strictly for tests using a disposable NVMe image with the documented serial and
 boot opt-in; do not treat it as an installer. QEMU's NVMe/Virtio device IDs and BAR
 addresses are recorded in docs/evidence/m3/*.pci.log and are not a Fusion inventory.

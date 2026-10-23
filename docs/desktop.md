@@ -48,3 +48,18 @@ All applications currently share one embedded static ELF, selected by entry role
 Each launch executes in its own private EL0 address space and owns its windows,
 event queue, handles and memory. Kernel-controlled launch is bounded at eight live
 processes. This is not an installed application/package loader.
+
+## Native Setup and installed sessions
+
+Meta-7 (or CHOS Setup) opens the original installer. Boot the ISO with a disposable
+NVMe disk attached; accept the license, select the displayed serial/capacity,
+enter a computer name and type `ERASE <exact serial>` only after reviewing the
+warning. Wait for successful completion, detach the ISO and restart. Current
+Setup configures the computer name only: user/password/timezone/layout/mode setup
+are explicitly unfinished. There is no account security.
+
+After a verified installed boot, the desktop uses the CHFS system partition and
+file saves persist across cold boots. About shows the installed-volume status and
+computer name. The earlier RAM-only description applies to live ISO/builder
+sessions. A disk-booted Setup cannot erase its own boot medium. See milestone-6b.md
+for tested geometry, safety/error limits and exact native-install evidence.

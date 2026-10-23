@@ -4,6 +4,9 @@
 #include <stddef.h>
 #include <stdbool.h>
 extern unsigned app_role;
+extern bool app_persistent;
+const char *volume_status(void);
+void setup_paint(void);void setup_key(unsigned);void setup_click(int,int);
 extern int app_window,app_width,app_height;
 extern char app_status[80];
 int64_t api(unsigned,uint64_t,uint64_t,uint64_t);
