@@ -22,15 +22,15 @@ Blue keyboard-driven disk selection and typed confirmation lead to native Royale
 configuration/progress/completion. Progress follows real operations and copied
 bytes. Original GPT/FAT32/CHFS writers verify the files and installed boot path.
 
-**M7E now boots on the user's M1/Fusion VM.** Supplied screenshots show EL1,
-GICv3/timer, MMU/protection tests and 1024×768 GOP diagnostics working. The user
-reports normal Setup also appears. Keyboard/mouse do not work, and NVMe is not
-initialized. The screenshot places xHCI on bus `0a` and NVMe on bus `12`; the old
-drivers scanned only bus 0. M7F corrects that confirmed discovery blocker and adds
-an input-test panel plus detailed driver/read-only storage reports. **M7F Fusion
-input/storage retest remains pending**; QEMU passes are separate evidence.
-See [actual observations](docs/fusion-observations-m7e.md),
-[PCI correction](docs/pci-discovery.md) and [driver diagnostics](docs/driver-diagnostics.md).
+**M7F now passes boot/MMU/GIC/framebuffer and NVMe initialization/read-only tests
+on the user's M1/Fusion VM.** Keyboard/mouse still fail: xHCI is discovered at
+bus `0a` but refuses stage 2. M7G replaces an invalid 4 KiB minimum for register
+offsets with bounded block/overlap validation and adds distinct failure causes,
+raw register reports and controller/port/HID readiness in the INPUT panel.
+**Actual M7G Fusion input remains pending.** The existing evidence narrows the
+old refusal to slots/offsets; it does not identify the exact raw register value.
+See [M7G audit/results](docs/milestone-7g.md), [driver diagnostics](docs/driver-diagnostics.md)
+and [Fusion retest](docs/fusion-first-boot.md).
 USB interrupts/hubs/general HID, authentication/ACLs, full regional/display setup,
 networking, SMP and CHOS 0.1 remain unfinished.
 
@@ -44,9 +44,9 @@ to disk. [First Fusion evaluation instructions](docs/fusion-first-boot.md).
 
 ## Download testing images
 
-- [Current live USB input test ISO](artifacts/milestone-7f/CHOS-ARM64-M7F-INPUT.iso).
-- [Current noninteractive M7F diagnostic ISO](artifacts/milestone-7f/CHOS-ARM64-M7F-DIAGNOSTIC.iso).
-- [Current M7F Setup/Live Desktop ISO](artifacts/milestone-7f/CHOS-ARM64.iso).
+- [Current live USB input test ISO](artifacts/milestone-7g/CHOS-ARM64-M7G-INPUT.iso).
+- [Current noninteractive M7G diagnostic ISO](artifacts/milestone-7g/CHOS-ARM64-M7G-DIAGNOSTIC.iso).
+- [Current M7G Setup/Live Desktop ISO](artifacts/milestone-7g/CHOS-ARM64.iso).
 - [Preserved noninteractive M7C diagnostic ISO](artifacts/milestone-7c/CHOS-ARM64-M7C.iso).
 - [Preserved M7C Setup/Live Desktop ISO](artifacts/milestone-7c/CHOS-ARM64.iso).
 - [Preserved M7A/7B boot/interrupt compatibility ISO](artifacts/milestone-7a-b/CHOS-ARM64.iso).
@@ -63,7 +63,7 @@ to disk. [First Fusion evaluation instructions](docs/fusion-first-boot.md).
 - [Older M2A ISO](artifacts/milestone-2a/CHOS-ARM64.iso).
 
 On GitHub choose **Download raw file**, then verify the adjacent SHA256SUMS.
-Read [current image notes](artifacts/milestone-7d/README.md) before testing. The
+Read [current image notes](artifacts/milestone-7g/README.md) before testing. The
 separate STORAGE-TEST ISO is for the automated disposable-disk tests only, with
 an explicit boot-volume opt-in and exact device identity gate. It is not an installer.
 

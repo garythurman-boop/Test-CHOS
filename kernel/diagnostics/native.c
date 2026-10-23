@@ -72,7 +72,7 @@ void diagnostic_map_serial(void){
 }
 unsigned diagnostic_screen(unsigned page){
     if(!boot)return 1;
-    const unsigned panel=(boot->reserved&CHOS_INPUT_TEST_BOOT)?168:0;
+    const unsigned panel=(boot->reserved&CHOS_INPUT_TEST_BOOT)?204:0;
     const unsigned rows=(boot->height-96-panel)/18,cols=(boot->width-32)/12;
     console_rect(0,0,boot->width,boot->height,0x102b50);
     console_text(16,16,"CHOS HARDWARE DIAGNOSTICS",0xffffff);
@@ -106,13 +106,18 @@ void diagnostic_input_event(const struct input_event *e){
 void diagnostic_input_panel(void){
     if(!boot || !(boot->reserved&CHOS_INPUT_TEST_BOOT))return;
     const struct usb_status *s=usb_status();const struct input_state *i=input_get();unsigned y=boot->height-184;
-    console_rect(0,y,boot->width,160,0x163a64);
+    console_rect(0,y-36,boot->width,196,0x163a64);
+    console_text(16,y-32,"CONTROLLER INITIALIZED",0x9ed7ff);console_text(304,y-32,s->initialized?"YES":"NO",0xffffff);
+    console_text(400,y-32,"PORTS",0x9ed7ff);console_number(496,y-32,s->ports);
+    console_text(16,y-14,"ENUMERATED",0x9ed7ff);console_number(160,y-14,s->enumerated);
+    console_text(232,y-14,"HID",0x9ed7ff);console_number(280,y-14,s->keyboards+s->mice);
+    console_text(328,y-14,"CONNECTED",0x9ed7ff);console_number(460,y-14,s->connected);
     console_text(16,y+4,"CHOS USB HARDWARE TEST",0xffffff);
     char id[]="0000:0000";for(unsigned n=0;n<4;n++){id[n]="0123456789ABCDEF"[(s->id>>((3-n)*4))&15];id[n+5]="0123456789ABCDEF"[(s->id>>(16+(3-n)*4))&15];}
     console_text(352,y+4,"PCI",0x9ed7ff);console_text(412,y+4,id,0xffffff);
     console_text(16,y+28,"USB KEYBOARD",0x9ed7ff);console_text(184,y+28,s->keyboards?"READY":"NOT DETECTED",0xffffff);
     console_text(16,y+46,"USB MOUSE",0x9ed7ff);console_text(184,y+46,s->mice?"READY":"NOT DETECTED",0xffffff);
-    console_text(16,y+64,"PATH",0x9ed7ff);console_text(184,y+64,s->keyboards || s->mice?"XHCI POLLED":"NO ACTIVE USB PATH",0xffffff);
+    console_text(16,y+64,"PATH",0x9ed7ff);console_text(184,y+64,s->initialized?"XHCI POLLED":"NO ACTIVE USB PATH",0xffffff);
     console_text(16,y+82,"STAGE / REASON",0x9ed7ff);console_number(232,y+82,s->stage);console_number(328,y+82,s->reason);
     console_text(16,y+100,"LAST KEY CODE / VALUE",0x9ed7ff);console_number(304,y+100,key_code);console_number(448,y+100,key_value);
     console_text(16,y+118,"POINTER X Y BUTTONS",0x9ed7ff);console_number(304,y+118,(unsigned)i->x);console_number(400,y+118,(unsigned)i->y);console_number(496,y+118,mouse_buttons);

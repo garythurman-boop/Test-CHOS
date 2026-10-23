@@ -1,6 +1,6 @@
-# M7F device initialization and input diagnostics
+# M7G device initialization and input diagnostics
 
-Use `CHOS-ARM64-M7F-INPUT.iso` for the next Fusion trial. This original UEFI/kernel
+Use `CHOS-ARM64-M7G-INPUT.iso` for the next Fusion trial. This original UEFI/kernel
 image runs normal protection/timer tests, skips Setup/filesystem mounting, attempts
 bounded driver initialization and rotates reports automatically. A fixed lower
 panel shows live USB keyboard/mouse availability, selected controller ID, actual
@@ -25,8 +25,8 @@ limit; initialized devices continue using the known polled event ring.
 
 xHCI controller stage: 1 discovery/BAR/memory decode, 2 capabilities/offsets/ports,
 3 extended capabilities/ownership, 4 halt, 5 reset/4 KiB page support, 6 DMA/rings/
-bus master, 7 start, 8 controller running. On initialization failure the stage is
-also its reason; discovery failures use the shared PCI result code instead. A
+bus master, 7 start, 8 controller running. M7G uses distinct stable reasons below; discovery failures use shared PCI
+result codes 1–5 at stage 1. A
 running controller with zero accepted HID devices is not a successful input path.
 
 Enumeration stage: 10 connection/reset, 11 speed, 12 enable slot, 13 DMA allocation,
@@ -34,7 +34,10 @@ Enumeration stage: 10 connection/reset, 11 speed, 12 enable slot, 13 DMA allocat
 17 device/configuration header, 18 configuration/HID parsing, 19 configuration/boot
 protocol, 20 interrupt endpoint configuration, 21 HID ready. Last rejected port and
 stage are reported; held states are released on disconnect. The panel's active
-path says xHCI only when a keyboard or mouse is actually ready.
+path says XHCI POLLED when the controller runs; separate keyboard/mouse READY
+fields establish usable input. Enumerated counts successful device/configuration
+header retrieval; HID counts accepted boot interfaces. Connected is the initial
+root-port connection count, not a hotplug topology service.
 
 UHCI/EHCI/OHCI remain inventoried but unsupported. The target screenshot proves
 these controllers exist, not which owns the keyboard/mouse. No duplicate HID/input
@@ -44,6 +47,26 @@ interrupt routing, hubs/general HID, firmware ownership takeover, scratchpads,
 USB3 input, hotplug re-enumeration or controller reset recovery. Timeouts are bounded;
 uncertain DMA pages remain reserved. Unexpected MMIO exceptions still use the
 kernel exception screen; automatic controller recovery is not implemented. No target HID success is claimed yet.
+
+## Stable xHCI refusal reasons (M7G)
+
+| Code | Cause |
+|---|---|
+| 101 / 102 / 103 | Invalid BAR / MMIO mapping / PCI memory decode |
+| 201 | Invalid capability length or aperture |
+| 202 / 203 | Unsupported 32-bit-only DMA / scratchpad requirement |
+| 204 / 205 | Zero slots / zero or more than 32 ports |
+| 206 / 207 / 208 | Doorbell outside aperture / runtime outside aperture / overlapping blocks |
+| 301 / 302 / 303 | Extended capability bounds / BIOS ownership unsupported / traversal limit |
+| 401 | Halt timeout |
+| 501 / 502 / 503 | Reset timeout / CNR timeout / no supported 4 KiB page |
+| 601 / 602 | DMA allocation / PCI bus-master enable failure |
+| 701 | Run timeout |
+
+The failure log includes a readable cause. Stage 2 performs no allocation, reset
+or ownership operation. The M7F target report's eight-port line narrows its old
+stage-2 refusal to slots/offsets; raw register values are still needed to identify
+the exact old predicate. [Audit and correction](milestone-7g.md).
 
 ## NVMe stages and read-only policy
 

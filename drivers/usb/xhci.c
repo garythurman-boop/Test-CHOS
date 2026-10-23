@@ -110,6 +110,7 @@ static bool enumerate(struct hid_device *d,unsigned port){
     }
     report.enum_stage=17;
     if(!control(d,0x0680,0x100,0,18,true) || !control(d,0x0680,0x200,0,9,true))return false;
+    report.enumerated++;
     report.enum_stage=18;
     unsigned bytes=(unsigned)data[2]|(unsigned)data[3]<<8;
     if(bytes<9 || bytes>512 || !control(d,0x0680,0x200,0,bytes,true) || !usb_boot_configuration(data,bytes,&d->interface))return false;
@@ -133,42 +134,79 @@ static bool enumerate(struct hid_device *d,unsigned port){
     d->ready=true;for(unsigned receive=0;receive<8;receive++)submit_input(d,receive);
     diagnostic_log(d->interface.protocol==1?"USB boot keyboard initialized: PASS":"USB boot mouse initialized: PASS");return true;
 }
+/* Register snapshot only after the layout helper has validated all used ranges. */
+static uint64_t r64(uint64_t a){uint32_t low=r32(a);return low|((uint64_t)r32(a+4)<<32);}
+static void registers(void){
+    diagnostic_value("xHCI USBCMD: ",r32(host.op),true);
+    diagnostic_value("xHCI USBSTS: ",r32(host.op+4),true);
+    diagnostic_value("xHCI PAGESIZE: ",r32(host.op+8),true);
+    diagnostic_value("xHCI CRCR: ",r64(host.op+0x18),true);
+    diagnostic_value("xHCI DCBAAP: ",r64(host.op+0x30),true);
+    diagnostic_value("xHCI CONFIG: ",r32(host.op+0x38),true);
+}
 int usb_initialize(struct pmm *memory,const struct chos_boot_info *boot){
-    host=(typeof(host)){0};host.memory=memory;report=(struct usb_status){.stage=1};unsigned stage=1;
+    host=(typeof(host)){0};host.memory=memory;report=(struct usb_status){.stage=1};unsigned stage=1,reason=XHCI_BAR;
+    bool layout_valid=false;struct xhci_layout layout;
     struct pci_device pci;
     if(!pci_find_class(boot,0x0c0330,&pci)){report.reason=pci.error;pci_report("xHCI PCI discovery",&pci);return 0;}
     pci_report("xHCI driver selected",&pci);report.id=pci.id;
-    uint32_t low=r32(pci.config+16);
-    if(!pci_memory_bar(low,r32(pci.config+20),65536,&host.base))goto failure;
+    uint32_t low=r32(pci.config+16),high=r32(pci.config+20);
+    diagnostic_value("xHCI PCI command before: ",r32(pci.config+4)&65535,true);
+    diagnostic_value("xHCI BAR0 low: ",low,true);diagnostic_value("xHCI BAR0 high: ",high,true);
+    if(!pci_memory_bar(low,high,65536,&host.base))goto failure;
     report.base=host.base;diagnostic_value("xHCI MMIO base: ",host.base,true);
-    if(!mmu_device(host.base,65536) || !pci_enable(&pci,2))goto failure;
+    reason=XHCI_MAP;if(!mmu_device(host.base,65536))goto failure;
+    reason=XHCI_DECODE;if(!pci_enable(&pci,2))goto failure;
+    diagnostic_value("xHCI PCI command decode: ",r32(pci.config+4)&65535,true);
     stage=2;unsigned cap=r32(host.base),hcs=r32(host.base+4),hcs2=r32(host.base+8),hcc=r32(host.base+16);
-    report.capabilities=hcc;report.hcs=hcs;
-    diagnostic_value("xHCI capabilities: ",hcc,true);diagnostic_value("xHCI HCSPARAMS2: ",hcs2,true);
-    if((cap&255)<32 || (cap&255)>128 || !(hcc&1) || (hcs2&0xfbe00000))goto failure; /* scratchpads not implemented */
-    host.op=host.base+(cap&255);host.context_size=(hcc&4)?64:32;host.slots=hcs&255;host.ports=hcs>>24;
-    report.ports=host.ports;diagnostic_value("xHCI root ports: ",host.ports,false);
-    unsigned db=r32(host.base+20)&~3u,rt=r32(host.base+24)&~31u;
-    if(!host.slots || !host.ports || host.ports>32 || db>0xfc00 || rt>0xff80 || db<0x1000 || rt<0x1000)goto failure;
-    host.doorbell=host.base+db;host.runtime=host.base+rt+0x20;
-    stage=3;uint32_t ext=hcc>>16;for(unsigned steps=0;ext && steps<64;steps++){
-        if(ext>16380)goto failure;uint32_t c=r32(host.base+ext*4);
-        if((c&255)==1 && (c&(1u<<16))){diagnostic_log("xHCI firmware ownership handoff unsupported");goto failure;}
-        unsigned next=(c>>8)&255;if(!next)break;ext+=next;if(steps==63)goto failure;
+    unsigned db=r32(host.base+20),rt=r32(host.base+24);
+    report.capabilities=hcc;report.hcs=hcs;report.ports=hcs>>24;
+    diagnostic_value("xHCI CAPLENGTH/version: ",cap,true);
+    diagnostic_value("xHCI HCSPARAMS1: ",hcs,true);diagnostic_value("xHCI HCSPARAMS2: ",hcs2,true);
+    diagnostic_value("xHCI HCCPARAMS1: ",hcc,true);
+    if((cap>>16)>=0x110)diagnostic_value("xHCI HCCPARAMS2: ",r32(host.base+28),true);
+    diagnostic_value("xHCI DBOFF raw: ",db,true);diagnostic_value("xHCI RTSOFF raw: ",rt,true);
+    diagnostic_value("xHCI scratchpad buffers: ",((hcs2>>27)&31)|((hcs2>>16)&0x3e0),false);
+    diagnostic_value("xHCI root ports: ",report.ports,false);
+    reason=xhci_layout_validate(cap,hcs,hcs2,hcc,db,rt,65536,&layout);if(reason)goto failure;
+    layout_valid=true;host.op=host.base+layout.operational;host.context_size=(hcc&4)?64:32;host.slots=layout.slots;host.ports=layout.ports;
+    host.doorbell=host.base+layout.doorbell;host.runtime=host.base+layout.runtime+0x20;
+    registers();
+    stage=3;uint32_t ext=hcc>>16;for(unsigned steps=0;ext;steps++){
+        reason=XHCI_EXT_LIMIT;if(steps==64)goto failure;
+        reason=XHCI_EXT_BOUNDS;if(!xhci_extended_span(&layout,ext*4,4))goto failure;
+        uint32_t c=r32(host.base+ext*4);diagnostic_value("xHCI extended capability: ",c,true);
+        if((c&255)==1){
+            if(!xhci_extended_span(&layout,ext*4,8))goto failure;
+            diagnostic_value("xHCI legacy ownership: ",c,true);
+            diagnostic_value("xHCI legacy control: ",r32(host.base+ext*4+4),true);
+            reason=XHCI_LEGACY_OWNED;if(c&(1u<<16))goto failure;
+        }
+        unsigned next=(c>>8)&255;if(!next)break;ext+=next;
     }
-    stage=4;w32(host.op,r32(host.op)&~1u);if(!wait_bits(host.op+4,1,1))goto failure;
-    stage=5;w32(host.op,2);if(!wait_bits(host.op,2,0) || !wait_bits(host.op+4,1u<<11,0) || !(r32(host.op+8)&1))goto failure;
-    stage=6;host.dcbaa=page();host.events=page();host.erst=page();if(!host.dcbaa || !host.events || !host.erst || !ring_init(&host.commands))goto failure;
+    stage=4;reason=XHCI_HALT;w32(host.op,r32(host.op)&~1u);if(!wait_bits(host.op+4,1,1))goto failure;
+    diagnostic_log("xHCI halt: PASS");
+    stage=5;reason=XHCI_NOT_READY;if(!wait_bits(host.op+4,1u<<11,0))goto failure;
+    reason=XHCI_RESET;w32(host.op,2);if(!wait_bits(host.op,2,0))goto failure;
+    reason=XHCI_NOT_READY;if(!wait_bits(host.op+4,1u<<11,0))goto failure;
+    diagnostic_log("xHCI reset/CNR: PASS");registers();
+    reason=XHCI_PAGESIZE;if(!(r32(host.op+8)&1))goto failure;
+    stage=6;reason=XHCI_ALLOC;host.dcbaa=page();host.events=page();host.erst=page();
+    if(!host.dcbaa || !host.events || !host.erst || !ring_init(&host.commands))goto failure;
+    diagnostic_log("xHCI four aligned DMA pages allocated: PASS");
     ((uint64_t *)(uintptr_t)host.erst)[0]=host.events;((uint64_t *)(uintptr_t)host.erst)[1]=256;cache(host.erst,false);
-    if(!pci_enable(&pci,4))goto failure;
+    reason=XHCI_BUSMASTER;if(!pci_enable(&pci,4))goto failure;
+    diagnostic_value("xHCI PCI command DMA: ",r32(pci.config+4)&65535,true);
     host.cycle=1;w64(host.op+0x30,host.dcbaa);w64(host.op+0x18,host.commands.address|1);w32(host.op+0x38,host.slots);
     w32(host.runtime,0);w32(host.runtime+8,1);w64(host.runtime+0x10,host.erst);w64(host.runtime+0x18,host.events);
-    stage=7;w32(host.op,1);if(!wait_bits(host.op+4,1,0))goto failure;
-    report.stage=8;host.running=true;diagnostic_log("xHCI reset and polled event ring: PASS");
+    __asm__ volatile("dsb sy":::"memory");
+    stage=7;reason=XHCI_RUN;w32(host.op,1);if(!wait_bits(host.op+4,1,0))goto failure;
+    report.stage=8;report.initialized=1;host.running=true;registers();diagnostic_log("xHCI reset and polled event ring: PASS");
     for(unsigned port=1;port<=host.ports;port++){
         uint32_t portsc=r32(host.op+0x400+(port-1)*16);
         diagnostic_value("xHCI root port number: ",port,false);diagnostic_value("xHCI PORTSC before enumeration: ",portsc,true);
         if(!(portsc&1))continue;report.connected++;
+        diagnostic_value("USB connected port speed ID: ",(portsc>>10)&15,false);
         if(host.count==2){diagnostic_log("USB bounded device capacity reached");continue;}
         if(enumerate(&host.device[host.count],port))host.count++;
         else {diagnostic_value("USB enumeration port: ",port,false);diagnostic_value("USB enumeration failure stage: ",report.enum_stage,false);diagnostic_value("USB PORTSC after failure: ",r32(host.op+0x400+(port-1)*16),true);diagnostic_log("USB device enumeration failed/unsupported");}
@@ -176,8 +214,13 @@ int usb_initialize(struct pmm *memory,const struct chos_boot_info *boot){
     diagnostic_value("USB connected root ports: ",report.connected,false);diagnostic_value("USB operational boot HID devices: ",host.count,false);
     return (int)host.count;
 failure:
-    /* Never reclaim DMA pages while hardware ownership is uncertain. */
-    host.running=false;report.stage=stage;report.reason=stage;diagnostic_value("xHCI failure stage: ",stage,false);diagnostic_log("xHCI initialization failed/unsupported; DMA reserved");return 0;
+    /* No uncertain DMA ownership is reclaimed. A capability refusal allocates
+     * no DMA; reserve language must not imply an allocator failure. */
+    host.running=false;report.stage=stage;report.reason=reason;
+    diagnostic_value("xHCI failure stage: ",stage,false);diagnostic_value("xHCI failure reason: ",reason,false);
+    diagnostic_log(xhci_reason_name(reason));
+    if(layout_valid)registers();
+    diagnostic_log("xHCI initialization refused; see stage/reason/registers");return 0;
 }
 void usb_poll(void){
     if(!host.running)return;

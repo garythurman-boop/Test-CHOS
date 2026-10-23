@@ -1,3 +1,14 @@
+# M7G — xHCI register-layout correction and precise diagnostics
+
+M7F Fusion NVMe identify/read-only first/last reads and write guard now pass in
+the user's report; USB still refuses initialization at stage 2. M7G accepts valid
+compact register offsets while validating complete register blocks and overlaps,
+bounds extended-capability reads and distinguishes allocation/ownership/reset/
+capability refusals. The no-input panel separates controller, connections,
+descriptors and HID readiness. NVMe, installer/Royale and original kernel remain.
+The exact old Fusion predicate/raw offsets still require capture; no target HID
+or installation pass is claimed. [M7G report](milestone-7g.md).
+
 # M7F — nonzero-bus discovery, input trial and safe NVMe diagnostics
 
 Supplied Fusion screenshots confirm M7E MMU/timer/protection/GOP success, with

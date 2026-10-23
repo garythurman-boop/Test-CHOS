@@ -4,7 +4,8 @@ M7C adds original C xHCI bring-up and USB boot-keyboard/mouse decoding. No Linux
 BSD, firmware USB driver or third-party USB stack is linked or called by the
 running kernel. **Only the documented QEMU controller/device configurations are
 verified for HID operation. Actual Fusion xHCI is `15ad:077a` at `0a:00.0`;
-its capabilities, attached paths and HID behavior await M7F retest.**
+M7F reaches capability stage 2 but refuses initialization. M7G accepts bounded
+compact register layouts; actual corrected initialization/HID remains pending.**
 
 ## Boundaries
 
@@ -81,3 +82,8 @@ and noninteractive unsupported-controller/non-boot-device cases. Check the
 
 M7F adds controller/port/enum status and a live input test ISO without replacing
 the polled path. [Reports/policy](driver-diagnostics.md), [PCI correction](pci-discovery.md).
+
+M7G replaces the arbitrary 4 KiB DBOFF/RTSOFF minimum with validated register
+block lengths/overlap checks and distinct refusal reasons. Extended capability
+spans are checked before reads; the input panel separates controller, connection,
+descriptor and HID readiness. [Audit/results](milestone-7g.md).

@@ -35,10 +35,10 @@ try:
  g.snapshot('fusion-m7e-baseline-nonzero');results.append(record(g,expected_old_discovery_failure=True))
 finally:g.close()
 assert sha(disk)==before
-g=Guest('fusion-bus-input',disk=disk,optical=True,live=False,gic_version=3,iso=BUILD/'CHOS-ARM64-M7F-INPUT.iso',**BRIDGED)
+g=Guest('fusion-bus-input',disk=disk,optical=True,live=False,gic_version=3,iso=BUILD/'CHOS-ARM64-M7G-INPUT.iso',**BRIDGED)
 try:
  text=diagnostic(g)
- for s in ['USB boot keyboard initialized: PASS','USB boot mouse initialized: PASS','NVMe initialized: PASS','NVMe first/last 4KiB reads: PASS','NVMe diagnostic write guard: PASS']:assert s in text,s
+ for s in ['xHCI halt: PASS','xHCI reset/CNR: PASS','xHCI four aligned DMA pages allocated: PASS','xHCI DBOFF raw:','xHCI RTSOFF raw:','xHCI PCI command DMA:','USB boot keyboard initialized: PASS','USB boot mouse initialized: PASS','NVMe initialized: PASS','NVMe first/last 4KiB reads: PASS','NVMe diagnostic write guard: PASS']:assert s in text,s
  # Firmware assigns both endpoints below root ports, not on bus zero.
  import re
  bdfs=[int(x,16) for x in re.findall(r'Driver PCI segment/bus/devfn: 0x([0-9a-f]+)',text)]
@@ -57,6 +57,11 @@ assert sha(disk)==before,'Diagnostic changed target disk'
 g=Guest('fusion-bus-setup',disk=disk,optical=True,live=False,gic_version=3,**BRIDGED)
 try:
  g.wait(lambda p:p(30,160)==0x244da8,'normal Setup with bridged USB/NVMe',120);g.snapshot('fusion-bus-setup')
+ g.key('down');g.wait(lambda p:p(30,212)==0x244da8,'USB arrow selects Live Desktop')
+ g.key('up');g.wait(lambda p:p(30,160)==0x244da8,'USB arrow restores Install')
+ g.key('ret');g.wait(lambda p:matches(p,32,92,'CHOS Setup Agreement',0xf2f6ff),'USB Enter opens license')
+ g.key('esc');g.wait(lambda p:p(30,160)==0x244da8,'USB Escape restores welcome focus')
+ g.snapshot('fusion-bus-navigation')
  g.key('l');g.wait(lambda p:p(60,250)==0x326bb0,'USB Setup L selects native Live Desktop',120)
  g.click(618,36);launch(g,2);type_text(g,'BRIDGED USB INPUT')
  g.wait(lambda p:matches(p,42,118,'BRIDGED USB INPUT',0x152b40),'actual native keyboard/mouse interaction');g.snapshot('fusion-bus-notepad')
@@ -64,13 +69,14 @@ try:
 finally:g.close()
 assert sha(disk)==before,'Unconfirmed normal Setup changed disk'
 for label,devices in [('fusion-input-absent',['qemu-xhci']),('fusion-input-refusal',['qemu-xhci,p2=0,p3=0'])]:
- g=Guest(label,ram=2048,live=False,gic_version=3,input_backend='none',iso=BUILD/'CHOS-ARM64-M7F-INPUT.iso',extra_devices=devices)
+ g=Guest(label,ram=2048,live=False,gic_version=3,input_backend='none',iso=BUILD/'CHOS-ARM64-M7G-INPUT.iso',extra_devices=devices)
  try:
   text=diagnostic(g);assert 'Input initialized devices: 0' in text
-  if label.endswith('refusal'):assert 'xHCI failure stage: 2' in text
+  if label.endswith('refusal'):assert 'xHCI failure stage: 2' in text and 'xHCI failure reason: 205' in text
+  else:assert 'xHCI reset and polled event ring: PASS' in text and 'USB connected root ports: 0' in text
   g.snapshot(label);results.append(record(g,no_disk_or_input=True))
  finally:g.close()
-g=Guest('fusion-nvme-refusal',ram=2048,disk=disk,optical=True,live=False,gic_version=3,input_backend='none',iso=BUILD/'CHOS-ARM64-M7F-INPUT.iso',storage_pci_bus='nvmeroot',early_devices=['pcie-root-port,id=nvmeroot,chassis=2'],nvme_options='mqes=7')
+g=Guest('fusion-nvme-refusal',ram=2048,disk=disk,optical=True,live=False,gic_version=3,input_backend='none',iso=BUILD/'CHOS-ARM64-M7G-INPUT.iso',storage_pci_bus='nvmeroot',early_devices=['pcie-root-port,id=nvmeroot,chassis=2'],nvme_options='mqes=7')
 try:
  text=diagnostic(g);assert 'NVME CAPABILITIES UNSUPPORTED' in text and 'NVMe failure stage: 4' in text
  # Wait for the actual controller error line, not an unrelated first report page.
@@ -81,4 +87,4 @@ try:
  g.snapshot('fusion-nvme-refusal');results.append(record(g,controller_detected_but_capabilities_rejected=True,read_only=True))
 finally:g.close()
 assert sha(disk)==before
-(BUILD/'fusion-devices.json').write_text(json.dumps({'passed':True,'scope':'QEMU nonzero-bus regression and live diagnostic panel; real Fusion M7F retest pending','cases':results,'all_unconfirmed_disks_unchanged':True},indent=2)+'\n');print(json.dumps(results,indent=2))
+(BUILD/'fusion-devices.json').write_text(json.dumps({'passed':True,'scope':'QEMU nonzero-bus regression and live diagnostic panel; real Fusion M7G retest pending','cases':results,'all_unconfirmed_disks_unchanged':True},indent=2)+'\n');print(json.dumps(results,indent=2))
