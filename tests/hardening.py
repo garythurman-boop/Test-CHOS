@@ -14,6 +14,8 @@ try:
   assert g.proc.poll() is None;time.sleep(.2)
  text=serial.read_text(errors='replace');assert 'Optional Virtio input initialization failed' in text,text[-1800:]
  assert 'NVME PCI CONTROLLER NOT FOUND' in text
+ # Wait for the complete framebuffer report, not only the earlier serial marker.
+ g.wait(lambda p:p(0,g.dimensions()[1]-24)==0x244da8 and any(p(x,78+y)==0xe0efff for y in range(14) for x in range(16,400)), 'complete optional-failure inventory screen',45)
  g.snapshot('diagnostic-optional-failure');results.append({'passed':True,'case':'no disk/network/input/desktop; optional Virtio IOMMU-feature rejection','command':g.command,'iso_sha256':hashlib.sha256(g.iso.read_bytes()).hexdigest()})
 finally:g.close()
 g=Guest('usb-mouse-disconnect',input_backend='usb',gic_version=3,virtualization=True)

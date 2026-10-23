@@ -1,0 +1,20 @@
+UEFI firmware (version 2025.02-8+deb13u1 built at 18:06:17 on Nov  8 2025)
+BdsDxe: loading Boot0001 "UEFI QEMU QEMU CD-ROM " from PciRoot(0x0)/Pci(0x3,0x0)/Scsi(0x0,0x0)
+BdsDxe: starting Boot0001 "UEFI QEMU QEMU CD-ROM " from PciRoot(0x0)/Pci(0x3,0x0)/Scsi(0x0,0x0)
+CHOS - ARM64 UEFI loader
+CHOS: firmware entry EL1
+CHOS: CHOS/KERNEL.BIN missing
+BdsDxe: failed to start Boot0001 "UEFI QEMU QEMU CD-ROM " from PciRoot(0x0)/Pci(0x3,0x0)/Scsi(0x0,0x0): Not Found
+BdsDxe: loading Boot0002 "EFI Internal Shell" from Fv(64074AFE-340A-4BE6-94BA-91B5B4D0F71E)/FvFile(7C04A583-9E3E-4F1C-AD65-E05268D0B4D1)
+BdsDxe: starting Boot0002 "EFI Internal Shell" from Fv(64074AFE-340A-4BE6-94BA-91B5B4D0F71E)/FvFile(7C04A583-9E3E-4F1C-AD65-E05268D0B4D1)
+UEFI Interactive Shell v2.2
+EDK II
+UEFI v2.70 (Debian distribution of EDK II, 0x00010000)
+Mapping table
+      FS0: Alias(s):CD0a0a1:;BLK2:
+          PciRoot(0x0)/Pci(0x3,0x0)/Scsi(0x0,0x0)/CDROM(0x0)/HD(1,MBR,0x00000000)
+     BLK0: Alias(s):
+          PciRoot(0x0)/Pci(0x3,0x0)/Scsi(0x0,0x0)
+     BLK1: Alias(s):
+          PciRoot(0x0)/Pci(0x3,0x0)/Scsi(0x0,0x0)/CDROM(0x0)
+Press ESC in 5 seconds to skip startup.nsh or any other key to continue.
