@@ -15,6 +15,7 @@ bool platform_tables(const struct chos_boot_info *,uint32_t *,unsigned *);
 bool platform_serial(const struct chos_boot_info *,uint64_t *);
 bool platform_psci(const struct chos_boot_info *,bool *hvc);
 int64_t platform_power(const struct chos_boot_info *,unsigned);
+bool platform_pci_function(const struct chos_boot_info *,unsigned segment,unsigned bus,unsigned slot,unsigned function,uint64_t *);
 bool platform_pcie(const struct chos_boot_info *,uint64_t *base);
 bool platform_discover(const struct chos_boot_info *,uint64_t mpidr,struct platform *);
 #endif

@@ -83,7 +83,7 @@ static bool setup(struct pmm *p,volatile uint8_t *pci,struct device *d) {
 }
 int input_initialize(struct pmm *p,const struct chos_boot_info *boot) {
     device_count=0; input_reset(boot->width,boot->height);
-    uint64_t ecam; if(!platform_pcie(boot,&ecam) || !mmu_device(ecam,0x100000)) return 0;
+    uint64_t ecam; if(!platform_pcie(boot,&ecam) || !mmu_device(ecam,0x100000)) return usb_initialize(p,boot);
     for(unsigned slot=0;slot<32 && device_count<2;slot++) for(unsigned function=0;function<8 && device_count<2;function++) {
         volatile uint8_t *pci=(void *)(uintptr_t)(ecam+(slot<<15)+(function<<12));
         if(r16(pci,0)==0x1af4 && r16(pci,2)==0x1052) {

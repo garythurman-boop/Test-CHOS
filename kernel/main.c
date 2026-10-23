@@ -158,6 +158,12 @@ void kernel_main(struct chos_boot_info *info) {
     struct block_device disk; bool test_identity=false;
     bool disk_ready=nvme_init(&physical,boot,&disk,&test_identity);
     diagnostic_log(disk_ready?"NVMe initialized: PASS":nvme_error());
+    if(disk_ready && (boot->reserved&CHOS_DIAGNOSTIC_BOOT)) {
+        static uint8_t probe[4096];
+        bool first=disk.read(disk.context,0,probe),last_read=disk.read(disk.context,disk.blocks-1,probe);
+        diagnostic_log(first && last_read?"NVMe first/last 4KiB reads: PASS":"NVMe read-only probe: FAILED");
+        diagnostic_log(nvme_writable()?"NVMe diagnostic write guard: FAILED":"NVMe diagnostic write guard: PASS");
+    }
     unsigned storage_phase=0;
     if(boot->reserved&1) {
         if(!disk_ready) { console_text(32,520,"BAR ADDRESS",0xffffff); console_number(240,520,nvme_bar()); panic(nvme_error()); }
@@ -197,7 +203,8 @@ void kernel_main(struct chos_boot_info *info) {
         diagnostic_log("Diagnostic mode: no installer, no filesystem writes");
         unsigned page=0,pages=diagnostic_screen(0);uint64_t next=timer_ticks()+500;
         __asm__ volatile("msr daifclr, #2":::"memory");
-        for(;;){input_poll();struct input_event ignored;while(input_next(&ignored)){}
+        for(;;){input_poll();struct input_event ignored;bool changed=false;while(input_next(&ignored)){if(boot->reserved&CHOS_INPUT_TEST_BOOT)diagnostic_input_event(&ignored);changed=true;}
+            if(changed && (boot->reserved&CHOS_INPUT_TEST_BOOT))diagnostic_input_panel();
             if(timer_ticks()>=next){page=(page+1)%pages;pages=diagnostic_screen(page);next=timer_ticks()+500;}
             __asm__ volatile("wfi");
         }

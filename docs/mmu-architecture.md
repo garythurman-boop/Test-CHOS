@@ -1,5 +1,10 @@
 # M7E ARM64 MMU audit, memory maps and diagnostic codes
 
+Subsequent M7E target screenshots now show MMU/protection/timer success with
+531/1024 table pages. The original M7D failed branch was not captured on Fusion;
+the reproduced QEMU capacity defect was corrected. M7F proceeds with the separate
+[confirmed device-discovery blocker](pci-discovery.md). [Actual screenshots transcribed](fusion-observations-m7e.md).
+
 ## Evidence and cause boundary
 
 The user reports M7D normal `CHOS-ARM64.iso` on an Apple M1 MacBook Air, one CPU,

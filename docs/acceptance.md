@@ -1,6 +1,6 @@
 # CHOS acceptance evidence
 
-Current sequence: [M7E MMU and Fusion retest](milestone-7e.md),
+Current sequence: [M7F discovery/input/storage](milestone-7f.md),
 [setup architecture](setup-environment.md). Earlier tables below retain their
 checkpoint-specific evidence; each new sequence reruns the earlier core coverage.
 
@@ -114,3 +114,13 @@ QEMU cases and 18 host C programs, including the production mapper with privileg
 operations stubbed. ASan/UBSan and repeatable/clean-source image builds remain
 required. A real M7D Fusion failure is recorded; M7E target acceptance requires
 an actual M1 retest, separate from these controlled stress layouts.
+
+## M7F additions and actual target gates
+
+Retain all 66 earlier QEMU cases; add six device trials (including a preserved M7E
+nonzero-bus failure), and bridged native install/two disk-only boots: **75 unique
+QEMU cases, 20 host C programs**. Input ISO repeatability, all three image clean-source
+reproduction and ASan/UBSan are required. Controlled QEMU topologies use QEMU devices.
+Actual M7E Fusion core boot/diagnostics/Setup now pass. Input delivery, USB attachment,
+NVMe initialization/reads, installation and disk-only persistence remain target gates
+for the new image. Read-only diagnostics precede any target writes.

@@ -106,7 +106,8 @@ bool platform_discover(const struct chos_boot_info *b,uint64_t mpidr,struct plat
     return out->gic_redistributor || out->redistributor_count;
 }
 
-bool platform_pcie(const struct chos_boot_info *b,uint64_t *base) {
+bool platform_pci_function(const struct chos_boot_info *b,unsigned segment,unsigned bus,unsigned slot,unsigned function,uint64_t *base) {
+    if(!base || segment>65535 || bus>255 || slot>31 || function>7)return false;
     if(!memory(b,b->rsdp,36)) return false;
     const uint8_t *r=(void *)(uintptr_t)b->rsdp;
     uint32_t rsdp_len=u32(r+20);
@@ -120,16 +121,25 @@ bool platform_pcie(const struct chos_boot_info *b,uint64_t *base) {
         const uint8_t *t=table(b,u64(x+i));
         if(!t || !same(t,"MCFG",4)) continue;
         uint32_t n=u32(t+4);
-        if(n<60 || (n-44)%16) return false;
+        if(n<60 || (n-44)%16 || (n-44)/16>64) return false;
         for(uint32_t j=44;j<n;j+=16) {
-            if(t[j+8] || t[j+9] || t[j+10] || t[j+11]<t[j+10]) continue;
-            uint64_t address=u64(t+j);
-            if(!address || address%0x100000 || address>=(1ULL<<39)-0x100000) return false;
-            *base=address; return true;
+            unsigned seg=t[j+8]|(unsigned)t[j+9]<<8,start=t[j+10],end=t[j+11];
+            if(start>end || u32(t+j+12))return false;
+            if(seg!=segment || bus<start || bus>end)continue;
+            /* ACPI MCFG base corresponds to bus zero, including nonzero StartBus. */
+            uint64_t address=u64(t+j),offset=((uint64_t)bus<<20)|((uint64_t)slot<<15)|((uint64_t)function<<12);
+            if(!address || address%0x100000 || address>=(1ULL<<48) || ((uint64_t)end+1)*0x100000>(1ULL<<48)-address || offset>(1ULL<<48)-address-PAGE_SIZE)return false;
+            uint64_t page=address+offset;
+            if(!mmio(b,page,PAGE_SIZE))return false;
+            *base=page;return true;
         }
     }
     return false;
 }
+bool platform_pcie(const struct chos_boot_info *b,uint64_t *base) {
+    return platform_pci_function(b,0,0,0,0,base);
+}
+
 
 /* ACPI FADT ARM_BOOT_ARCH specifies PSCI compliance and its call conduit. */
 bool platform_psci(const struct chos_boot_info *b,bool *hvc) {

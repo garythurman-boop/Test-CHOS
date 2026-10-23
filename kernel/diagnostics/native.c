@@ -5,6 +5,7 @@
 #include "mmu.h"
 #include "timer.h"
 #include "storage.h"
+#include "usb.h"
 static const struct chos_boot_info *boot;
 static uint64_t uart;
 static bool serial_ready;
@@ -71,7 +72,8 @@ void diagnostic_map_serial(void){
 }
 unsigned diagnostic_screen(unsigned page){
     if(!boot)return 1;
-    const unsigned rows=(boot->height-96)/18,cols=(boot->width-32)/12;
+    const unsigned panel=(boot->reserved&CHOS_INPUT_TEST_BOOT)?168:0;
+    const unsigned rows=(boot->height-96-panel)/18,cols=(boot->width-32)/12;
     console_rect(0,0,boot->width,boot->height,0x102b50);
     console_text(16,16,"CHOS HARDWARE DIAGNOSTICS",0xffffff);
     console_text(16,42,"AUTOMATIC PAGES / NO INSTALLATION",0x9ed7ff);
@@ -88,5 +90,33 @@ unsigned diagnostic_screen(unsigned page){
     console_number(boot->width-64,16,page+1);
     console_rect(0,boot->height-24,boot->width,24,0x244da8);
     console_text(16,boot->height-20,"REPORT IN SERIAL / READ-ONLY BUFFER",0xffffff);
+    if(panel)diagnostic_input_panel();
     return line?(line+rows-1)/rows:1;
+}
+
+/* Single volatile event only. Never append event codes/content to the report,
+ * serial stream, files or persistent configuration. */
+static uint64_t test_events;
+static unsigned key_code,key_value,mouse_buttons;
+void diagnostic_input_event(const struct input_event *e){
+    test_events++;
+    if(e->type==1 && e->code<256){key_code=e->code;key_value=(unsigned)e->value;}
+    if(e->type==1 && e->code>=272 && e->code<=274){unsigned mask=1u<<(e->code-272);if(e->value)mouse_buttons|=mask;else mouse_buttons&=~mask;}
+}
+void diagnostic_input_panel(void){
+    if(!boot || !(boot->reserved&CHOS_INPUT_TEST_BOOT))return;
+    const struct usb_status *s=usb_status();const struct input_state *i=input_get();unsigned y=boot->height-184;
+    console_rect(0,y,boot->width,160,0x163a64);
+    console_text(16,y+4,"CHOS USB HARDWARE TEST",0xffffff);
+    char id[]="0000:0000";for(unsigned n=0;n<4;n++){id[n]="0123456789ABCDEF"[(s->id>>((3-n)*4))&15];id[n+5]="0123456789ABCDEF"[(s->id>>(16+(3-n)*4))&15];}
+    console_text(352,y+4,"PCI",0x9ed7ff);console_text(412,y+4,id,0xffffff);
+    console_text(16,y+28,"USB KEYBOARD",0x9ed7ff);console_text(184,y+28,s->keyboards?"READY":"NOT DETECTED",0xffffff);
+    console_text(16,y+46,"USB MOUSE",0x9ed7ff);console_text(184,y+46,s->mice?"READY":"NOT DETECTED",0xffffff);
+    console_text(16,y+64,"PATH",0x9ed7ff);console_text(184,y+64,s->keyboards || s->mice?"XHCI POLLED":"NO ACTIVE USB PATH",0xffffff);
+    console_text(16,y+82,"STAGE / REASON",0x9ed7ff);console_number(232,y+82,s->stage);console_number(328,y+82,s->reason);
+    console_text(16,y+100,"LAST KEY CODE / VALUE",0x9ed7ff);console_number(304,y+100,key_code);console_number(448,y+100,key_value);
+    console_text(16,y+118,"POINTER X Y BUTTONS",0x9ed7ff);console_number(304,y+118,(unsigned)i->x);console_number(400,y+118,(unsigned)i->y);console_number(496,y+118,mouse_buttons);
+    console_text(16,y+136,"LIVE EVENTS",0x9ed7ff);console_number(184,y+136,test_events);
+    console_rect(0,boot->height-24,boot->width,24,0x244da8);
+    console_text(16,boot->height-20,"NO KEY CONTENT LOGGED / NO DISK WRITES",0xffffff);
 }

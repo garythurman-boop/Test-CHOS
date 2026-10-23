@@ -18,9 +18,13 @@ def digest(path):
     with path.open('rb') as file:return hashlib.file_digest(file,'sha256').hexdigest()
 parser=argparse.ArgumentParser();parser.add_argument('--sector',type=int,choices=[512,4096],default=512)
 parser.add_argument('--gic-version',type=int,choices=[2,3],default=2);parser.add_argument('--virtualization',action='store_true')
+parser.add_argument('--bridged',action='store_true')
 args=parser.parse_args();sector=args.sector
 suffix=f'-gic{args.gic_version}-el2' if args.virtualization else (f'-gic{args.gic_version}' if args.gic_version!=2 else '')
 machine={'gic_version':args.gic_version,'virtualization':args.virtualization}
+if args.bridged:
+    from bus_topology import BRIDGED
+    machine.update(BRIDGED);suffix+='-bridged'
 run=Path(tempfile.mkdtemp(prefix=f'native-install-{sector}-',dir=BUILD));disk=run/'target.img'
 with disk.open('wb') as file:file.truncate((128 if sector==512 else 512)*1024*1024)
 result={'passed':False,'disk':str(disk),'iso_sha256':digest(BUILD/'CHOS-ARM64.iso'),'boots':[],'logical_sector_bytes':sector,'gic_version':args.gic_version,'virtualization':args.virtualization}

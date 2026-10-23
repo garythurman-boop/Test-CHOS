@@ -4,6 +4,9 @@
 #include "platform.h"
 #include "mmu.h"
 #include "diagnostic.h"
+#include "pci.h"
+static struct usb_status report;
+const struct usb_status *usb_status(void){return &report;}
 struct hid_device {unsigned slot,port,speed,dci;struct usb_ring control,input;uint64_t contexts,output,data,report,pending[8],reports;struct usb_boot_interface interface;struct usb_hid_state hid;bool ready,warned;};
 static struct {uint64_t base,op,runtime,doorbell,dcbaa,events,erst;struct usb_ring commands;unsigned consumer,cycle,context_size,ports,slots,count;bool running;struct pmm *memory;struct hid_device device[2];} host;
 static uint32_t r32(uint64_t a){return *(volatile uint32_t *)(uintptr_t)a;}
@@ -38,7 +41,7 @@ static void disconnect(struct hid_device *d){
     struct input_event batch[32];unsigned count=0;uint8_t empty[8]={0};
     if(usb_hid_report(&d->hid,d->interface.protocol,empty,d->interface.protocol==1?8:3,batch,&count))input_accept_batch(batch,count);
     diagnostic_value("USB releases on disconnect: ",count,false);
-    d->ready=false;
+    d->ready=false;if(d->interface.protocol==1 && report.keyboards)report.keyboards--;if(d->interface.protocol==2 && report.mice)report.mice--;
 }
 static void input_event(const struct usb_trb *e){
     unsigned slot=e->control>>24,endpoint=(e->control>>16)&31,completion=e->status>>24;
@@ -76,13 +79,17 @@ static bool control(struct hid_device *d,unsigned request,unsigned value,unsigne
 }
 static uint32_t *context(uint64_t base,unsigned index){return (void *)(uintptr_t)(base+(uint64_t)index*host.context_size);}
 static bool enumerate(struct hid_device *d,unsigned port){
+    report.enum_port=port;report.enum_stage=10;
     uint64_t portsc=host.op+0x400+(port-1)*16;uint32_t status=r32(portsc);
     if(!(status&1))return false;
     w32(portsc,(status&0xe00)|16); /* preserve power/indicator, start USB2 reset */
     if(!wait_bits(portsc,16,0) || !wait_bits(portsc,2,2))return false;
+    report.enum_stage=11;
     d->port=port;d->speed=(r32(portsc)>>10)&15;
     if(d->speed<1 || d->speed>3){diagnostic_log("USB root speed unsupported (USB2 only)");return false;}
+    report.enum_stage=12;
     unsigned slot=0;if(!command(0,9u<<10,&slot) || !slot || slot>host.slots)return false;d->slot=slot;
+    report.enum_stage=13;
     d->contexts=page();d->output=page();d->data=page();d->report=page();
     if(!d->contexts || !d->output || !d->data || !d->report || !ring_init(&d->control) || !ring_init(&d->input))return false;
     ((uint64_t *)(uintptr_t)host.dcbaa)[slot]=d->output;cache(host.dcbaa,false);
@@ -90,17 +97,23 @@ static bool enumerate(struct hid_device *d,unsigned port){
     input[1]=3;s[0]=(1u<<27)|(d->speed<<20);s[1]=port<<16;
     unsigned packet=d->speed==3?64:8;
     ep[1]=(packet<<16)|(4u<<3)|6;*(uint64_t *)(ep+2)=d->control.address|1;ep[4]=8;cache(d->contexts,false);
+    report.enum_stage=14;
     if(!command(d->contexts,(11u<<10)|(slot<<24),0))return false;
+    report.enum_stage=15;
     if(!control(d,0x0680,0x100,0,8,true))return false;
     const uint8_t *data=(void *)(uintptr_t)d->data;
     if(data[0]!=18 || data[1]!=1 || (data[7]!=8 && data[7]!=16 && data[7]!=32 && data[7]!=64))return false;
+    report.enum_stage=16;
     if(packet!=data[7]){
         input[1]=2;ep[1]=(ep[1]&65535)|((unsigned)data[7]<<16);cache(d->contexts,false);
         if(!command(d->contexts,(13u<<10)|(slot<<24),0))return false;
     }
+    report.enum_stage=17;
     if(!control(d,0x0680,0x100,0,18,true) || !control(d,0x0680,0x200,0,9,true))return false;
+    report.enum_stage=18;
     unsigned bytes=(unsigned)data[2]|(unsigned)data[3]<<8;
     if(bytes<9 || bytes>512 || !control(d,0x0680,0x200,0,bytes,true) || !usb_boot_configuration(data,bytes,&d->interface))return false;
+    report.enum_stage=19;
     if(!control(d,0x0900,d->interface.configuration,0,0,false) || !control(d,0x0b21,0,d->interface.interface,0,false))return false;
     /* SET_IDLE is optional; keyboards still emit changed reports without it. */
     (void)control(d,0x0a21,0,d->interface.interface,0,false);
@@ -113,27 +126,28 @@ static bool enumerate(struct hid_device *d,unsigned port){
     if(interval>15)return false;
     ep[0]=interval<<16;ep[1]=(d->interface.packet<<16)|(7u<<3)|6;
     *(uint64_t *)(ep+2)=d->input.address|1;ep[4]=d->interface.packet|((uint32_t)d->interface.packet<<16);cache(d->contexts,false);
+    report.enum_stage=20;
     if(!command(d->contexts,(12u<<10)|(slot<<24),0))return false;
+    report.enum_stage=21;diagnostic_value("USB HID protocol: ",d->interface.protocol,false);diagnostic_value("USB HID interface: ",d->interface.interface,false);
+    if(d->interface.protocol==1)report.keyboards++;else report.mice++;
     d->ready=true;for(unsigned receive=0;receive<8;receive++)submit_input(d,receive);
     diagnostic_log(d->interface.protocol==1?"USB boot keyboard initialized: PASS":"USB boot mouse initialized: PASS");return true;
 }
 int usb_initialize(struct pmm *memory,const struct chos_boot_info *boot){
-    host=(typeof(host)){0};host.memory=memory;uint64_t ecam;unsigned stage=1;
-    if(!platform_pcie(boot,&ecam) || !mmu_device(ecam,0x100000))return 0;
-    uint64_t pci=0;
-    for(unsigned slot=0;slot<32 && !pci;slot++)for(unsigned fn=0;fn<8;fn++){
-        uint64_t at=ecam+(slot<<15)+(fn<<12);
-        if((r32(at)&65535)!=65535 && (r32(at+8)>>8)==0x0c0330){pci=at;break;}
-    }
-    if(!pci)return 0;
-    uint32_t low=r32(pci+16);if((low&1) || ((low&6)!=0 && (low&6)!=4))goto failure;
-    host.base=low&~15ULL;if((low&6)==4)host.base|=(uint64_t)r32(pci+20)<<32;
-    if(!host.base || host.base%4096 || !mmu_device(host.base,65536))goto failure;
-    *(volatile uint16_t *)(uintptr_t)(pci+4)|=2;
+    host=(typeof(host)){0};host.memory=memory;report=(struct usb_status){.stage=1};unsigned stage=1;
+    struct pci_device pci;
+    if(!pci_find_class(boot,0x0c0330,&pci)){report.reason=pci.error;pci_report("xHCI PCI discovery",&pci);return 0;}
+    pci_report("xHCI driver selected",&pci);report.id=pci.id;
+    uint32_t low=r32(pci.config+16);
+    if(!pci_memory_bar(low,r32(pci.config+20),65536,&host.base))goto failure;
+    report.base=host.base;diagnostic_value("xHCI MMIO base: ",host.base,true);
+    if(!mmu_device(host.base,65536) || !pci_enable(&pci,2))goto failure;
     stage=2;unsigned cap=r32(host.base),hcs=r32(host.base+4),hcs2=r32(host.base+8),hcc=r32(host.base+16);
+    report.capabilities=hcc;report.hcs=hcs;
     diagnostic_value("xHCI capabilities: ",hcc,true);diagnostic_value("xHCI HCSPARAMS2: ",hcs2,true);
     if((cap&255)<32 || (cap&255)>128 || !(hcc&1) || (hcs2&0xfbe00000))goto failure; /* scratchpads not implemented */
     host.op=host.base+(cap&255);host.context_size=(hcc&4)?64:32;host.slots=hcs&255;host.ports=hcs>>24;
+    report.ports=host.ports;diagnostic_value("xHCI root ports: ",host.ports,false);
     unsigned db=r32(host.base+20)&~3u,rt=r32(host.base+24)&~31u;
     if(!host.slots || !host.ports || host.ports>32 || db>0xfc00 || rt>0xff80 || db<0x1000 || rt<0x1000)goto failure;
     host.doorbell=host.base+db;host.runtime=host.base+rt+0x20;
@@ -146,19 +160,24 @@ int usb_initialize(struct pmm *memory,const struct chos_boot_info *boot){
     stage=5;w32(host.op,2);if(!wait_bits(host.op,2,0) || !wait_bits(host.op+4,1u<<11,0) || !(r32(host.op+8)&1))goto failure;
     stage=6;host.dcbaa=page();host.events=page();host.erst=page();if(!host.dcbaa || !host.events || !host.erst || !ring_init(&host.commands))goto failure;
     ((uint64_t *)(uintptr_t)host.erst)[0]=host.events;((uint64_t *)(uintptr_t)host.erst)[1]=256;cache(host.erst,false);
-    *(volatile uint16_t *)(uintptr_t)(pci+4)|=4;
+    if(!pci_enable(&pci,4))goto failure;
     host.cycle=1;w64(host.op+0x30,host.dcbaa);w64(host.op+0x18,host.commands.address|1);w32(host.op+0x38,host.slots);
     w32(host.runtime,0);w32(host.runtime+8,1);w64(host.runtime+0x10,host.erst);w64(host.runtime+0x18,host.events);
     stage=7;w32(host.op,1);if(!wait_bits(host.op+4,1,0))goto failure;
-    host.running=true;diagnostic_log("xHCI reset and polled event ring: PASS");
-    for(unsigned port=1;port<=host.ports && host.count<2;port++)if(r32(host.op+0x400+(port-1)*16)&1){
+    report.stage=8;host.running=true;diagnostic_log("xHCI reset and polled event ring: PASS");
+    for(unsigned port=1;port<=host.ports;port++){
+        uint32_t portsc=r32(host.op+0x400+(port-1)*16);
+        diagnostic_value("xHCI root port number: ",port,false);diagnostic_value("xHCI PORTSC before enumeration: ",portsc,true);
+        if(!(portsc&1))continue;report.connected++;
+        if(host.count==2){diagnostic_log("USB bounded device capacity reached");continue;}
         if(enumerate(&host.device[host.count],port))host.count++;
-        else diagnostic_log("USB device enumeration failed/unsupported");
+        else {diagnostic_value("USB enumeration port: ",port,false);diagnostic_value("USB enumeration failure stage: ",report.enum_stage,false);diagnostic_value("USB PORTSC after failure: ",r32(host.op+0x400+(port-1)*16),true);diagnostic_log("USB device enumeration failed/unsupported");}
     }
+    diagnostic_value("USB connected root ports: ",report.connected,false);diagnostic_value("USB operational boot HID devices: ",host.count,false);
     return (int)host.count;
 failure:
     /* Never reclaim DMA pages while hardware ownership is uncertain. */
-    host.running=false;diagnostic_value("xHCI failure stage: ",stage,false);diagnostic_log("xHCI initialization failed/unsupported; DMA reserved");return 0;
+    host.running=false;report.stage=stage;report.reason=stage;diagnostic_value("xHCI failure stage: ",stage,false);diagnostic_log("xHCI initialization failed/unsupported; DMA reserved");return 0;
 }
 void usb_poll(void){
     if(!host.running)return;

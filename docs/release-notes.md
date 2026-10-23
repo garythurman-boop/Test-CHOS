@@ -1,3 +1,15 @@
+# M7F — nonzero-bus discovery, input trial and safe NVMe diagnostics
+
+Supplied Fusion screenshots confirm M7E MMU/timer/protection/GOP success, with
+xHCI on bus 0a and NVMe on bus 12. The old drivers scanned only bus 0. M7F shares
+validated MCFG/firmware-BDF/live-config discovery, prioritizes endpoints in the
+bounded inventory, adds port/enum/capability reports and a live USB input ISO.
+Diagnostic modes enforce read-only storage and probe first/last 4 KiB reads.
+Normal Setup and the original polled drivers/Royale appearance are preserved.
+No speculative UHCI/EHCI driver; actual USB attachment and NVMe operation await
+retest. See [M7F results](milestone-7f.md), [PCI findings](pci-discovery.md),
+[driver stages](driver-diagnostics.md). This is not full Fusion installation or 0.1.
+
 # M7E — precise MMU reports and table-demand correction
 
 Real M7D Fusion testing reports `MMU INIT FAILED` on an M1 MacBook Air at 2 GiB.

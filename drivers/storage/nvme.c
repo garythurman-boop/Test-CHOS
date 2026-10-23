@@ -3,12 +3,16 @@
 #include "storage.h"
 #include "platform.h"
 #include "mmu.h"
+#include "pci.h"
+#include "diagnostic.h"
+#include "nvme_format.h"
 struct queue { uint64_t sq,cq; unsigned tail,head,phase,id; uint16_t cid; };
 static const char *error;
 static char serial_number[21];
-static bool read_only;
-const char *nvme_error(void) { return error; }
-static struct { uint64_t bar,buffer,frequency,sectors; unsigned sector_size,stride; struct queue admin,io; bool ready; } controller;
+static bool read_only,diagnostic_only;
+static unsigned driver_stage,last_completion;
+const char *nvme_error(void) { diagnostic_value("NVMe failure stage: ",driver_stage,false);diagnostic_value("NVMe last completion: ",last_completion,true);return error; }
+static struct { uint64_t bar,buffer,frequency,sectors; unsigned sector_size,stride,timeout_ms; struct queue admin,io; bool ready; } controller;
 static volatile uint32_t *reg(unsigned n) { return (void *)(uintptr_t)(controller.bar+n); }
 static uint64_t counter(void) { uint64_t n; __asm__ volatile("mrs %0, cntpct_el0":"=r"(n)); return n; }
 static void cache(uint64_t address,size_t size,bool invalidate) {
@@ -22,7 +26,7 @@ static void cache(uint64_t address,size_t size,bool invalidate) {
 }
 static bool wait_ready(bool ready) {
     uint64_t start=counter();
-    while(((*reg(0x1c)&1)!=0)!=ready) if(counter()-start>controller.frequency*2) return false;
+    while(((*reg(0x1c)&1)!=0)!=ready) if(counter()-start>controller.frequency/1000*controller.timeout_ms) return false;
     return (*reg(0x1c)&2)==0;
 }
 static bool queue_init(struct pmm *p,struct queue *q,unsigned id) {
@@ -44,6 +48,7 @@ static bool command(struct queue *q,uint32_t cmd[16]) {
     for(;;) {
         cache((uintptr_t)completion,16,true);
         uint32_t result=completion[3];
+        last_completion=result;
         if(((result>>16)&1)==q->phase) {
             bool success=(uint16_t)result==cid && (result>>17)==0;
             q->head=(q->head+1)%16; if(!q->head) q->phase^=1;
@@ -63,7 +68,7 @@ static bool identify(unsigned ns,unsigned cns) {
 }
 static bool transfer(void *unused,uint64_t block,void *data,bool write) {
     (void)unused;
-    if(!controller.ready || (write && read_only) || block>=controller.sectors/(4096/controller.sector_size)) return false;
+    if(!controller.ready || (write && (read_only || diagnostic_only)) || block>=controller.sectors/(4096/controller.sector_size)) return false;
     uint8_t *buffer=(void *)(uintptr_t)controller.buffer;
     if(write) for(unsigned i=0;i<4096;i++) buffer[i]=((const uint8_t *)data)[i];
     cache(controller.buffer,4096,false);
@@ -78,35 +83,34 @@ static bool read_block(void *c,uint64_t b,void *p) { return transfer(c,b,p,false
 static bool write_block(void *c,uint64_t b,const void *p) { return transfer(c,b,(void *)p,true); }
 static bool flush(void *unused) {
     (void)unused; uint32_t cmd[16]={0}; cmd[1]=1;
-    return controller.ready && command(&controller.io,cmd);
+    return controller.ready && !diagnostic_only && command(&controller.io,cmd);
 }
 bool nvme_init(struct pmm *physical,const struct chos_boot_info *boot,struct block_device *device,bool *identity) {
-    error="PCI ACPI OR ECAM MAP FAILED";
-    *identity=false; controller.ready=false;
-    uint64_t ecam;
-    if(!platform_pcie(boot,&ecam) || !mmu_device(ecam,0x100000)) return false;
-    volatile uint32_t *pci=0;
-    for(unsigned d=0;d<32 && !pci;d++) for(unsigned f=0;f<8;f++) {
-        volatile uint32_t *candidate=(void *)(uintptr_t)(ecam+(d<<15)+(f<<12));
-        if((candidate[0]&0xffff)!=0xffff && (candidate[2]>>8)==0x010802) { pci=candidate; break; }
+    driver_stage=1;last_completion=0;diagnostic_only=(boot->reserved&CHOS_DIAGNOSTIC_BOOT)!=0;
+    error="NVME PCI DISCOVERY FAILED";
+    *identity=false;controller=(typeof(controller)){0};serial_number[0]=0;
+    struct pci_device pci;
+    if(!pci_find_class(boot,0x010802,&pci)) {
+        pci_report("NVMe PCI discovery",&pci);if(pci.error==4)error="NVME PCI CONTROLLER NOT FOUND";return false;
     }
-    error="NVME PCI CONTROLLER NOT FOUND";
-    if(!pci || (pci[4]&1)) return false;
-    uint64_t bar=pci[4]&~UINT64_C(15);
-    if((pci[4]&6)==4) bar|=(uint64_t)pci[5]<<32;
-    error="NVME BAR MAP FAILED";
-    controller.bar=bar;
-    if(!bar || !mmu_device(bar,0x4000)) return false;
-    controller.bar=bar;
-    *(volatile uint16_t *)(uintptr_t)((uintptr_t)pci+4)|=6;
-    error="NVME CAPABILITIES UNSUPPORTED";
-    uint64_t cap=*reg(0)|((uint64_t)*reg(4)<<32);
-    if((cap&0xffff)<15 || !(cap&(1ULL<<37)) || ((cap>>48)&15) || ((cap>>32)&15)>7) return false;
-    controller.stride=4u<<((cap>>32)&15);
+    pci_report("NVMe driver selected",&pci);
+    driver_stage=2;error="NVME BAR MAP FAILED";
+    const volatile uint32_t *config=(void *)(uintptr_t)pci.config;
+    uint64_t bar;
+    if(!pci_memory_bar(config[4],config[5],0x4000,&bar))return false;
+    controller.bar=bar;diagnostic_value("NVMe MMIO base: ",bar,true);
+    if(!mmu_device(bar,0x4000))return false;
+    driver_stage=3;error="NVME PCI ENABLE FAILED";if(!pci_enable(&pci,6))return false;
+    driver_stage=4;error="NVME CAPABILITIES UNSUPPORTED";
+    uint64_t cap=*reg(0)|((uint64_t)*reg(4)<<32);struct nvme_capabilities capabilities;
+    diagnostic_value("NVMe CAP: ",cap,true);diagnostic_value("NVMe version: ",*reg(8),true);
+    if(!nvme_capabilities(cap,&capabilities))return false;
+    controller.stride=capabilities.stride;controller.timeout_ms=capabilities.timeout_ms;
+    diagnostic_value("NVMe ready timeout ms: ",controller.timeout_ms,false);
     __asm__ volatile("mrs %0, cntfrq_el0":"=r"(controller.frequency));
-    error="NVME DISABLE FAILED";
+    driver_stage=5;error="NVME DISABLE FAILED";
     *reg(0x14)=0; if(!wait_ready(false)) return false;
-    error="NVME QUEUE ALLOCATION FAILED";
+    driver_stage=6;error="NVME QUEUE ALLOCATION FAILED";
     if(!queue_init(physical,&controller.admin,0) || !queue_init(physical,&controller.io,1)) return false;
     controller.buffer=pmm_alloc(physical,1); if(!controller.buffer) return false;
     for(unsigned i=0;i<4096;i++) ((uint8_t *)(uintptr_t)controller.buffer)[i]=0;
@@ -114,7 +118,7 @@ bool nvme_init(struct pmm *physical,const struct chos_boot_info *boot,struct blo
     *reg(0x28)=(uint32_t)controller.admin.sq; *reg(0x2c)=(uint32_t)(controller.admin.sq>>32);
     *reg(0x30)=(uint32_t)controller.admin.cq; *reg(0x34)=(uint32_t)(controller.admin.cq>>32);
     __asm__ volatile("dsb sy":::"memory");
-    error="NVME ENABLE OR IDENTIFY FAILED";
+    driver_stage=7;error="NVME ENABLE OR IDENTIFY FAILED";
     *reg(0x14)=(6u<<16)|(4u<<20)|1;
     if(!wait_ready(true) || !identify(0,1)) return false;
     const uint8_t *buffer=(void *)(uintptr_t)controller.buffer;
@@ -123,24 +127,22 @@ bool nvme_init(struct pmm *physical,const struct chos_boot_info *boot,struct blo
     const char serial[]="CHOS-TEST-0001"; bool match=true;
     for(unsigned i=0;i<20;i++) if(buffer[4+i]!=(uint8_t)(i<sizeof(serial)-1?serial[i]:' ')) match=false;
     *identity=match;
-    error="NVME NAMESPACE IDENTIFY FAILED";
+    driver_stage=8;error="NVME NAMESPACE IDENTIFY FAILED";
     if(!identify(1,0)) return false;
-    controller.sectors=*(const uint64_t *)buffer;
-    read_only=(buffer[99]&1)!=0;
-    unsigned format=buffer[26]&15;
-    uint32_t lbaf=*(const uint32_t *)(buffer+128+format*4);
-    unsigned shift=(lbaf>>16)&255;
-    error="NVME SECTOR FORMAT UNSUPPORTED";
-    if((lbaf&0xffff) || (shift!=9 && shift!=12) || controller.sectors<128) return false;
-    controller.sector_size=1u<<shift;
+    struct nvme_namespace ns;error="NVME SECTOR FORMAT UNSUPPORTED";
+    if(!nvme_namespace(buffer,4096,&ns))return false;
+    controller.sectors=ns.sectors;controller.sector_size=ns.sector_bytes;read_only=ns.read_only;
+    diagnostic_value("NVMe namespace 1 sectors: ",controller.sectors,false);
+    diagnostic_value("NVMe sector bytes: ",controller.sector_size,false);
+    diagnostic_log(diagnostic_only?"NVMe diagnostic policy: READ ONLY":"NVMe normal policy: explicit installer confirmation");
     uint32_t cmd[16]={0}; cmd[0]=5; cmd[10]=(15u<<16)|1; cmd[11]=1; prp(cmd,controller.io.cq);
-    error="NVME IO COMPLETION QUEUE FAILED";
+    driver_stage=9;error="NVME IO COMPLETION QUEUE FAILED";
     if(!command(&controller.admin,cmd)) return false;
     for(unsigned i=0;i<16;i++) cmd[i]=0;
     cmd[0]=1; cmd[10]=(15u<<16)|1; cmd[11]=(1u<<16)|1; prp(cmd,controller.io.sq);
-    error="NVME IO SUBMISSION QUEUE FAILED";
+    driver_stage=10;error="NVME IO SUBMISSION QUEUE FAILED";
     if(!command(&controller.admin,cmd)) return false;
-    controller.ready=true;
+    driver_stage=11;controller.ready=true;diagnostic_log("NVMe controller and namespace operational: PASS");
     *device=(struct block_device){0,controller.sectors/(4096/controller.sector_size),read_block,write_block,flush};
     return true;
 }
@@ -149,14 +151,13 @@ uint64_t nvme_bar(void) { return controller.bar; }
 
 unsigned nvme_sector_size(void){return controller.ready?controller.sector_size:0;}
 const char *nvme_serial(void){return serial_number;}
-bool nvme_writable(void){return controller.ready && !read_only;}
+bool nvme_writable(void){return controller.ready && !read_only && !diagnostic_only;}
 bool nvme_recheck(void){
     if(!controller.ready || !identify(0,1))return false;
     const uint8_t *b=(void *)(uintptr_t)controller.buffer;
     unsigned n=0;while(serial_number[n])n++;
     for(unsigned i=0;i<20;i++)if(b[4+i]!=(uint8_t)(i<n?serial_number[i]:' '))return false;
-    if(!identify(1,0) || *(const uint64_t *)b!=controller.sectors)return false;
-    read_only=(b[99]&1)!=0;
-    unsigned format=b[26]&15;uint32_t lbaf=*(const uint32_t *)(b+128+format*4);
-    return !(lbaf&0xffff) && ((lbaf>>16)&255)==(controller.sector_size==512?9:12);
+    if(!identify(1,0))return false;
+    struct nvme_namespace ns;if(!nvme_namespace(b,4096,&ns) || ns.sectors!=controller.sectors || ns.sector_bytes!=controller.sector_size)return false;
+    read_only=ns.read_only;return true;
 }

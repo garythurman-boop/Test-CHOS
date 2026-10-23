@@ -8,10 +8,11 @@
 | 4: CHOS Desktop/window manager/taskbar/Start | Working core; Royale widgets and multi-window usage tested; dedicated Search/Help and wallpaper file loading remain |
 | 5: six native applications | Functional bounded native apps with installed persistence and shared widgets; see desktop.md |
 | 6: graphical installer/GPT/ESP/installed boot | Dedicated full-screen blue/Royale native setup, disk boot and persistent system volume; saved computer/theme/fixed clock offset implemented; account/password/layout and graphical mode configuration unfinished |
-| 7: VMware Fusion validation | Real M7D Fusion test reports MMU failure at 2 GiB; M7E corrects a reproduced QEMU capacity defect and adds precise reports; target retest and broader USB support remain open |
+| 7: VMware Fusion validation | M7E Fusion boot/MMU/timer/GOP diagnostics and Setup reached; input/NVMe fail. M7F fixes confirmed bus-zero discovery blocker; actual peripheral retest pending |
 | 8: CHOS 0.1 | Not ready |
 
-Current ISO/results: [M7E MMU correction and Fusion retest](milestone-7e.md).
+Current ISO/results: [M7F discovery/input/read-only storage](milestone-7f.md).
+Preserved [M7E MMU correction](milestone-7e.md).
 Preserved [M7D bootstrap/diagnostic hardening](milestone-7d.md).
 Preserved [M7C diagnostics and USB](milestone-7c.md).
 Preserved [M7A/7B boot and interrupts](milestone-7a-b.md).
@@ -82,13 +83,18 @@ M7D replaces the fixed half-megabyte bootstrap limit with a bounded versioned
 image and independent guarded stack. File/BSS sizing, far RO/NX, loader-version
 refusal, optional-driver failure without disk/input and remaining-device operation
 after unplug are covered by the expanded sequence. [Architecture](kernel-image.md).
-Actual M7D Fusion MMU failure is now reported; broader inventory and M7E retest
-remain pending. No speculative target driver was added.
+Actual M7E Fusion core boot now passes; keyboard/mouse and NVMe remain blocked. No speculative target driver was added.
 
 M7E preserves the 1,024-table safety ceiling but allocates individual pages and
 uses 2 MiB blocks outside managed RAM. All managed RAM remains page-granular for
 live thread guards. Precise framebuffer failure codes, PA/granule validation,
 identity coverage, memory-map validation and host/QEMU stress tests are added.
-The reported M7D failure on an M1 MacBook Air is genuine target evidence; the
-specific cause and correction on Fusion await the new image retest. See
+The M7E retest now passes MMU/protection/timer tests on the M1 target. See
 [MMU architecture and codes](mmu-architecture.md).
+
+M7F uses firmware BDFs plus validated MCFG/live config for xHCI/NVMe, preserving
+bus-zero fallback and the original polled drivers. The input ISO adds a volatile
+live panel and bounded driver/port reports; both diagnostic modes reject writes
+and probe first/last 4 KiB reads. Actual controllers are xHCI `0a:00.0` and NVMe
+`12:00.0`; keyboard attachment/namespace behavior remains unverified after this fix.
+UHCI/EHCI support is not justified solely by PCI presence. See [driver limits](driver-diagnostics.md).

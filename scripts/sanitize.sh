@@ -47,3 +47,8 @@ build/sanitized/image
 
 cc "${flags[@]}" -DCHOS_MMU_TEST tests/mmu.c kernel/memory/virtual.c kernel/memory/physical.c -o build/sanitized/mmu
 build/sanitized/mmu
+
+cc "${flags[@]}" tests/pci.c drivers/pci/discover.c drivers/pci/resource.c -o build/sanitized/pci
+build/sanitized/pci
+cc "${flags[@]}" tests/nvme_format.c drivers/storage/nvme_format.c -o build/sanitized/nvme
+build/sanitized/nvme

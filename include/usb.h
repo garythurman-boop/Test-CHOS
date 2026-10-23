@@ -12,6 +12,8 @@ _Static_assert(sizeof(struct usb_trb)==16,"xHCI TRB ABI");
 bool usb_dma_span(uint64_t,unsigned,uint64_t,unsigned);
 uint64_t usb_ring_push(struct usb_ring *,uint64_t,uint32_t,uint32_t);
 bool usb_event_pop(uint64_t,unsigned *,unsigned *,struct usb_trb *);
+struct usb_status {uint64_t base;uint32_t id,capabilities,hcs,ports,connected,stage,reason,enum_port,enum_stage,keyboards,mice;};
+const struct usb_status *usb_status(void);
 int usb_initialize(struct pmm *,const struct chos_boot_info *);
 void usb_poll(void);
 #endif

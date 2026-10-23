@@ -1,15 +1,15 @@
 # VMware Fusion on Apple Silicon
 
-**M7D reached the kernel on the user's M1 MacBook Air and failed at MMU init.**
-Reported configuration: one CPU, 2 GiB, macOS 27 “Golden Gate,” Fusion “26H1u1,”
-normal M7D ISO. Full build and memory/device maps are unavailable. The current
-M7E correction passes controlled QEMU tests; the actual Fusion retest is pending.
-No Apple Silicon/Fusion host is attached to this workspace.
+**M7E successfully reaches kernel diagnostics and Setup on the user's M1/Fusion VM.**
+MMU/protection, EL1, GICv3/timer and 1024×768 GOP are observed. Keyboard/mouse and
+NVMe initialization fail. The supplied screenshot places both supported controllers
+on nonzero buses, beyond the old scan. M7F fixes that discovery blocker and adds
+input/read-only diagnostics; actual M7F peripheral retest is pending.
 
 - [Compatibility matrix and research provenance](fusion-compatibility-matrix.md)
 - [Exact manual Fusion validation checklist](fusion-validation.md)
-- [Current iteration and QEMU evidence](milestone-7e.md)
-- [Versioned test images and checksums](../artifacts/milestone-7e/README.md)
+- [Current iteration and QEMU evidence](milestone-7f.md)
+- [Versioned test images and checksums](../artifacts/milestone-7f/README.md)
 
 M7C adds input-free diagnostics and a bounded original polled xHCI USB2 boot-HID
 path tested only in QEMU. USB interrupts, other controllers, hubs and general HID
@@ -27,3 +27,6 @@ no disk. Do not proceed to installation on Fusion until boot/input/storage pass.
 
 Retest at the same 2 GiB with the M7E diagnostic image and [capture the complete
 MMU failure report or all inventory pages](fusion-first-boot.md).
+
+[Actual target evidence](fusion-observations-m7e.md) · [PCI routing](pci-discovery.md)
+· [live input/driver reports](driver-diagnostics.md).

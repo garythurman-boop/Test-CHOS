@@ -3,6 +3,7 @@
 #include "boot.h"
 #include <stdbool.h>
 #define CHOS_DIAGNOSTIC_BOOT 2u
+#define CHOS_INPUT_TEST_BOOT 4u
 #define DIAGNOSTIC_CAPACITY 16384u
 void diagnostic_reset(void);
 void diagnostic_append(const char *);
@@ -14,4 +15,7 @@ void diagnostic_log(const char *);
 void diagnostic_value(const char *,uint64_t,bool);
 void diagnostic_inventory(const struct chos_boot_info *);
 unsigned diagnostic_screen(unsigned);
+struct input_event;
+void diagnostic_input_event(const struct input_event *);
+void diagnostic_input_panel(void);
 #endif

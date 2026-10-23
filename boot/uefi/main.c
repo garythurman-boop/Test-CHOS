@@ -3,6 +3,7 @@
 #include "display_mode.h"
 #include <stdbool.h>
 #include "kernel_image.h"
+#include "pci.h"
 static const struct guid acpi_guid={0x8868e871,0xe4f1,0x11d3,{0xbc,0x22,0,0x80,0xc7,0x3c,0x88,0x81}};
 static struct guid path_guid={0x09576e91,0x6d3f,0x11d2,{0x8e,0x39,0,0xa0,0xc9,0x69,0x72,0x3b}};
 static struct guid loaded_guid={0x5b1b31a1,0x9562,0x11d2,{0x8e,0x3f,0,0xa0,0xc9,0x69,0x72,0x3b}};
@@ -19,11 +20,12 @@ static void pci_inventory(struct system_table *st,struct chos_boot_info *b){
     if(!st->boot->locate_handle_buffer || EFI_ERROR(st->boot->locate_handle_buffer(2,&protocol,0,&count,&handles)))return;
     if(count<=256 && handles){
         b->pci_total=(uint32_t)count;
-        for(unsigned i=0;i<count && b->pci_count<32;i++){
+        for(unsigned i=0;i<count;i++){
             struct pci_io *p=0;uint64_t segment,bus,slot,function;uint32_t header[3];
             if(EFI_ERROR(st->boot->handle_protocol(handles[i],&protocol,(void **)&p)) || !p || !p->pci_read || !p->get_location || EFI_ERROR(p->get_location(p,&segment,&bus,&slot,&function)) || segment>65535 || bus>255 || slot>31 || function>7 || EFI_ERROR(p->pci_read(p,2,0,3,header)) || (header[0]&65535)==65535)continue;
-            struct chos_pci_device *d=&b->pci[b->pci_count++];
+            struct chos_pci_device record,*d=&record;
             *d=(struct chos_pci_device){.vendor=(uint16_t)header[0],.device=(uint16_t)(header[0]>>16),.base_class=(uint8_t)(header[2]>>24),.subclass=(uint8_t)(header[2]>>16),.interface=(uint8_t)(header[2]>>8),.revision=(uint8_t)header[2],.segment=(uint16_t)segment,.bus=(uint8_t)bus,.slot=(uint8_t)slot,.function=(uint8_t)function};
+            pci_inventory_keep(b,d);
             char16 line[]=u"CHOS: PCI 0000:00:00.0 ID 0000:0000 CLASS 000000\r\n";
             const char16 hex[]=u"0123456789abcdef";
             const unsigned at[]={10,15,18,21,26,31,42};
@@ -97,6 +99,9 @@ status efi_main(handle image,struct system_table *st) {
         const char expected[]="CHOS DIAGNOSTICS V1";bool equal=!EFI_ERROR(cs) && bytes==sizeof(expected)-1;
         for(unsigned i=0;equal && i<sizeof(expected)-1;i++)if(content[i]!=expected[i])equal=false;
         if(equal && !test_flags)test_flags=2;
+        const char input_test[]="CHOS INPUT TEST V1";equal=!EFI_ERROR(cs) && bytes==sizeof(input_test)-1;
+        for(unsigned i=0;equal && i<sizeof(input_test)-1;i++)if(content[i]!=input_test[i])equal=false;
+        if(equal && !test_flags)test_flags=6;
     }
     uint32_t requested_w=1024,requested_h=768;
     if(!EFI_ERROR(root->open(root,&config,(char16 *)u"\\CHOS\\DISPLAY.CFG",1,0))) {

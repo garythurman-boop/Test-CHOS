@@ -260,3 +260,12 @@ where alignment permits. Managed RAM remains 4 KiB granular for runtime stack gu
 text/rodata and bootstrap guards are refined before activation. Granule/PA/map/
 identity validation and retained framebuffer reports precede the switch. The table
 ceiling remains 1,024 pages. [Full audit and limits](mmu-architecture.md).
+
+## M7F firmware device routing
+
+xHCI/NVMe select firmware BDFs, validate MCFG/segment/bus/config bounds and recheck
+live IDs/classes before BAR access. Endpoint-prioritized inventory keeps the same
+32-record ABI. Legacy bus-zero fallback remains; Virtio remains bounded to bus 0.
+Both diagnostics modes reject namespace writes/flushes and use read-only probes.
+The live test panel consumes the original event queue without logging key content.
+[PCI architecture](pci-discovery.md), [driver stages/policy](driver-diagnostics.md).

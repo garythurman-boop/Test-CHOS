@@ -28,8 +28,16 @@ int main(void) {
     assert(platform_discover(&b,0x102,&p));
     uint64_t ecam=0;
     assert(platform_pcie(&b,&ecam) && ecam==0x4010000000ULL);
+    assert(platform_pci_function(&b,0,10,0,0,&ecam) && ecam==0x4010a00000ULL);
+    assert(platform_pci_function(&b,0,18,0,0,&ecam) && ecam==0x4011200000ULL);
+    assert(!platform_pci_function(&b,0,256,0,0,&ecam) && !platform_pci_function(&b,0,0,32,0,&ecam));
+    mcfg[54]=10;mcfg[55]=18;sum(mcfg,60,9);
+    assert(platform_pci_function(&b,0,18,0,0,&ecam) && ecam==0x4011200000ULL);
+    assert(!platform_pci_function(&b,0,9,0,0,&ecam) && !platform_pci_function(&b,0,19,0,0,&ecam));
+    mcfg[55]=255;
     mcfg[54]=1; sum(mcfg,60,9); assert(!platform_pcie(&b,&ecam));
     mcfg[54]=0; mcfg[52]=1; sum(mcfg,60,9); assert(!platform_pcie(&b,&ecam));
+    assert(platform_pci_function(&b,1,18,0,0,&ecam));
     mcfg[52]=0; sum(mcfg,60,9);
     assert(p.gic_distributor==0x8000000 && p.gic_cpu==0x8010000 && p.timer_irq==30);
     assert(!platform_discover(&b,0,&p));

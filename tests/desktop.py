@@ -11,7 +11,7 @@ import time
 from boot import BUILD, read_ppm, save_png
 
 class Guest:
-    def __init__(self,label='desktop',ram=512,disk=None,sector_bytes=512,optical=False,live=True,fault_config=None,gic_version=2,virtualization=False,iso=None,input_backend="virtio",extra_devices=()):
+    def __init__(self,label='desktop',ram=512,disk=None,sector_bytes=512,optical=False,live=True,fault_config=None,gic_version=2,virtualization=False,iso=None,input_backend="virtio",extra_devices=(),early_devices=(),input_pci_bus=None,storage_pci_bus=None,nvme_options=""):
         self.label=label
         self.lock=(BUILD/'boot-test.lock').open('w')
         fcntl.flock(self.lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
@@ -23,14 +23,15 @@ class Guest:
             '-device','ramfb',
             '-display','none','-serial',f'file:{BUILD}/{label}.serial.log',
             '-qmp',f'unix:{self.sockpath},server=on,wait=off','-no-reboot','-net','none']
+        for device in early_devices:self.command += ["-device",device]
         if input_backend=="virtio":self.command += ["-device","virtio-keyboard-pci","-device","virtio-mouse-pci"]
-        elif input_backend=="usb":self.command += ["-device","qemu-xhci,id=xhci","-device","usb-kbd,id=usbkbd,bus=xhci.0","-device","usb-mouse,id=usbmouse,bus=xhci.0"]
+        elif input_backend=="usb":self.command += ["-device","qemu-xhci,id=xhci"+(f",bus={input_pci_bus}" if input_pci_bus else ""),"-device","usb-kbd,id=usbkbd,bus=xhci.0","-device","usb-mouse,id=usbmouse,bus=xhci.0"]
         elif input_backend!="none":raise ValueError("Unknown input backend")
         for device in extra_devices:self.command += ["-device",device]
         if disk:
             backend=f'blkdebug:{fault_config}:{disk}' if fault_config else str(disk)
             self.command += ['-drive',f'if=none,id=nvme0,format=raw,file={backend}',
-                '-device',f'nvme,drive=nvme0,serial=CHOS-GPT-BOOT,logical_block_size={sector_bytes},physical_block_size={sector_bytes}',
+                '-device',f'nvme,drive=nvme0,serial=CHOS-GPT-BOOT,logical_block_size={sector_bytes},physical_block_size={sector_bytes}'+(f',bus={storage_pci_bus}' if storage_pci_bus else '')+(f',{nvme_options}' if nvme_options else ''),
                 '-boot','order=d' if optical else 'order=c']
         if not disk or optical:
             self.command += ['-device','virtio-scsi-pci','-drive',f'if=none,id=cd,media=cdrom,readonly=on,file={self.iso}',

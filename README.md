@@ -22,15 +22,17 @@ Blue keyboard-driven disk selection and typed confirmation lead to native Royale
 configuration/progress/completion. Progress follows real operations and copied
 bytes. Original GPT/FAT32/CHFS writers verify the files and installed boot path.
 
-**Real Fusion testing has reached the kernel but failed at MMU initialization.**
-The user reports an M1 MacBook Air, one CPU, 2 GiB RAM, macOS 27 “Golden Gate,”
-Fusion “26H1u1,” and the M7D normal ISO displaying `MMU INIT FAILED`. These are
-user-reported details; a full Fusion build number and memory map are unavailable.
-M7E corrects a confirmed 2 GiB QEMU table-exhaustion defect and adds retained
-framebuffer failure reports. **The M7E Fusion retest is pending.** Native input,
-storage, desktop, installation and persistence on Fusion remain unverified.
-USB interrupts/hubs/general HID, accounts/authentication/ACLs, full regional/display
-setup, networking, SMP and CHOS 0.1 remain unfinished.
+**M7E now boots on the user's M1/Fusion VM.** Supplied screenshots show EL1,
+GICv3/timer, MMU/protection tests and 1024×768 GOP diagnostics working. The user
+reports normal Setup also appears. Keyboard/mouse do not work, and NVMe is not
+initialized. The screenshot places xHCI on bus `0a` and NVMe on bus `12`; the old
+drivers scanned only bus 0. M7F corrects that confirmed discovery blocker and adds
+an input-test panel plus detailed driver/read-only storage reports. **M7F Fusion
+input/storage retest remains pending**; QEMU passes are separate evidence.
+See [actual observations](docs/fusion-observations-m7e.md),
+[PCI correction](docs/pci-discovery.md) and [driver diagnostics](docs/driver-diagnostics.md).
+USB interrupts/hubs/general HID, authentication/ACLs, full regional/display setup,
+networking, SMP and CHOS 0.1 remain unfinished.
 
 M7D replaces the fixed 512 KiB bootstrap ceiling with a validated versioned kernel
 image and a separately allocated 64 KiB guarded stack. Controlled large-file/BSS
@@ -42,8 +44,9 @@ to disk. [First Fusion evaluation instructions](docs/fusion-first-boot.md).
 
 ## Download testing images
 
-- [Current noninteractive M7E diagnostic ISO](artifacts/milestone-7e/CHOS-ARM64-M7E-DIAGNOSTIC.iso).
-- [Current M7E Setup/Live Desktop ISO](artifacts/milestone-7e/CHOS-ARM64.iso).
+- [Current live USB input test ISO](artifacts/milestone-7f/CHOS-ARM64-M7F-INPUT.iso).
+- [Current noninteractive M7F diagnostic ISO](artifacts/milestone-7f/CHOS-ARM64-M7F-DIAGNOSTIC.iso).
+- [Current M7F Setup/Live Desktop ISO](artifacts/milestone-7f/CHOS-ARM64.iso).
 - [Preserved noninteractive M7C diagnostic ISO](artifacts/milestone-7c/CHOS-ARM64-M7C.iso).
 - [Preserved M7C Setup/Live Desktop ISO](artifacts/milestone-7c/CHOS-ARM64.iso).
 - [Preserved M7A/7B boot/interrupt compatibility ISO](artifacts/milestone-7a-b/CHOS-ARM64.iso).
@@ -80,7 +83,7 @@ El Torito FAT boot volume. Secure Boot must be off. The FAT volume is not an
 installed ESP. `kernel.elf` is a debug artifact; the separate static ELF loader
 runs original acceptance and application programs embedded in the kernel.
 
-Validation runs eighteen host C test programs (both ELF payloads) and sixty-six real
+Validation runs twenty host C test programs (both ELF payloads) and seventy-five real
 AArch64 UEFI QEMU cases, including 512 MiB/1 GiB boots, protection/IPC, keyboard/
 mouse window and application interactions, native restart/shutdown, three cold
 NVMe/CHFS boots, two GPT/ESP disk-only boots and expected error/safety cases.
@@ -107,7 +110,9 @@ failure, mouse disconnect with a working keyboard, mixed-loader version rejectio
 large image/BSS boot/install/disk reboot and three malformed-image refusals.
 M7E adds 2/8 GiB UEFI boots, input-free 2 GiB discovery and an actual
 framebuffer table-capacity refusal. The production mapper also runs host stress
-tests with privileged operations stubbed. Evidence: docs/evidence/m7e.
+tests with privileged operations stubbed. M7F adds actual production PCI routing/VMware-ID host tests, namespace/CAP parsing,
+nonzero-bus input/read-only/normal Setup, failure panels, a preserved M7E discovery
+regression and bridged native installation/two disk boots. Evidence: docs/evidence/m7f.
 `bash scripts/sanitize.sh` additionally runs the portable modules with ASan/UBSan
 when host GCC/Clang supports them.
 
@@ -120,7 +125,8 @@ after toolchain installation. Tests start/stop their own QEMU processes.
 
 - [Acceptance criteria and evidence](docs/acceptance.md)
 - [Dedicated installation environment and safety](docs/setup-environment.md)
-- [Current M7E MMU hardening and Fusion retest](docs/milestone-7e.md)
+- [Current M7F discovery/input/storage checkpoint](docs/milestone-7f.md)
+- [Preserved M7E MMU hardening](docs/milestone-7e.md)
 - [Preserved M7D hardening iteration](docs/milestone-7d.md)
 - [Kernel image and bootstrap architecture](docs/kernel-image.md)
 - [Previous M7C discovery/USB iteration](docs/milestone-7c.md)

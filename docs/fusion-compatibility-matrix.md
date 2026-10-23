@@ -1,23 +1,24 @@
-# ARM64 compatibility matrix — M7E checkpoint
+# ARM64 compatibility matrix — M7F checkpoint
 
-**Real M7D Fusion test: kernel MMU initialization failed.** The user reports
-an Apple M1 MacBook Air, one CPU, 2 GiB RAM, macOS 27 “Golden Gate,” Fusion
-“26H1u1,” and normal M7D `CHOS-ARM64.iso`. Full build identifier, automatic versus
-manual optical path, firmware inventory and memory map have not been supplied.
-No target host is attached here. **M7E Fusion retest pending.** QEMU/stress results
-are separate from the user-reported Fusion failure.
+**M7E real Fusion boot now passes MMU/protection/timer tests and GOP diagnostics.**
+The user reports normal Setup is reached. Three supplied diagnostic screenshots
+show actual nonzero-bus controllers, zero input devices and NVMe not found. M7F
+corrects the bus-zero discovery defect; **its target peripheral retest is pending**.
+Host: M1 MacBook Air, one CPU, 2 GiB; previously reported macOS 27 “Golden Gate,”
+Fusion “26H1u1” (exact build unspecified). No target host is attached to this workspace.
+[Transcribed actual observations](fusion-observations-m7e.md).
 
 | Subsystem | Existing CHOS implementation | Fusion requirement / missing evidence | Status | Required changes / test evidence |
 |---|---|---|---|---|
-| MMU | Validated CHOS identity tables, page-granular managed RAM, 2 MiB blocks elsewhere, individual table pages and retained failure codes | Retest M7E on the same 2 GiB configuration; capture stage/reason or discovery pages | M7D user-reported failure; M7E QEMU correction, Fusion pending | [MMU audit](mmu-architecture.md); actual Fusion map/cause unconfirmed |
-| Optical boot | Original AA64 PE, EFI El Torito FAT, `EFI/BOOT/BOOTAA64.EFI`, bounded ExitBootServices | Exact release must accept custom ARM64 optical UEFI boot; Secure Boot off | QEMU pass; user reports reaching MMU failure, automatic/manual path unknown | Capture automatic catalog/path execution; ISO/EFI inspection logs and boot JSONs |
-| Exception levels | EL1 direct; original non-VHE EL2→EL1 transition preserving firmware tables until kernel translation replaces them | Actual entry EL, HCR/TCR and mapping regime | Both tested in QEMU | `boot-gic2-el2.json`, `boot-gic3-el2.json`; validate target handoff |
-| Interrupts | ACPI GICv2 or GICv3; MPIDR-selected GICC/GICR, distributor, CPU interface, ack/EOI | Actual MADT GIC revision/resources and accessible CPU sysregs | Both tested in QEMU | Original GICv3 path; affinity/stride/masking/timeout host tests; actual target MADT required |
-| Timer | GTDT non-secure physical PPI, CNTFRQ, nominal 100 Hz | Actual PPI/flags and physical timer permission | QEMU pass at both EL handoffs | Protection, preemption, IPC and input checks on all four EL/GIC combinations |
+| MMU | Validated CHOS identity tables, page-granular managed RAM, 2 MiB blocks elsewhere, individual table pages and retained failure codes | 531/1024 tables and protection tests observed at 2 GiB; preserve in M7F retest | M7E Fusion PASS in supplied screenshot | [MMU audit](mmu-architecture.md); actual Fusion map/cause unconfirmed |
+| Optical boot | Original AA64 PE, EFI El Torito FAT, `EFI/BOOT/BOOTAA64.EFI`, bounded ExitBootServices | Exact release must accept custom ARM64 optical UEFI boot; Secure Boot off | Fusion EFI/kernel reached; automatic/manual path unknown | Capture automatic catalog/path execution; ISO/EFI inspection logs and boot JSONs |
+| Exception levels | EL1 direct; original non-VHE EL2→EL1 transition preserving firmware tables until kernel translation replaces them | Actual EL1 entry/kernel observed; full HCR/TCR not supplied | EL1 Fusion observed; both paths tested in QEMU | `boot-gic2-el2.json`, `boot-gic3-el2.json`; validate target handoff |
+| Interrupts | ACPI GICv2 or GICv3; MPIDR-selected GICC/GICR, distributor, CPU interface, ack/EOI | Actual MADT GIC revision/resources and accessible CPU sysregs | GICv3/PPI delivery Fusion observed; both tested in QEMU | Original GICv3 path; affinity/stride/masking/timeout host tests; actual target MADT required |
+| Timer | GTDT non-secure physical PPI, CNTFRQ, nominal 100 Hz | Actual PPI/flags and physical timer permission | Fusion PPI 30/31 ticks observed; QEMU both EL handoffs pass | Protection, preemption, IPC and input checks on all four EL/GIC combinations |
 | ACPI/CPU topology | Checksummed RSDP/XSDT/MADT/GTDT; MCFG segment 0/bus 0; boot CPU only | Actual tables, PSCI conduit and CPU affinity | QEMU pass; no DT-only or SMP | ACPI-off refusal; capture target tables before modifying discovery |
-| Storage | Original polling NVMe, one controller/namespace, 512/4096 sectors, GPT/FAT32/CHFS | Actual IDs/class, BARs, namespace, DMA and geometry | QEMU install/persistence pass; Fusion unknown | Capture PCI inventory, then test actual controller; SCSI/SATA absent |
-| Input | Virtio PCI and original polled xHCI USB2 boot keyboard/relative mouse | Actual USB controller(s), PCI class/programming interface, topology and HID descriptors, or other interface | Both tested only in QEMU; Fusion unknown; USB interrupts/hubs/general HID/other controllers absent | Capture actual target IDs and descriptors; xHCI support is a subset, not an assumed Fusion requirement |
-| Display | GOP RGB/BGR linear framebuffer, pre-exit mode choice, original renderer | Actual format/stride/mode and post-exit mapping lifetime | QEMU pass; user reports visible early panic, post-MMU Fusion display pending | Test target pointer alignment, clipping, redraw and framebuffer stability; no VMware GPU driver claim |
+| Storage | Original polling NVMe, one controller/namespace, 512/4096 sectors, GPT/FAT32/CHFS | Actual IDs/class, BARs, namespace, DMA and geometry | QEMU install/persistence pass; Fusion PCI `15ad:07f0` bus 12 known, initialization failed in M7E | Capture PCI inventory, then test actual controller; SCSI/SATA absent |
+| Input | Virtio PCI and original polled xHCI USB2 boot keyboard/relative mouse | Actual USB controller(s), PCI class/programming interface, topology and HID descriptors, or other interface | Fusion UHCI/EHCI/xHCI known; zero input in M7E. M7F BDF correction and HID success tested in QEMU; actual input pending | Capture actual target IDs and descriptors; xHCI support is a subset, not an assumed Fusion requirement |
+| Display | GOP RGB/BGR linear framebuffer, pre-exit mode choice, original renderer | Actual format/stride/mode and post-exit mapping lifetime | Fusion post-MMU 1024×768 diagnostics observed; normal desktop/input pending | Test target pointer alignment, clipping, redraw and framebuffer stability; no VMware GPU driver claim |
 | Network | No driver/stack | Actual adapter IDs/protocol | Unsupported | Later after boot/input/storage stability |
 | Installation | Confirmed native GPT/ESP/CHFS writer, verification, reset, disk-only persistence | All target hardware prerequisites plus optical exclusion/disk identity | QEMU pass on both sectors and EL1/GICv2, EL2/GICv3 | Separate full Fusion checklist; QEMU cannot satisfy it |
 | Performance | Allocator/render counters, bounded host vCPU observation | Actual host/VM native memory and CPU measurements | QEMU only | Report scope/units; no inferred Fusion performance |
@@ -59,7 +60,7 @@ from SPCR. The independent bounded USB driver does not establish Fusion support.
 The QEMU probe compares firmware PCI IDs with independent QMP inventory and verifies
 an unconfirmed disk remains byte-identical. Full target ACPI tables and USB/HID
 reports still need firmware diagnostics; this snapshot is not a complete dump tool.
-See [manual checklist](fusion-validation.md) and [iteration report](milestone-7e.md).
+See [manual checklist](fusion-validation.md) and [iteration report](milestone-7f.md).
 
 M7C also tests a no-input VM with USB and unsupported storage inventory and an
 unchanged disposable disk, USB-only native editing/save/reopen/mouse/ring-wrap/
@@ -79,3 +80,10 @@ instrumented preserved baseline. The new image passes larger-memory QEMU tests;
 that is a demonstrated correction of an independent defect, not proof of the
 Fusion root cause. The first Fusion retest must capture the new failure codes or
 all automatic inventory pages before any installation is attempted.
+
+M7F controller findings: UHCI `01:00.0 15ad:0774`, EHCI `01:02.0 15ad:0770`,
+xHCI `0a:00.0 15ad:077a`, NVMe `12:00.0 15ad:07f0`, GOP display
+`00:0f.0 15ad:0406`, unsupported AHCI `01:03.0 15ad:07e0`. The old bus-zero
+loops could not reach xHCI/NVMe. [Correction](pci-discovery.md) and [new report
+stages/read-only policy](driver-diagnostics.md). Controller capability/port/HID/
+namespace details await M7F target results; do not infer an attachment path.

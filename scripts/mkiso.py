@@ -14,6 +14,7 @@ def run(*args, **kwargs):
     subprocess.run(list(map(str, args)), check=True, **kwargs)
 
 def main():
+    if os.environ.get("CHOS_INPUT_TEST"):os.environ["CHOS_DIAGNOSTIC"]="1"
     BUILD.mkdir(exist_ok=True)
     lock=(BUILD/'iso-build.lock').open('w')
     fcntl.flock(lock,fcntl.LOCK_EX)
@@ -47,7 +48,7 @@ def main():
     if os.environ.get('CHOS_DIAGNOSTIC'):
         if os.environ.get('CHOS_TEST_STORAGE'): raise ValueError('Diagnostic and destructive storage-test modes cannot be combined')
         config=BUILD/'diagnostic.cfg'
-        config.write_text('CHOS DIAGNOSTICS V1')
+        config.write_text('CHOS INPUT TEST V1' if os.environ.get('CHOS_INPUT_TEST') else 'CHOS DIAGNOSTICS V1')
         inputs.append((config,'::/CHOS/DIAG.CFG'))
     if os.environ.get('CHOS_DISPLAY_MODE'):
         config=BUILD/'display.cfg'
@@ -83,7 +84,7 @@ def main():
                 directory(root_offset+root_bytes+(cluster-2)*cluster_bytes, cluster_bytes)
     directory(root_offset,root_bytes)
     image.write_bytes(data)
-    output = BUILD / ('CHOS-ARM64-M7C.iso' if os.environ.get('CHOS_DIAGNOSTIC') else 'CHOS-STORAGE-TEST.iso' if os.environ.get('CHOS_TEST_STORAGE') else 'CHOS-missing-kernel.iso' if os.environ.get('CHOS_TEST_MISSING_KERNEL') else 'CHOS-ARM64.iso')
+    output = BUILD / ('CHOS-ARM64-M7F-INPUT.iso' if os.environ.get('CHOS_INPUT_TEST') else 'CHOS-ARM64-M7C.iso' if os.environ.get('CHOS_DIAGNOSTIC') else 'CHOS-STORAGE-TEST.iso' if os.environ.get('CHOS_TEST_STORAGE') else 'CHOS-missing-kernel.iso' if os.environ.get('CHOS_TEST_MISSING_KERNEL') else 'CHOS-ARM64.iso')
     run('xorriso', '-as', 'mkisofs', '-quiet', '-V', 'CHOS_ARM64',
         '--modification-date='+stamp, '--set_all_file_dates', stamp,
         '-c', 'boot/boot.cat', '-e', 'boot/efi.img', '-no-emul-boot',
