@@ -25,3 +25,8 @@ build/sanitized/setup
 
 cc "${flags[@]}" tests/graphics.c desktop/graphics/render.c desktop/graphics/primitives.c desktop/graphics/fontcache.c desktop/graphics/assets.S -o build/sanitized/graphics
 build/sanitized/graphics
+
+cc "${flags[@]}" tests/config.c kernel/config/format.c kernel/config/store.c filesystem/chfs.c -o build/sanitized/config
+build/sanitized/config
+cc "${flags[@]}" tests/gui.c userspace/libraries/gui/widgets.c -o build/sanitized/gui
+build/sanitized/gui

@@ -26,6 +26,12 @@ void input_accept(struct input_event e) {
         state.motion++;
     }
 }
+void input_accept_batch(const struct input_event *batch,unsigned n) {
+    /* Independent Virtio queues have no shared timestamp. For one poll batch,
+     * deliver pointer position/button changes before typing into that target. */
+    for(unsigned i=0;i<n;i++)if(batch[i].type==2 || (batch[i].type==1 && batch[i].code>=256))input_accept(batch[i]);
+    for(unsigned i=0;i<n;i++)if(!(batch[i].type==2 || (batch[i].type==1 && batch[i].code>=256)))input_accept(batch[i]);
+}
 bool input_next(struct input_event *e) {
     if(!count) return false;
     *e=events[head]; head=(head+1)%128; count--; return true;

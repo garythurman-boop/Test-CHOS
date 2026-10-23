@@ -6,7 +6,7 @@ struct process;
 struct exception_frame;
 struct chos_boot_info;
 #define WM_WINDOWS 8
-#define WM_EVENTS 32
+#define WM_EVENTS 128
 #define WM_COMMANDS 128
 struct wm_window {
     uint64_t owner; uint32_t id; char title[48];
@@ -15,7 +15,8 @@ struct wm_window {
 };
 struct wm {
     struct wm_window windows[WM_WINDOWS]; unsigned order[WM_WINDOWS],count;
-    uint32_t next_id,focus; int width,height,mouse_x,mouse_y,drag,dx,dy;
+    uint32_t next_id,focus; int width,height,mouse_x,mouse_y,drag,dx,dy,client_capture,client_hover;
+    unsigned desktop_selection,shell_press;bool button_down;
     bool resize,menu,applications,alt,ctrl,shift,dirty,logout; unsigned launch,theme,confirm,power,selection;
 };
 void wm_init(struct wm *,int,int);
@@ -27,6 +28,7 @@ void wm_key(struct wm *,unsigned,int);
 bool wm_event(struct wm *,uint64_t,uint32_t,struct chos_event *,bool consume);
 void wm_focus(struct wm *,uint32_t);
 int wm_task_width(const struct wm *);
+unsigned wm_shell_hit(const struct wm *,int,int);
 bool wm_menu_item(const struct wm *,unsigned,int *,int *,int *,int *);
 struct surface { uint32_t *pixels; int width,height,stride; int x,y,w,h; };
 void gfx_clip(struct surface *,int,int,int,int);

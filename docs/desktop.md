@@ -73,3 +73,14 @@ and remaining widgets. Old 12-pixel editing cells and event geometry are preserv
 UI labels/status bars are proportional, and toolbar labels align with hit regions.
 Boot-time UEFI mode enumeration prefers 1024×768. Disk mount failures explicitly
 report temporary RAM storage. Detailed evidence: [M6C](milestone-6c.md).
+
+## M6D shared widgets and installed preferences
+
+The Royale aesthetic is retained. Native apps now share a bounded C widget library
+for controls, fields, modal dialogs, menus, list rows/scrollbars, tabs and toolbars.
+Explorer/Notepad still operate on the real VFS. Control Panel applies supported
+settings in live RAM or atomically saves installed settings. Native Setup stages
+configuration before independent typed destructive confirmation and provides Back
+for correction. The installed desktop has no permanent session overlay.
+See [toolkit](gui-toolkit.md), [configuration](configuration.md), and [M6D real
+workspace/installation evidence](milestone-6d.md).

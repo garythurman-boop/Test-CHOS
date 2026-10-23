@@ -115,6 +115,7 @@ int64_t desktop_syscall(struct process *p,struct exception_frame *f) {
         const char *name=setup_computer();for(unsigned i=0;i<31 && name[i];i++)info.computer[i]=name[i];
         return user_copy(p,a,&info,sizeof(info),true)?0:-14;
     }
+    if(op==SYS_CONFIG){int64_t r=setup_configure(p,a,b,f->x[2]);if(!r && a==1){model.theme=setup_configuration()->theme;model.dirty=true;}return r;}
     if(op==SYS_RENDER)return user_copy(p,a,&metrics,sizeof(metrics),true)?0:-14;
     if(op==SYS_POWER)return a>2?-22:platform_power(boot,(unsigned)a);
     if(op==SYS_TASK) {
@@ -166,7 +167,7 @@ static void window_draw(unsigned slot) {
     for(int b=0;b<3;b++) {
         int x=w->x+w->w-78+b*26,y=w->y+5;bool hover=hit(x,y,22,21);
         round_box(x,y,22,21,4,b==2?0xd77b74:0x92c4f2,b==2?0xa43237:0x2e6eb8);
-        round_box(x+1,y+1,20,9,3,hover?0xe4f5ff:(b==2?0xf2b2a2:0xb0d8fa),b==2?0xd46b60:0x6ba8e3);
+        round_box(x+1,y+1,20,9,3,(model.shell_press==400+slot*3+(unsigned)b && hover)?0x6b94c5:(hover?0xe4f5ff:(b==2?0xf2b2a2:0xb0d8fa)),b==2?0xd46b60:0x6ba8e3);
         if(b==0)rect(x+6,y+14,10,2,0xffffff);
         if(b==1){rect(x+6,y+6,10,9,0xffffff);rect(x+7,y+9,8,5,0x437fbd);}
         if(b==2)for(int k=0;k<9;k++){rect(x+7+k,y+6+k,2,2,0xffffff);rect(x+15-k,y+6+k,2,2,0xffffff);}
@@ -190,11 +191,15 @@ static void render(void) {
     clip(0,0,screen.width,screen.height);
     if(wallpaper_theme!=model.theme)make_wallpaper();
     for(int y=screen.y;y<screen.y+screen.h;y++)for(int x=screen.x;x<screen.x+screen.w;x++)screen.pixels[(size_t)y*screen.width+x]=wallpaper[(size_t)y*screen.width+x];
-    ui(FONT_TITLE,screen.width-230,34,"CHOS Royale",0xc4e8fa);
-    ui(FONT_SMALL,screen.width-230,62,setup_persistent()?"System disk - persistent":"Live session - RAM volume",0xb0d7ef);
+    if(!setup_persistent()) {
+        ui(FONT_TITLE,screen.width-230,34,"CHOS Royale",0xc4e8fa);
+        ui(FONT_SMALL,screen.width-230,62,"Live session - RAM volume",0xb0d7ef);
+    }
     static const char names[7][16]={"Explorer","Notepad","Terminal","Control Panel","Task Manager","About CHOS","CHOS Setup"};
     for(unsigned i=0;i<7;i++) {
-        int y=60+(int)i*66;icon(34,y,i+1);
+        int y=60+(int)i*66;
+        if(model.desktop_selection==i+1)gfx_round(&screen,5,y-4,100,58,6,0x91c8f0,0x3375b8,110);
+        icon(34,y,i+1);
         int x=50-gfx_ui_width(FONT_SMALL,names[i])/2;
         ui(FONT_SMALL,x+1,y+37,names[i],0x153759);ui(FONT_SMALL,x,y+36,names[i],0xf3fbff);
     }
@@ -207,14 +212,14 @@ static void render(void) {
     gfx_gradient(&screen,0,task_y,screen.width,44,0x71a7e5,0x133e86);
     rect(0,task_y+1,screen.width,1,0xb0d9fc);gfx_gradient(&screen,0,task_y+9,screen.width,35,0x2c6bc0,0x174897);
     round_box(6,task_y+4,92,36,12,0x99d9d8,0x126d84);
-    round_box(8,task_y+5,88,17,10,model.menu?0xc7f3f4:0x8cd3e1,0x2987a9);
+    round_box(8,task_y+5,88,17,10,model.shell_press==1?0x4b9eba:(model.menu?0xc7f3f4:(hit(6,task_y+4,92,36)?0xb3e7ed:0x8cd3e1)),0x2987a9);
     ui(FONT_TITLE,28,task_y+8,"CHOS",0xffffff);
     unsigned n=0;int button_width=wm_task_width(&model);
     for(unsigned i=0;i<WM_WINDOWS;i++) if(model.windows[i].owner) {
         struct wm_window *w=&model.windows[i]; int x=108+(int)n++*button_width;
         if(x>=screen.width-160)break;
-        bool focused=w->id==model.focus;
-        round_box(x,task_y+7,button_width-6,29,5,focused?0x173e82:0x78abe6,focused?0x397bc7:0x306bbb);
+        bool focused=w->id==model.focus;bool hovered=hit(x,task_y+7,button_width-6,29);
+        round_box(x,task_y+7,button_width-6,29,5,model.shell_press==300+i?0x255c9e:(focused?0x173e82:(hovered?0x9ac4ed:0x78abe6)),focused?0x397bc7:0x306bbb);
         clip(x+6,task_y+7,button_width-18,29);ui(FONT_SMALL,x+7,task_y+14,w->title,0xffffff);
         clip(0,0,screen.width,screen.height);
     }
@@ -222,8 +227,9 @@ static void render(void) {
     char timer[21];decimal(timer,timer_ticks()/100);
     if(boot->clock_valid) {
         uint64_t now,freq;__asm__ volatile("mrs %0, cntpct_el0":"=r"(now));__asm__ volatile("mrs %0, cntfrq_el0":"=r"(freq));
-        uint64_t seconds=(boot->clock_seconds+(now-boot->clock_counter)/freq)%86400;
-        char clock[6]={(char)('0'+seconds/36000),(char)('0'+seconds/3600%10),':',(char)('0'+seconds/60%60/10),(char)('0'+seconds/60%10),0};
+        uint64_t seconds=config_clock((unsigned)((boot->clock_seconds+(now-boot->clock_counter)/freq)%86400),setup_configuration()->utc_offset);
+        char clock[9]={(char)('0'+seconds/36000),(char)('0'+seconds/3600%10),':',(char)('0'+seconds/60%60/10),(char)('0'+seconds/60%10),0};
+        if(setup_configuration()->clock_seconds){clock[5]=':';clock[6]=(char)('0'+seconds%60/10);clock[7]=(char)('0'+seconds%10);clock[8]=0;}
         ui(FONT_SMALL,screen.width-137,task_y+6,"System time",0xd9f1ff);ui(FONT_BOLD,screen.width-137,task_y+20,clock,0xffffff);
     } else { ui(FONT_SMALL,screen.width-137,task_y+6,"Uptime",0xd9f1ff);ui(FONT_BOLD,screen.width-137,task_y+20,timer,0xffffff); }
     rect(screen.width-14,task_y+14,6,6,0x8dd9b3);
@@ -237,18 +243,18 @@ static void render(void) {
         ui(FONT_TITLE,68,top+10,"CHOS",0xffffff);
         ui(FONT_SMALL,69,top+34,setup_computer(),0xebf6ff);
         rect(10,top+56,207,300,0xf6f9fd);rect(217,top+56,209,300,0xddeafa);rect(217,top+56,1,300,0xabc6e7);
-        unsigned count=model.applications?7:12;
+        unsigned count=model.applications?8:12;
         if(!model.applications)for(unsigned i=0;i<7;i++) {
             int y=top+64+(int)i*36;
-            if(hit(18,y,194,34))round_box(18,y,194,34,4,0x9fc9ef,0x69a0d5);
+            if(hit(18,y,194,34))round_box(18,y,194,34,4,model.shell_press==200+i?0x80b0dd:0xb6d6f0,0x69a0d5);
             icon(23,y,i+1);ui(FONT_BODY,64,y+8,names[i],ROYALE_INK);
         }
         for(unsigned i=0;i<count;i++) {
             int x,y,w,h;if(!wm_menu_item(&model,i,&x,&y,&w,&h))continue;
             bool selected=i==model.selection;
-            if(selected)round_box(x,y,w,h,4,0x6da8e5,0x326eb4);
-            if(model.applications){icon(x+5,y,i+1);ui(FONT_BODY,x+46,y+8,names[i],selected?0xffffff:ROYALE_INK);}
-            else ui(i==0?FONT_BOLD:FONT_BODY,x+10,y+8,items[i],selected?0xffffff:(i>=8?0xf1f7ff:ROYALE_INK));
+            if(selected)round_box(x,y,w,h,4,model.shell_press==100+i?0x3e79ba:0x6da8e5,0x326eb4);
+            if(model.applications){if(i<7){icon(x+5,y,i+1);ui(FONT_BODY,x+46,y+8,names[i],selected?0xffffff:ROYALE_INK);}else ui(FONT_BOLD,x+10,y+8,"<  Back to Start",0xffffff);}
+            else {ui(i==0?FONT_BOLD:FONT_BODY,x+10,y+8,items[i],selected?0xffffff:(i>=8?0xf1f7ff:ROYALE_INK));if(i==0)ui(FONT_BOLD,x+w-22,y+8,">",selected?0xffffff:ROYALE_INK);}
         }
     }
     if(model.confirm) {
@@ -280,7 +286,7 @@ void desktop_start(struct pmm *p,struct chos_boot_info *b) {
     screen=(struct surface){.pixels=(void *)(uintptr_t)memory,.width=(int)b->width,.height=(int)b->height,.stride=(int)b->width};
     uint64_t art=pmm_alloc(p,pages);if(!art)panic("WALLPAPER CACHE FAILED");wallpaper=(void *)(uintptr_t)art;
     damage_x=damage_y=0;damage_w=screen.width;damage_h=screen.height;
-    wm_init(&model,screen.width,screen.height);
+    wm_init(&model,screen.width,screen.height);model.theme=setup_configuration()->theme;
     model.mouse_x=input_get()->x;model.mouse_y=input_get()->y;
     struct input_event event;while(input_next(&event)) {} /* discard diagnostic input */
     extern bool ram_volume_start(struct pmm *);

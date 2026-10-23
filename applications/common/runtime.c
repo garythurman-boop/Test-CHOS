@@ -1,4 +1,7 @@
 #include "app.h"
+struct ui_context app_gui;
+static void gui_emit(void *unused,const struct chos_draw *d){(void)unused;(void)api(SYS_DRAW,(uint64_t)app_window,(uintptr_t)d,0);}
+void gui_initialize(void){app_gui=(struct ui_context){.emit=gui_emit,.mouse_x=-4096,.mouse_y=-4096};}
 unsigned app_role;
 bool app_persistent;
 const char *volume_status(void){return app_persistent?"System disk: persistent files":"RAM volume: files lost at shutdown";}
@@ -25,12 +28,12 @@ void ui_text(unsigned font,int x,int y,const char *s,uint32_t c) { draw(DRAW_UI_
 void box(int x,int y,int w,int h,uint32_t c) { draw(DRAW_RECT,x,y,w,h,0,c); }
 void begin(uint32_t c) { draw(DRAW_CLEAR,0,0,0,0,0,c); }
 void status(const char *s) { copy(app_status,s,sizeof(app_status)); }
-void label(int y,const char *s) { ui_text(0,12,y,s,0x204b72); }
-void prompt(const char *title,const char *initial) { copy(prompt_title,title,sizeof(prompt_title));copy(prompt_value,initial,sizeof(prompt_value));prompting=true; }
+void label(int y,const char *s) { ui_label(&app_gui,0,12,y,s,ROYALE_APP_INK); }
+void prompt(const char *title,const char *initial) { copy(prompt_title,title,sizeof(prompt_title));copy(prompt_value,initial,sizeof(prompt_value));prompting=true;ui_modal_edit(&app_gui,UI_PROMPT_FIELD,prompt_value,sizeof(prompt_value)); }
 bool prompt_key(unsigned key) {
     if(key==('u'|KEY_CTRL)){prompt_value[0]=0;return false;}
-    if(key==27) { prompting=false;status("Cancelled");return false; }
-    if(key==13) { prompting=false;return true; }
+    if(key==27) { prompting=false;ui_modal_end(&app_gui);status("Cancelled");return false; }
+    if(key==13) { prompting=false;ui_modal_end(&app_gui);return true; }
     size_t n=length(prompt_value);
     if(key==8 && n)prompt_value[n-1]=0;
     else if(key>=32 && key<127 && n+1<sizeof(prompt_value)){prompt_value[n]=(char)key;prompt_value[n+1]=0;}
@@ -38,12 +41,17 @@ bool prompt_key(unsigned key) {
 }
 void present(void) {
     if(prompting) {
-        rounded(4,app_height-110,app_width-8,84,0xb9d5ee);
-        ui_text(1,12,app_height-102,prompt_title,0x163b65);
-        box(12,app_height-78,app_width-24,25,0xffffff);text(16,app_height-73,prompt_value,0x163b65);
-        ui_text(3,12,app_height-46,"Enter accepts. Escape cancels.",0x163b65);
+        /* Modal dialogs replace the hit registry, preserving already drawn app
+         * contents while blocking controls behind the dialog. */
+        ui_begin(&app_gui);
+        ui_dialog(&app_gui,4,app_height-110,app_width-8,84,prompt_title);
+        ui_textfield(&app_gui,UI_PROMPT_FIELD,12,app_height-78,app_width-24,prompt_value,sizeof(prompt_value));
+        ui_label(&app_gui,3,12,app_height-46,"Enter accepts. Escape cancels.",0x163b65);
+        ui_button(&app_gui,UI_PROMPT_ACCEPT,13,app_width-188,app_height-50,82,24,"OK",true);
+        ui_button(&app_gui,UI_PROMPT_CANCEL,27,app_width-98,app_height-50,82,24,"Cancel",true);
     }
-    box(0,app_height-23,app_width,23,0xc1d7e9);ui_text(3,8,app_height-18,app_status,0x163b65);
+    ui_end(&app_gui);
+    box(0,app_height-23,app_width,23,ROYALE_STATUS_BG);ui_text(3,8,app_height-18,app_status,0x163b65);
     (void)api(SYS_PRESENT,(uint64_t)app_window,0,0);
 }
 int read_file(const char *path,char *buffer,unsigned cap) {

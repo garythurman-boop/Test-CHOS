@@ -5,13 +5,13 @@
 | 1: UEFI, original ARM64 kernel, bootable ISO | Verified under QEMU UEFI |
 | 2: protected memory, exceptions/timer, scheduling, EL0 ELF/syscalls/IPC | Core implemented and tested |
 | 3: display/input/NVMe/CHFS persistent operations | QEMU GOP + Virtio PCI + NVMe tested; three cold storage boots |
-| 4: CHOS Desktop/window manager/taskbar/Start | Working core; Royale foundation tested; dedicated Search/Run/Help and wallpaper file loading remain |
-| 5: six native applications | Functional bounded live-session versions; see desktop.md |
-| 6: graphical installer/GPT/ESP/installed boot | Native graphical installation core, disk boot and persistent system volume tested; account/password/timezone/layout and graphical mode configuration unfinished |
+| 4: CHOS Desktop/window manager/taskbar/Start | Working core; Royale widgets and multi-window usage tested; dedicated Search/Help and wallpaper file loading remain |
+| 5: six native applications | Functional bounded native apps with installed persistence and shared widgets; see desktop.md |
+| 6: graphical installer/GPT/ESP/installed boot | Native graphical installation core, disk boot and persistent system volume tested; saved computer/theme/fixed clock offset implemented; account/password/layout and graphical mode configuration unfinished |
 | 7: VMware Fusion validation | Not run: no Apple Silicon/Fusion host available |
 | 8: CHOS 0.1 | Not ready |
 
-Current ISO/results: [milestone 6C](milestone-6c.md). [Royale visual architecture](royale.md). Previous installer core: [milestone 6B](milestone-6b.md). Earlier foundations: [milestone 6A](milestone-6a.md). Ordinary images
+Current ISO/results: [milestone 6D](milestone-6d.md). [Saved configuration](configuration.md), [native toolkit](gui-toolkit.md). Previous visual checkpoint: [milestone 6C](milestone-6c.md). [Royale visual architecture](royale.md). Previous installer core: [milestone 6B](milestone-6b.md). Earlier foundations: [milestone 6A](milestone-6a.md). Ordinary images
 start a genuine original desktop and native EL0 apps after kernel tests. Their live
 CHFS volume is RAM backed. Native Setup requires explicit destructive confirmation.
 Installed sessions mount the verified CHFS system partition and persist files.
@@ -43,10 +43,11 @@ not an installer or desktop persistence environment.
 - GOP RGB/BGR 640×480 through 1920×1200; UEFI mode selection before boot, no runtime switch/GPU acceleration/full alpha
   compositor or image-file wallpaper loader. Pointer-only damage is clipped; other
   state changes still copy full frames. Cached grayscale fonts are ASCII only.
-- Clock follows firmware time plus the generic counter; no date/timezone setup or
-  persistence. Settings only change the actual session color theme/display report.
+- Clock follows firmware time plus the generic counter and a saved fixed offset.
+  No date setting, DST/IANA time-zone rules or network time. Control Panel saves
+  supported computer/theme/clock settings; live sessions remain volatile.
 - Task Manager uses real process IDs, memory counters and scheduled timer samples,
   not CPU percentage. Allocator figures exclude non-conventional reservations.
 - Native installation and installed CHFS persistence pass QEMU cold-boot tests.
-  Setup lacks account/password/timezone/layout/mode configuration, cancellation of
+  Setup lacks account/password/DST/layout/mode configuration, cancellation of
   an active writer, repair/fsck and full transactional rollback. No Fusion evidence.

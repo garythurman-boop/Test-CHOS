@@ -1,0 +1,3 @@
+   text	   data	    bss	    dec	    hex	filename
+ 208042	      8	 195408	 403458	  62802	build/kernel.elf
+  32092	    208	  24808	  57108	   df14	build/desktop.elf

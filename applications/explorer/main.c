@@ -36,25 +36,26 @@ void explorer_key(unsigned key) {
     }
     if(key=='u')action(1);if(key=='n')action(2);if(key=='c')action(3);if(key=='m')action(4);if(key=='d')action(5);if(key=='r')refresh();
 }
-void explorer_click(int x,int y) {
-    if(y>=36 && y<66){action((unsigned)x/100+1);return;}
-    if(y<86)return;
-    unsigned index=offset+(unsigned)(y-86)/22;if(index>=count)return;
-    copy(selected,entries[index].path,sizeof(selected));
-    if(entries[index].kind==2){copy(cwd,selected,sizeof(cwd));selected[0]=0;offset=0;refresh();}
-    else status("Selected file. C copy, M move, D delete.");
-}
 void explorer_paint(void) {
     refresh();begin(0xf2f6fa);box(0,0,app_width,30,0xd5e5f2);label(8,cwd);
     static const char actions[5][8]={"Up","New","Copy","Move","Delete"};
-    for(unsigned i=0;i<5;i++){rounded(4+(int)i*100,36,92,29,0xd8e8f6);ui_text(0,16+(int)i*100,43,actions[i],0x204b72);}
+    static const unsigned keys[5]={'u','n','c','m','d'};
+    ui_toolbar(&app_gui,0,32,app_width,36);
+    for(unsigned i=0;i<5;i++)ui_button(&app_gui,i+1,keys[i],4+(int)i*100,36,92,29,actions[i],i<2 || selected[0]);
     label(70,"Name");ui_text(0,app_width-110,70,"Bytes",0x204b72);
     unsigned rows=(unsigned)(app_height-120)/22;if(offset>=count)offset=0;if(rows>count-offset)rows=count-offset;
     for(unsigned row=0;row<rows;row++) {
         unsigned i=offset+row;
-        int y=86+(int)row*22;if(equal(selected,entries[i].path))box(2,y-3,app_width-4,22,0xc4dcf4);
+        int y=86+(int)row*22;
         const char *name=entries[i].path;for(unsigned j=0;entries[i].path[j];j++)if(entries[i].path[j]=='/')name=entries[i].path+j+1;
-        text(14,y,name,entries[i].kind==2?0x206ba5:0x203a54);
+        ui_list_row(&app_gui,100+i,2,y-3,app_width-24,name,equal(selected,entries[i].path),entries[i].kind==2?0x206ba5:0x203a54);
         char bytes[21];number(bytes,entries[i].size);text(app_width-110,y,entries[i].kind==2?"DIR":bytes,0x44617c);
     }
+    unsigned page=(unsigned)(app_height-120)/22;
+    ui_scrollbar(&app_gui,500,app_width-20,83,(int)page*22,offset,count,page);
+}
+void explorer_widget(unsigned id,unsigned value){
+    app_gui.relayout=true;
+    if(id==500){unsigned page=(unsigned)(app_height-120)/22;offset=value;if(offset>count)offset=count;if(count>page && offset>count-page)offset=count-page;return;}
+    if(id>=100 && id<100+count){unsigned index=id-100;copy(selected,entries[index].path,sizeof(selected));if(entries[index].kind==2){copy(cwd,selected,sizeof(cwd));selected[0]=0;offset=0;refresh();}else status("Selected file. C copy, M move, D delete.");}
 }

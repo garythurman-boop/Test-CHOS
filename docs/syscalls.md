@@ -129,3 +129,23 @@ INFO's former `reserved` uint32 now reports VOLUME_* from include/abi.h: 0 live,
 1 persistent, 2 no disk device, 3 invalid GPT, 4 ESP identity mismatch, 5 invalid
 CHFS, 6 invalid installed computer configuration. `persistent` remains authoritative
 for mounted persistent files; values 2–6 identify a temporary fallback session.
+
+## M6D configuration and input additions
+
+32 CONFIG: x0 operation (0 get, 1 apply, 2 stage installation), x1 pointer to
+64-byte `chos_config`, x2 persistence flag 0/1 for mutations. Get validates a writable
+buffer; mutations validate all input. Apply is restricted to built-in Control Panel
+and Setup; staging is Setup-only and requires an eligible destination before the
+writer starts. Apply with x2=1 requires an installed mounted volume. Errors include
+-13 role/operation authority, -14 bad span, -22 malformed settings/operation, -30 no
+persistent volume, -16 active installer, -5 save I/O. Stage never writes the disk.
+See configuration.md for the versioned disk format and actual limitations.
+
+23 EVENT additionally accepts nonzero x2 for a nonblocking dequeue. Existing x2=0
+waits are unchanged. Clients can drain pending input before repainting, then block
+at idle. EVENT_POINTER=5 and EVENT_RELEASE=6 carry client coordinates; release is
+captured outside the window. Pointer coordinates can be negative on leave. Existing
+CLICK=2 is press. KEY_SHIFT=131072 is added to Shift-Tab; KEY_ALT=262144 preserves
+Alt combinations (Alt-Tab remains the window-manager shortcut). Buffers are still
+validated before dequeue. Pointer events coalesce only with the same event type;
+release and close survive a full 128-entry window queue.

@@ -93,6 +93,7 @@ int input_initialize(struct pmm *p,const struct chos_boot_info *boot) {
     return (int)device_count;
 }
 void input_poll(void) {
+    struct input_event batch[64];unsigned count=0;
     for(unsigned i=0;i<device_count;i++) {
         struct device *d=&devices[i];
         cache(d->used,4096,true);
@@ -103,11 +104,12 @@ void input_poll(void) {
             uint32_t id=used[0]; if(id>=32 || used[1]!=8) panic("VIRTIO INPUT COMPLETION INVALID");
             uint64_t address=d->buffer+id*8; cache(address,8,true);
             const struct input_event *event=(void *)(uintptr_t)address;
-            input_accept(*event);
+            if(count==64)panic("INPUT BATCH CAPACITY");batch[count++]=*event;
             ((uint16_t *)(uintptr_t)d->avail)[2+d->available%32]=(uint16_t)id;
             d->available++; ((uint16_t *)(uintptr_t)d->avail)[1]=d->available;
             d->last++;
         }
         cache(d->avail,4096,false); w16(d->notify,0,0); (void)*d->isr;
     }
+    input_accept_batch(batch,count);
 }

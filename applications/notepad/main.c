@@ -1,7 +1,7 @@
 #include "app.h"
 static char document[4096],filename[60];
 static unsigned size,cursor,operation;
-static bool modified;
+static bool modified,menu;
 static void action(unsigned op) {
     if(op==1 && modified){status("Unsaved changes. Save or Ctrl-N to discard.");return;}
     operation=op;
@@ -14,6 +14,9 @@ static void save(void) {
     else status("Save failed. Original file retained.");
 }
 void notepad_key(unsigned key) {
+    if(key==600 || key==('f'|KEY_ALT)){menu=!menu;app_gui.relayout=true;if(menu)app_gui.focus=610;return;}
+    if(menu && key==27){menu=false;ui_modal_end(&app_gui);return;}
+    if(menu && (key&KEY_CTRL))menu=false;
     if(prompting) {
         bool accepted=prompt_key(key);
         if(accepted) {
@@ -47,11 +50,9 @@ void notepad_key(unsigned key) {
         document[cursor++]=key==13?'\n':(char)key;size++;modified=true;
     }
 }
-void notepad_click(int x,int y) {
-    if(y<28) { if(x<88)action(1);else if(x<180)save();else action(2); }
-}
 void notepad_paint(void) {
-    begin(0xffffff);box(0,0,app_width,29,0xd4e4f1);rounded(4,2,80,25,0xe7f0f9);rounded(92,2,82,25,0xe7f0f9);rounded(184,2,94,25,0xe7f0f9);ui_text(0,16,7,"Open",0x204b72);ui_text(0,104,7,"Save",0x204b72);ui_text(0,196,7,"Save As",0x204b72);
+    begin(0xffffff);ui_toolbar(&app_gui,0,0,app_width,29);
+    ui_button(&app_gui,1,'o'|KEY_CTRL,4,2,80,25,"Open",true);ui_button(&app_gui,2,'s'|KEY_CTRL,92,2,82,25,"Save",true);ui_button(&app_gui,3,'a'|KEY_CTRL,184,2,94,25,"Save As",true);ui_button(&app_gui,4,600,286,2,80,25,"File",true);
     text(10,38,filename[0]?filename:"Untitled",0x2a5579);
     unsigned columns=(unsigned)(app_width-24)/12,rows=(unsigned)(app_height-105)/18;
     if(columns>78)columns=78;
@@ -67,6 +68,13 @@ void notepad_paint(void) {
     }
     if(cursor_line>=first && cursor_line<first+rows)box(10+(int)column*12,62+(int)(cursor_line-first)*18,2,16,0x286bb0);
     if(modified)text(app_width-118,38,"Modified",0x965024);
+    if(menu) {
+        ui_menu_panel(&app_gui,286,30,200,118);
+        ui_menu_item(&app_gui,610,'o'|KEY_CTRL,290,34,192,"Open...       Ctrl-O",true);
+        ui_menu_item(&app_gui,611,'s'|KEY_CTRL,290,61,192,"Save          Ctrl-S",true);
+        ui_menu_item(&app_gui,612,'a'|KEY_CTRL,290,88,192,"Save as...    Ctrl-A",true);
+        ui_menu_item(&app_gui,613,'n'|KEY_CTRL,290,115,192,"New           Ctrl-N",true);
+    }
 }
 
 bool notepad_close(void) {

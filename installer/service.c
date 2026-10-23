@@ -14,7 +14,7 @@ static uint64_t owner;
 static int worker=-1;
 static bool persistent;
 static unsigned volume_state;
-static char computer[32]="CHOS-PC";
+static struct chos_config configuration,pending_config;
 static struct chos_confirm confirmed;
 static uint64_t first_block,partition_blocks;
 static struct block_device system_device;
@@ -31,8 +31,10 @@ static void partition(void){
 }
 bool setup_persistent(void){return persistent;}
 unsigned setup_volume_state(void){return volume_state;}
-const char *setup_computer(void){return computer;}
+const char *setup_computer(void){return configuration.computer;}
+const struct chos_config *setup_configuration(void){return &configuration;}
 void setup_initialize(struct block_device *device,struct chos_boot_info *b,struct pmm *p){
+    config_defaults(&configuration);config_defaults(&pending_config);
     boot=b;physical=p;state.medium=b->boot_medium;
     if(b->boot_medium==1)volume_state=VOLUME_NO_DEVICE;
     if(!device)return;
@@ -48,10 +50,18 @@ void setup_initialize(struct block_device *device,struct chos_boot_info *b,struc
             if(!chfs_mount(&system_volume,system_device))return;
             volume_state=VOLUME_BAD_CONFIG;
             size_t size=0;
-            char name[32]={0};
-            if(!chfs_read(&system_volume,"/system/computer",0,name,31,&size) || !size || size>31)return;
-            for(unsigned i=0;i<size;i++)if(!((name[i]>='A' && name[i]<='Z') || (name[i]>='a' && name[i]<='z') || (name[i]>='0' && name[i]<='9') || name[i]=='-'))return;
-            copy(computer,name,sizeof(computer));vfs_mount(&system_volume);persistent=true;volume_state=VOLUME_PERSISTENT;
+            const struct chfs_entry *entry=chfs_stat(&system_volume,CHOS_CONFIG_PATH);
+            if(entry) {
+                unsigned char wire[CHOS_CONFIG_BYTES];
+                if(entry->kind!=1 || entry->size!=sizeof(wire) || !chfs_read(&system_volume,CHOS_CONFIG_PATH,0,wire,sizeof(wire),&size) || size!=sizeof(wire) || !config_decode(&configuration,wire,size))return;
+            } else {
+                /* M6B/M6C volumes are read without an automatic migration write. */
+                char name[32]={0};
+                if(!chfs_read(&system_volume,"/system/computer",0,name,31,&size) || !size || size>31)return;
+                copy(configuration.computer,name,sizeof(configuration.computer));
+                if(!config_valid(&configuration))return;
+            }
+            vfs_mount(&system_volume);persistent=true;volume_state=VOLUME_PERSISTENT;
         }
     }
     /* Optical boot is required: no path exists to erase the currently booted
@@ -80,7 +90,9 @@ static void install(void *unused){
     static const char welcome[]="Welcome to installed CHOS.\nThis system volume persists across reboot.\n";
     extern const uint8_t license_text[],license_text_end[],font_license[],font_license_end[];
     unsigned length=0;while(confirmed.computer[length])length++;
-    if(!chfs_format(&system_volume,system_device,true) || !chfs_mkdir(&system_volume,"/system") || !chfs_mkdir(&system_volume,"/documents") || !chfs_write(&system_volume,"/system/computer",confirmed.computer,length) || !chfs_write(&system_volume,"/documents/welcome.txt",welcome,sizeof(welcome)-1) || !chfs_write(&system_volume,"/system/license",license_text,(size_t)(license_text_end-license_text)) || !chfs_write(&system_volume,"/system/font-ofl",font_license,(size_t)(font_license_end-font_license))){state.error=4;return;}
+    copy(pending_config.computer,confirmed.computer,sizeof(pending_config.computer));
+    unsigned char config_wire[CHOS_CONFIG_BYTES];if(!config_encode(&pending_config,config_wire)){state.error=4;return;}
+    if(!chfs_format(&system_volume,system_device,true) || !chfs_mkdir(&system_volume,"/system") || !chfs_mkdir(&system_volume,"/documents") || !chfs_write(&system_volume,CHOS_CONFIG_PATH,config_wire,sizeof(config_wire)) || !chfs_write(&system_volume,"/system/computer",confirmed.computer,length) || !chfs_write(&system_volume,"/documents/welcome.txt",welcome,sizeof(welcome)-1) || !chfs_write(&system_volume,"/system/license",license_text,(size_t)(license_text_end-license_text)) || !chfs_write(&system_volume,"/system/font-ofl",font_license,(size_t)(font_license_end-font_license))){state.error=4;return;}
     if(!chfs_mount(&system_volume,system_device) || !install_gpt_verify(disk,state.sector,&plan,&workspace) || !install_fat32_verify(disk,&plan,&files,&workspace)){state.error=5;return;}
     state.progress=100;state.phase=4;
 }
@@ -100,5 +112,25 @@ int64_t setup_syscall(struct process *p,uint64_t op,uint64_t argument,uint64_t t
     worker=thread_create(physical,install,0,1);
     if(worker<0){state.phase=0;return -12;}
     state.allowed=0;return 0;
+}
+/* Apply active settings only after a successful CHFS commit. A final flush
+ * error can leave the disk with the old or new complete record; never claim rollback. */
+int64_t setup_configure(struct process *p,uint64_t op,uint64_t argument,uint64_t save) {
+    if(op==0)return user_copy(p,argument,&configuration,sizeof(configuration),true)?0:-14;
+    if((op!=1 && op!=2) || save>1)return -22;
+    if(p->application!=4 && p->application!=7)return -13;
+    struct chos_config input;
+    if(!user_copy(p,argument,&input,sizeof(input),false))return -14;
+    if(!config_valid(&input))return -22;
+    if(op==2) {
+        if(p->application!=7 || state.phase || !state.allowed)return -13;
+        pending_config=input;return 0;
+    }
+    if(state.phase && state.phase!=4)return -16;
+    if(save) {
+        if(!persistent)return -30;
+        return config_save(&system_volume,&input,&configuration)?0:-5;
+    }
+    configuration=input;return 0;
 }
 void setup_step(void){if(worker>=0 && thread_dead((unsigned)worker)){if(!thread_reap(physical,(unsigned)worker))panic("SETUP WORKER REAP FAILED");worker=-1;}}

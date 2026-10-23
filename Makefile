@@ -12,7 +12,7 @@ build/boot.obj: boot/uefi/main.c boot/uefi/efi.h include/boot.h include/display_
 	$(CC) $(CFLAGS) --target=aarch64-pc-windows-msvc -c $< -o $@
 build/BOOTAA64.EFI: build/boot.obj
 	lld-link /subsystem:efi_application /entry:efi_main /nodefaultlib /machine:arm64 /timestamp:0 /out:$@ $<
-KSOURCES := installer/policy.c installer/service.c installer/gpt.c installer/fat32.c filesystem/ram.c kernel/arch/arm64/power.c desktop/desktop.c desktop/window-manager/model.c desktop/graphics/render.c desktop/graphics/primitives.c desktop/graphics/fontcache.c desktop/graphics/font.c drivers/input/virtio.c drivers/input/events.c filesystem/vfs.c filesystem/chfs.c drivers/storage/nvme.c kernel/storage_test.c kernel/runtime.c kernel/main.c kernel/console.c kernel/process/elf.c kernel/process/process.c kernel/syscall/syscall.c kernel/arch/arm64/acpi.c kernel/memory/physical.c kernel/memory/heap.c kernel/memory/virtual.c kernel/interrupts/exception.c kernel/scheduler/scheduler.c drivers/interrupts/gicv2_timer.c
+KSOURCES := kernel/config/format.c kernel/config/store.c installer/policy.c installer/service.c installer/gpt.c installer/fat32.c filesystem/ram.c kernel/arch/arm64/power.c desktop/desktop.c desktop/window-manager/model.c desktop/graphics/render.c desktop/graphics/primitives.c desktop/graphics/fontcache.c desktop/graphics/font.c drivers/input/virtio.c drivers/input/events.c filesystem/vfs.c filesystem/chfs.c drivers/storage/nvme.c kernel/storage_test.c kernel/runtime.c kernel/main.c kernel/console.c kernel/process/elf.c kernel/process/process.c kernel/syscall/syscall.c kernel/arch/arm64/acpi.c kernel/memory/physical.c kernel/memory/heap.c kernel/memory/virtual.c kernel/interrupts/exception.c kernel/scheduler/scheduler.c drivers/interrupts/gicv2_timer.c
 KASM := desktop/graphics/assets.S kernel/arch/arm64/entry.S kernel/arch/arm64/vectors.S kernel/arch/arm64/mmu.S kernel/arch/arm64/test_worker.S kernel/process/image.S
 KOBJECTS := $(patsubst %.c,build/%.o,$(KSOURCES)) $(patsubst %.S,build/%.o,$(KASM))
 build/%.o: %.c $(wildcard include/*.h) Makefile
@@ -62,9 +62,9 @@ test-input: | build
 	$(CC) -std=c11 -Wall -Wextra -Werror -Iinclude tests/input.c drivers/input/events.c -o build/test-input
 	./build/test-input
 
-ASOURCES := applications/setup/main.c applications/common/runtime.c applications/desktop/main.c applications/explorer/main.c applications/notepad/main.c applications/terminal/main.c applications/control-panel/main.c applications/task-manager/main.c applications/about/main.c
+ASOURCES := userspace/libraries/gui/widgets.c applications/setup/main.c applications/common/runtime.c applications/desktop/main.c applications/explorer/main.c applications/notepad/main.c applications/terminal/main.c applications/control-panel/main.c applications/task-manager/main.c applications/about/main.c
 AOBJECTS := $(patsubst %.c,build/app/%.o,$(ASOURCES))
-build/app/%.o: %.c include/abi.h applications/common/app.h Makefile
+build/app/%.o: %.c $(wildcard include/*.h) applications/common/app.h Makefile
 	mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -Iapplications/common --target=aarch64-none-elf -march=armv8-a -mgeneral-regs-only -ffixed-x18 -mno-outline-atomics -c $< -o $@
 build/app/runtime.o: kernel/runtime.c Makefile | build
@@ -102,3 +102,13 @@ build/desktop/graphics/assets.o: assets/royale/fonts.bin assets/fonts/OFL.txt
 test-graphics: | build
 	$(CC) -std=c11 -Wall -Wextra -Werror -Iinclude tests/graphics.c desktop/graphics/render.c desktop/graphics/primitives.c desktop/graphics/fontcache.c desktop/graphics/assets.S -o build/test-graphics
 	./build/test-graphics
+
+.PHONY: test-config
+test-config: | build
+	$(CC) -std=c11 -Wall -Wextra -Werror -Iinclude tests/config.c kernel/config/format.c kernel/config/store.c filesystem/chfs.c -o build/test-config
+	./build/test-config
+
+.PHONY: test-gui
+test-gui: | build
+	$(CC) -std=c11 -Wall -Wextra -Werror -Iinclude tests/gui.c userspace/libraries/gui/widgets.c -o build/test-gui
+	./build/test-gui

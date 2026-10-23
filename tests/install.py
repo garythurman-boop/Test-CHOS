@@ -28,7 +28,12 @@ try:
     guest.wait(lambda p:matches(p,68,276,'GPT',0x204b72,0),'optical-media destination eligibility')
     guest.snapshot(f'setup-destination-{sector}')
     assert digest(disk)==before,'Disk changed before selection/confirmation'
-    guest.key('ret');replace_prompt(guest,'CHOSTEST')
+    guest.key('ret');replace_prompt(guest,'BAD/NAME');guest.key('ret')
+    guest.wait(lambda p:matches(p,64,484,'Invalid system configuration',0x163b65,3),'invalid setup configuration feedback')
+    assert digest(disk)==before,'Invalid setup configuration modified disk'
+    guest.click(110,452);guest.wait(lambda p:p(64,400)==0xb9d5ee,'configuration correction dialog');replace_prompt(guest,'CHOSTEST')
+    guest.key('2');guest.key('bracket_right');guest.key('s')
+    guest.snapshot(f'setup-configuration-{sector}')
     guest.key('ret');type_text(guest,'WRONG\n');time.sleep(.3)
     assert digest(disk)==before,'Rejected typed confirmation modified disk'
     guest.key('ret');type_text(guest,'ERASE CHOS-GPT-BOOT\n')
@@ -74,5 +79,9 @@ with disk.open('rb') as file:
     assert contents['/system/license']==(BUILD.parent/'LICENSE').read_bytes()
     assert contents['/system/font-ofl']==(BUILD.parent/'assets/fonts/OFL.txt').read_bytes()
     assert contents['/documents/note.txt']==b'INSTALLED CHOS 123'
-result.update(passed=True,filesystem_generation=generation,independent_disk_parser=True,disk_sha256=digest(disk),limitations=['accounts/password setup absent','timezone/keymap/display configuration incomplete','VMware Fusion unverified'])
+    config=bytearray(contents['/system/config']);assert len(config)==80 and config[:8]==b'CHOSCFG1'
+    crc=struct.unpack_from('<I',config,12)[0];config[12:16]=bytes(4);assert zlib.crc32(config)==crc
+    assert struct.unpack_from('<IIiI',config,16)==(1,1,60,1)
+    assert config[32:64].split(b'\0',1)[0]==b'CHOSTEST'
+result.update(passed=True,filesystem_generation=generation,independent_disk_parser=True,disk_sha256=digest(disk),limitations=['accounts/password setup absent','fixed clock offset supported; DST/keymap/display setup incomplete','VMware Fusion unverified'])
 (BUILD/f'native-install-{sector}.json').write_text(json.dumps(result,indent=2)+'\n');print(json.dumps(result,indent=2))

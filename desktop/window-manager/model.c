@@ -10,14 +10,15 @@ static void post(struct wm_window *w,struct chos_event e) {
     /* Resize is coalesced, key/click overflow discards the newest event. Close
      * always survives a full queue so a well-behaved client can terminate. */
     if(e.type==EVENT_CLOSE) { w->head=0; w->count=0; }
-    if(e.type==EVENT_RESIZE && w->count) {
+    if((e.type==EVENT_RESIZE || e.type==EVENT_POINTER) && w->count) {
         unsigned i=(w->head+w->count-1)%WM_EVENTS;
-        if(w->events[i].type==EVENT_RESIZE) { w->events[i]=e; return; }
+        if(w->events[i].type==e.type) { w->events[i]=e; return; }
     }
+    if(e.type==EVENT_RELEASE && w->count==WM_EVENTS){w->head=(w->head+1)%WM_EVENTS;w->count--;}
     if(w->count<WM_EVENTS) { w->events[(w->head+w->count)%WM_EVENTS]=e; w->count++; }
 }
 void wm_init(struct wm *m,int w,int h) {
-    *m=(struct wm){.width=w,.height=h,.next_id=1,.drag=-1,.dirty=true};
+    *m=(struct wm){.width=w,.height=h,.next_id=1,.drag=-1,.client_capture=-1,.client_hover=-1,.dirty=true};
 }
 struct wm_window *wm_owned(struct wm *m,uint64_t owner,uint32_t id) {
     struct wm_window *w=by_id(m,id); return w && w->owner==owner?w:0;
@@ -59,6 +60,8 @@ void wm_remove(struct wm *m,uint64_t owner) {
         unsigned slot=m->order[i];
         if(m->windows[slot].owner!=owner) { i++; continue; }
         if(m->drag==(int)slot) m->drag=-1;
+        if(m->client_capture==(int)slot)m->client_capture=-1;
+        if(m->client_hover==(int)slot)m->client_hover=-1;
         m->windows[slot]=(struct wm_window){0};
         for(unsigned j=i;j+1<m->count;j++) m->order[j]=m->order[j+1];
         m->count--;
@@ -72,7 +75,7 @@ static void maximize(struct wm *m,struct wm_window *w) {
     post(w,(struct chos_event){.type=EVENT_RESIZE,.width=w->w-8,.height=w->h-36});
 }
 static void menu_activate(struct wm *m,unsigned item) {
-    if(m->applications) {if(item<7)m->launch=item+1;m->applications=false;m->menu=false;return;}
+    if(m->applications) {if(item==7){m->applications=false;m->selection=0;return;}if(item<7)m->launch=item+1;m->applications=false;m->menu=false;return;}
     if(item==0){m->applications=true;m->selection=0;return;}
     static const unsigned apps[12]={0,1,1,4,4,1,3,6,0,0,0,0};
     if(item<12)m->launch=apps[item];
@@ -89,23 +92,87 @@ int wm_task_width(const struct wm *m) {
  * rendering on the same layout. Main entries retain their documented order. */
 bool wm_menu_item(const struct wm *m,unsigned item,int *x,int *y,int *w,int *h) {
     int top=m->height-44-400;*w=194;*h=32;
-    if(m->applications) {if(item>=7)return false;*x=18;*y=top+64+(int)item*38;return true;}
+    if(m->applications) {if(item==7){*x=18;*y=top+362;return true;}if(item>=7)return false;*x=18;*y=top+64+(int)item*38;return true;}
     if(item==0){*x=18;*y=top+324;return true;}
     if(item>=1 && item<=7){*x=224;*y=top+64+(int)(item-1)*38;return true;}
     if(item>=8 && item<=10){*x=18+(int)(item-8)*134;*y=top+362;*w=126;return true;}
     if(item==11){*x=390;*y=top+12;*w=28;*h=26;return true;}
     return false;
 }
+/* Shell controls activate on release in the same target. Native client
+ * controls use the separate per-window pointer/release capture below. */
+unsigned wm_shell_hit(const struct wm *m,int x,int y) {
+    if(m->confirm)return 0;
+    if(y>=m->height-44) {
+        if(x<100)return 1;
+        if(x<108 || x>=m->width-160)return 0;
+        unsigned n=(unsigned)(x-108)/(unsigned)wm_task_width(m);
+        for(unsigned i=0;i<WM_WINDOWS;i++)if(m->windows[i].owner && !n--)return 300+i;
+        return 0;
+    }
+    if(m->menu) {
+        unsigned count=m->applications?8:12;
+        for(unsigned i=0;i<count;i++){int a,b,w,h;if(wm_menu_item(m,i,&a,&b,&w,&h) && inside(x,y,a,b,w,h))return 100+i;}
+        int top=m->height-444;
+        if(!m->applications && inside(x,y,18,top+64,194,7*36))return 200+(unsigned)(y-top-64)/36;
+        return 0;
+    }
+    for(unsigned n=m->count;n;n--) {
+        unsigned slot=m->order[n-1];const struct wm_window *w=&m->windows[slot];
+        if(w->minimized || w->closing || !inside(x,y,w->x,w->y,w->w,w->h))continue;
+        if(y<w->y+30 && x>=w->x+w->w-80){unsigned b=x>=w->x+w->w-28?2:(x>=w->x+w->w-54?1:0);return 400+slot*3+b;}
+        return 0;
+    }
+    if(x<112 && y>=60 && y<60+7*66)return 500+(unsigned)(y-60)/66;
+    return 0;
+}
+static void shell_activate(struct wm *m,unsigned id) {
+    if(id==1){m->menu=!m->menu;m->applications=false;m->selection=0;return;}
+    if(id>=100 && id<112){menu_activate(m,id-100);return;}
+    if(id>=200 && id<207){m->launch=id-199;m->menu=false;return;}
+    if(id>=300 && id<300+WM_WINDOWS){struct wm_window *w=&m->windows[id-300];if(w->owner)wm_focus(m,w->id);return;}
+    if(id>=400 && id<400+WM_WINDOWS*3) {
+        struct wm_window *w=&m->windows[(id-400)/3];if(!w->owner)return;wm_focus(m,w->id);
+        unsigned b=(id-400)%3;
+        if(b==2)post(w,(struct chos_event){.type=EVENT_CLOSE});
+        if(b==1)maximize(m,w);
+        if(!b){w->minimized=true;next_focus(m);}return;
+    }
+    if(id>=500 && id<507){m->desktop_selection=id-499;m->launch=m->desktop_selection;}
+}
 void wm_mouse(struct wm *m,int x,int y,int button) {
     m->mouse_x=x; m->mouse_y=y; m->dirty=true;
+    if(button>=0)m->button_down=button!=0;
+    if(button==0) {
+        unsigned pressed=m->shell_press;m->shell_press=0;
+        if(pressed && pressed==wm_shell_hit(m,x,y))shell_activate(m,pressed);
+        if(m->client_capture>=0) {
+            struct wm_window *w=&m->windows[m->client_capture];
+            if(w->owner)post(w,(struct chos_event){.type=EVENT_RELEASE,.x=x-w->x-4,.y=y-w->y-32});
+            m->client_capture=-1;
+        }
+        m->drag=-1;return;
+    }
     if(m->confirm)return;
-    if(button==0) { m->drag=-1; return; }
     if(button<0) {
         if(m->menu) {
-            unsigned count=m->applications?7:12;
+            unsigned count=m->applications?8:12;
             for(unsigned item=0;item<count;item++) {int a,b,w,h;if(wm_menu_item(m,item,&a,&b,&w,&h) && inside(x,y,a,b,w,h))m->selection=item;}
         }
-        if(m->drag<0) return;
+        if(m->drag<0) {
+            int target=m->client_capture;
+            if(target<0 && !m->menu)for(unsigned n=m->count;n;n--) {
+                unsigned slot=m->order[n-1];struct wm_window *w=&m->windows[slot];
+                if(!w->minimized && !w->closing && inside(x,y,w->x,w->y,w->w,w->h)) {
+                    if(inside(x,y,w->x+4,w->y+32,w->w-8,w->h-36))target=(int)slot;
+                    break;
+                }
+            }
+            if(target!=m->client_hover && m->client_hover>=0)post(&m->windows[m->client_hover],(struct chos_event){.type=EVENT_POINTER,.x=-4096,.y=-4096});
+            m->client_hover=target;
+            if(target>=0){struct wm_window *w=&m->windows[target];post(w,(struct chos_event){.type=EVENT_POINTER,.x=x-w->x-4,.y=y-w->y-32});}
+            return;
+        }
         struct wm_window *w=&m->windows[m->drag];
         if(m->resize) {
             int nw=x-w->x+m->dx,nh=y-w->y+m->dy;
@@ -125,40 +192,21 @@ void wm_mouse(struct wm *m,int x,int y,int button) {
         }
         return;
     }
-    if(y>=m->height-44) {
-        if(x<100) { m->menu=!m->menu;m->applications=false;m->selection=0;return; }
-        if(x<108 || x>=m->width-160)return;
-        unsigned n=(unsigned)(x-108)/(unsigned)wm_task_width(m);
-        /* Taskbar order is stable by slot; stacking is independent. */
-        for(unsigned i=0;i<WM_WINDOWS;i++) if(m->windows[i].owner) {
-            if(!n--) { wm_focus(m,m->windows[i].id); break; }
-        }
-        return;
-    }
-    if(m->menu) {
-        unsigned count=m->applications?7:12;
-        for(unsigned item=0;item<count;item++) {
-            int a,b,w,h;if(wm_menu_item(m,item,&a,&b,&w,&h) && inside(x,y,a,b,w,h)){menu_activate(m,item);return;}
-        }
-        int top=m->height-44-400;
-        if(!m->applications && inside(x,y,18,top+64,194,7*36)) {m->launch=(unsigned)(y-top-64)/36+1;m->menu=false;return;}
-        m->menu=false;return;
-    }
+    m->shell_press=wm_shell_hit(m,x,y);if(m->shell_press)return;
+    if(y>=m->height-44)return;
+    if(m->menu){m->menu=false;return;}
     for(unsigned n=m->count;n;n--) {
         unsigned slot=m->order[n-1];struct wm_window *w=&m->windows[slot];
         if(w->minimized || w->closing || !inside(x,y,w->x,w->y,w->w,w->h)) continue;
         wm_focus(m,w->id);
         if(y<w->y+30) {
-            if(x>=w->x+w->w-28) { post(w,(struct chos_event){.type=EVENT_CLOSE}); }
-            else if(x>=w->x+w->w-54) maximize(m,w);
-            else if(x>=w->x+w->w-80) { w->minimized=true;next_focus(m); }
-            else if(!w->maximized) { m->drag=(int)slot;m->resize=false;m->dx=x-w->x;m->dy=y-w->y; }
+            if(!w->maximized) { m->drag=(int)slot;m->resize=false;m->dx=x-w->x;m->dy=y-w->y; }
         } else if(!w->maximized && x>=w->x+w->w-14 && y>=w->y+w->h-14) {
             m->drag=(int)slot;m->resize=true;m->dx=w->x+w->w-x;m->dy=w->y+w->h-y;
-        } else post(w,(struct chos_event){.type=EVENT_CLICK,.x=x-w->x-4,.y=y-w->y-32});
+        } else {m->client_capture=(int)slot;post(w,(struct chos_event){.type=EVENT_CLICK,.x=x-w->x-4,.y=y-w->y-32});}
         return;
     }
-    if(x<112 && y>=60 && y<60+7*66) m->launch=(unsigned)(y-60)/66+1;
+    m->desktop_selection=0;
 }
 void wm_key(struct wm *m,unsigned code,int value) {
     if(code==56 || code==100) { m->alt=value!=0; return; }
@@ -171,12 +219,14 @@ void wm_key(struct wm *m,unsigned code,int value) {
         return;
     }
     if(code==125) { m->menu=!m->menu;m->applications=false;m->selection=0;m->dirty=true;return; }
-    if(m->menu && (code==103 || code==108 || code==28 || code==1)) {
-        unsigned count=m->applications?7:12;
+    if(m->menu && (code==103 || code==108 || code==105 || code==106 || code==28 || code==1)) {
+        unsigned count=m->applications?8:12;
         if(code==103)m->selection=(m->selection+count-1)%count;
         if(code==108)m->selection=(m->selection+1)%count;
+        if(code==106 && !m->applications && m->selection==0){m->applications=true;m->selection=0;}
+        if(code==105 && m->applications){m->applications=false;m->selection=0;}
         if(code==28)menu_activate(m,m->selection);
-        if(code==1){m->menu=false;m->applications=false;}
+        if(code==1){if(m->applications){m->applications=false;m->selection=0;}else m->menu=false;}
         m->dirty=true;return;
     }
     if(m->alt && code==15 && m->count) {
@@ -200,7 +250,7 @@ void wm_key(struct wm *m,unsigned code,int value) {
     case 103:key=KEY_UP;break;case 108:key=KEY_DOWN;break;case 105:key=KEY_LEFT;break;case 106:key=KEY_RIGHT;break;
     }
     struct wm_window *w=by_id(m,m->focus);
-    if(w && !w->closing && key) post(w,(struct chos_event){.type=EVENT_KEY,.code=key|(m->ctrl?KEY_CTRL:0)});
+    if(w && !w->closing && key) post(w,(struct chos_event){.type=EVENT_KEY,.code=key|(m->ctrl?KEY_CTRL:0)|(m->alt?KEY_ALT:0)|((key==9 && m->shift)?KEY_SHIFT:0)});
 }
 bool wm_event(struct wm *m,uint64_t owner,uint32_t id,struct chos_event *e,bool consume) {
     struct wm_window *w=wm_owned(m,owner,id);

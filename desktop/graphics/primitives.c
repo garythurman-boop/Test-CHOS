@@ -52,9 +52,28 @@ void gfx_round(struct surface *s,int x,int y,int w,int h,int radius,uint32_t top
         }
     }
 }
+static void shadow_band(struct surface *s,int64_t l,int64_t t,int64_t r,int64_t b,int x,int y,int w,int h,int radius) {
+    if(l<s->x)l=s->x;
+    if(t<s->y)t=s->y;
+    if(r>(int64_t)s->x+s->w)r=s->x+s->w;
+    if(b>(int64_t)s->y+s->h)b=s->y+s->h;
+    if(l>=r || t>=b)return;
+    struct surface clipped=*s;gfx_clip(&clipped,(int)l,(int)t,(int)(r-l),(int)(b-t));
+    for(int spread=8;spread>0;spread--)gfx_round(&clipped,x-spread,y-spread+4,w+spread*2,h+spread*2,radius+spread,0x020b20,0x020b20,9);
+}
 void gfx_shadow(struct surface *s,int x,int y,int w,int h,int radius) {
-    if(w<=0 || h<=0 || x<INT_MIN+8 || y<INT_MIN+8 || x>INT_MAX-12 || y>INT_MAX-12 || w>INT_MAX-16 || h>INT_MAX-16)return;
-    for(int spread=8;spread>0;spread--)gfx_round(s,x-spread,y-spread+4,w+spread*2,h+spread*2,radius+spread,0x020b20,0x020b20,9);
+    if(w<=0 || h<=0 || x<INT_MIN+64 || y<INT_MIN+64 || x>INT_MAX-64 || y>INT_MAX-64 || w>INT_MAX-128 || h>INT_MAX-128)return;
+    if(radius<0)radius=0;
+    if(radius>32)radius=32;
+    if(radius>w/2)radius=w/2;
+    if(radius>h/2)radius=h/2;
+    /* The caller draws an opaque rounded object over the center. Omit covered
+     * pixels: four disjoint bands retain the exact original shadow at its edge. */
+    int64_t l=(int64_t)x+radius,r=(int64_t)x+w-radius,t=(int64_t)y+radius,b=(int64_t)y+h-radius;
+    shadow_band(s,s->x,s->y,(int64_t)s->x+s->w,t,x,y,w,h,radius);
+    shadow_band(s,s->x,b,(int64_t)s->x+s->w,(int64_t)s->y+s->h,x,y,w,h,radius);
+    shadow_band(s,s->x,t,l,b,x,y,w,h,radius);
+    shadow_band(s,r,t,(int64_t)s->x+s->w,b,x,y,w,h,radius);
 }
 void gfx_blit(struct surface *s,int x,int y,const uint32_t *src,int w,int h,int stride) {
     int l,t,r,b;if(!src || stride<w || !bounds(s,x,y,w,h,&l,&t,&r,&b))return;

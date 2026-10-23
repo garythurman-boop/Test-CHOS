@@ -27,3 +27,17 @@ mode request/fallback cases; and a failed CHFS mount on a copied installed disk
 that must warn and leave the entire disk unchanged. The expanded validator runs
 24 VMs. See [M6C](milestone-6c.md) and [Royale](royale.md). The GUI polish/installer
 configuration/Fusion milestones remain partial until their own evidence exists.
+
+## M6D additions
+
+Retain all M6C cases. The validator now requires twelve host programs and 29 real
+VM boots. Add configuration write/flush failure boundaries, CRC/range/wrap tests,
+GUI input/field/focus/capture tests, and pixel-equivalent visible shadows. Native
+installation must reject invalid preferences without writing, correct them with
+Back, save chosen settings and preserve user files after disk-only boots. Four
+configuration VMs verify invalid-save hashes, saved preferences/shutdown/cold boot,
+legacy read without migration writes and invalid-record fallback without changes.
+A workspace VM must demonstrate real simultaneous/overlapping native apps, menus,
+dialogs, file selection/scrolling, minimize/maximize/restore, bounded input checked
+through a second process, Task Manager and Setup inventory without disk writes.
+See [M6D](milestone-6d.md). Full Fusion and account/authentication acceptance remains open.

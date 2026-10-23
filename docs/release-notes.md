@@ -1,3 +1,14 @@
+# M6D — persistent configuration and native widget refinement
+
+Preserves the approved Royale design. Adds a shared original C control library,
+native application menus/dialogs, tabs/fields and real file list scrolling; saved
+computer/theme/clock configuration; Setup Back/error correction; pre-paint modal
+input binding, bounded event draining/capture and deterministic pointer/keyboard
+batch delivery. Installed sessions lose the permanent overlay. Shadow edge output
+is preserved while omitting covered blending. See [M6D evidence and limitations](milestone-6d.md).
+Authentication, full installer configuration, Fusion hardware validation and CHOS
+0.1 remain unfinished.
+
 # M6C — Royale visual foundation
 
 Continues M6B with licensed anti-aliased fonts, original wallpaper/icons, blue

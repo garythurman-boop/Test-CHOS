@@ -92,7 +92,8 @@ def main():
         guest.wait(lambda p:matches(p,68,86,'/documents/FOLDER',0x204b72,0),'Explorer directory navigation')
         guest.key('u');time.sleep(.2)
         guest.click(100,188) # note.txt
-        guest.key('c');type_text(guest,'GUI.TXT');guest.key('ret');time.sleep(.2)
+        guest.key('c');type_text(guest,'GUI.TXT');guest.key('ret')
+        guest.wait(lambda p:matches(p,70,274,'GUI.TXT',0x203a54),'Explorer copied file appears before move')
         guest.key('r');guest.click(100,276) # GUI.TXT, sixth entry
         guest.key('m');type_text(guest,'RENAMED.TXT');guest.key('ret');time.sleep(.2)
         guest.move(790,540)
@@ -104,7 +105,7 @@ def main():
         guest.click(738,36);time.sleep(.2) # close unmodified Notepad
         result['checks']+=['Explorer navigation, mkdir/copy/move/confirmed deletion and metadata refresh']
         launch(guest,4)
-        guest.wait(lambda p:p(60,150)==0x1c4f82,'functional Control Panel')
+        guest.wait(lambda p:matches(p,44,72,'CHOS Control Panel',0x204b72,0),'functional Control Panel')
         old=guest.capture()(780,20);guest.key('2')
         guest.wait(lambda p:p(780,20)!=old,'theme changes actual compositor wallpaper')
         guest.snapshot('apps-settings')

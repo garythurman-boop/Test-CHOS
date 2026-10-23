@@ -174,3 +174,19 @@ firmware graphics after ExitBootServices. Reject modes above allocation limits.
 Installed-volume mount failures expose an explicit error state and temporary RAM
 warning. A mount failure must not trigger repair/format; the disposable-corruption
 acceptance verifies the disk hash is unchanged.
+
+## M6D decisions
+
+Keep the original kernel WM and isolated native applications. Centralize control
+rendering/input in a small user-space C library with a bounded hit registry, rather
+than adding a heavyweight framework or moving application logic into the kernel.
+Bind and dismiss modal editing before the next paint, and force registry rebuilds
+after layout changes; drain bounded input batches before repainting. Release
+capture, pointer coalescing and deterministic pointer-before-keyboard poll batches
+handle real multi-window input. See [toolkit](gui-toolkit.md).
+
+Save one explicitly encoded configuration record in CHFS, not multiple independent
+preference files. Validate before writes and apply active settings after a successful
+commit. Support legacy reads without migration writes. CRC provides corruption
+detection, not authentication; a final flush error has uncertain old/new durability.
+No account/login or ACL claim is made. See [configuration](configuration.md).
