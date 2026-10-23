@@ -184,10 +184,10 @@ int usb_initialize(struct pmm *memory,const struct chos_boot_info *boot){
         }
         unsigned next=(c>>8)&255;if(!next)break;ext+=next;
     }
-    stage=4;reason=XHCI_HALT;w32(host.op,r32(host.op)&~1u);if(!wait_bits(host.op+4,1,1))goto failure;
+    stage=4;reason=XHCI_NOT_READY;if(!wait_bits(host.op+4,1u<<11,0))goto failure;
+    reason=XHCI_HALT;w32(host.op,r32(host.op)&~1u);if(!wait_bits(host.op+4,1,1))goto failure;
     diagnostic_log("xHCI halt: PASS");
-    stage=5;reason=XHCI_NOT_READY;if(!wait_bits(host.op+4,1u<<11,0))goto failure;
-    reason=XHCI_RESET;w32(host.op,2);if(!wait_bits(host.op,2,0))goto failure;
+    stage=5;reason=XHCI_RESET;w32(host.op,2);if(!wait_bits(host.op,2,0))goto failure;
     reason=XHCI_NOT_READY;if(!wait_bits(host.op+4,1u<<11,0))goto failure;
     diagnostic_log("xHCI reset/CNR: PASS");registers();
     reason=XHCI_PAGESIZE;if(!(r32(host.op+8)&1))goto failure;
