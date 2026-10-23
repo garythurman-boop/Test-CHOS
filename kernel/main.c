@@ -21,12 +21,13 @@ void kernel_main(struct chos_boot_info *info) {
     if (!info || info->magic!=CHOS_BOOT_MAGIC) for (;;) __asm__ volatile("wfe");
     struct chos_boot_info *boot=info;
     console_init(info);
+    if(info->entry_error)panic("UNSUPPORTED EL2 HANDOFF STATE");
     exception_init();
     console_rect(0,0,boot->width,boot->height,0x071b36);
     console_rect(0,0,boot->width,72,0x164a82);
     console_text(32,24,"CHOS",0xffffff);
     console_text(32,100,"ORIGINAL ARM64 KERNEL",0xffffff);
-    console_text(32,132,"FIRMWARE BOOT SERVICES EXITED",0x8edbff);
+    console_text(32,132,info->entry_el==2?"UEFI EL2 TO EL1 HANDOFF PASS":"UEFI EL1 HANDOFF PASS",0x8edbff);
     uint64_t el,freq;
     __asm__ volatile("mrs %0, CurrentEL":"=r"(el));
     __asm__ volatile("mrs %0, cntfrq_el0":"=r"(freq));
@@ -60,15 +61,15 @@ void kernel_main(struct chos_boot_info *info) {
     if(!a || !b || !heap_free(&heap,a) || !heap_free(&heap,b)) panic("HEAP TEST FAILED");
     uint64_t mpidr; __asm__ volatile("mrs %0, mpidr_el1":"=r"(mpidr));
     struct platform platform;
-    if(!platform_discover(boot,mpidr,&platform)) panic("ACPI GIC2 TIMER DISCOVERY FAILED");
-    if(!mmu_init(&physical,boot,platform.gic_distributor,platform.gic_cpu)) panic("MMU INIT FAILED");
+    if(!platform_discover(boot,mpidr,&platform)) panic("ACPI GIC TIMER DISCOVERY FAILED");
+    if(!mmu_init(&physical,boot,platform.gic_distributor,platform.gic_version==2?platform.gic_cpu:0)) panic("MMU INIT FAILED");
     if(!exception_test_read(0)) panic("NULL GUARD TEST FAILED");
     if(!exception_test_read((uintptr_t)__text_start+512*1024)) panic("STACK GUARD TEST FAILED");
     if(!exception_test_write((uintptr_t)__text_start)) panic("READONLY TEXT TEST FAILED");
     if(!exception_test_execute(arena)) panic("NX HEAP TEST FAILED");
     console_rect(0,160,boot->width,boot->height-160,0x071b36);
     console_text(32,172,"EXCEPTIONS AND MEMORY TESTS PASS",0x8effb0);
-    console_text(32,200,"ACPI GIC2 TIMER DISCOVERED",0x8edbff);
+    console_text(32,200,"ACPI GIC TIMER DISCOVERED",0x8edbff);
     console_text(32,228,"PREEMPTION TEST RUNNING",0xffffff);
     scheduler_init();
     int a_id=thread_create(&physical,arch_test_worker,&workers[0],1);
@@ -168,6 +169,7 @@ void kernel_main(struct chos_boot_info *info) {
     if(!storage_phase)setup_initialize(disk_ready?&disk:0,boot,&physical);
     int input_devices=input_initialize(&physical,boot);
     if(input_devices<0) panic("VIRTIO INPUT SETUP FAILED");
+    platform_record(boot,&platform,(unsigned)input_devices,disk_ready);
     __asm__ volatile("msr daifclr, #2":::"memory");
     console_rect(0,150,boot->width,boot->height-150,0x071b36);
     console_text(32,172,"MEMORY PREEMPTION AND REAP PASS",0x8effb0);
@@ -176,7 +178,7 @@ void kernel_main(struct chos_boot_info *info) {
     console_text(32,256,"TIMER TICKS",0xffffff); console_number(240,256,timer_ticks());
     console_text(32,284,"CONTEXT SWITCHES",0xffffff); console_number(240,284,scheduler_switches());
     console_text(32,316,"CORE TESTS PASS STORAGE OPTIONAL",0x8effb0);
-    console_text(32,352,"STARTING DESKTOP AFTER CORE TESTS",0xffffff);
+    console_text(32,352,platform.gic_version==3?"GICV3 TIMER INTERRUPTS VERIFIED":"GICV2 TIMER INTERRUPTS VERIFIED",0xffffff);
     uint32_t signature[8]={0x32bbcd,0x6b45a1,0xf3ba20,0x18ad72,
                                         0xe14567,0x2998ef,0xcddc39,0x804020};
     if(!storage_phase) console_text(32,380,disk_ready?"NVME STORAGE READY":"NVME NOT PRESENT OPTIONAL",0x8edbff);

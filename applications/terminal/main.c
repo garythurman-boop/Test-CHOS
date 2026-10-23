@@ -5,6 +5,27 @@ static void line(const char *s) {
     if(lines==16){for(unsigned i=0;i<15;i++)copy(history[i],history[i+1],80);lines--;}
     copy(history[lines++],s,80);
 }
+static void pair(const char *label,uint64_t a,const char *label2,uint64_t b){
+    char row[80],value[21];copy(row,label,sizeof(row));number(value,a);copy(row+length(row),value,sizeof(row)-length(row));copy(row+length(row),label2,sizeof(row)-length(row));number(value,b);copy(row+length(row),value,sizeof(row)-length(row));line(row);
+}
+static void hardware(void){
+    struct chos_hardware h;if(api(SYS_HARDWARE,(uintptr_t)&h,0,0)){line("Hardware snapshot unavailable");return;}
+    line("CHOS firmware/hardware snapshot v1");line(h.firmware_vendor);
+    pair("Firmware EL: ",h.entry_el,"   Kernel EL: ",h.kernel_el);
+    pair("GIC version: ",h.gic_version,"   Timer IRQ: ",h.timer_irq);
+    pair("Input devices: ",h.input_devices,"   NVMe: ",h.storage);
+    pair("Display: ",h.width," x ",h.height);
+    pair("Sector bytes: ",h.sector_bytes,"   Pixel format: ",h.pixel_format);
+    pair("PCI recorded: ",h.pci_count,"   Handles: ",h.pci_total);
+    unsigned count=h.pci_count<8?h.pci_count:8;
+    for(unsigned i=0;i<count;i++){
+        const struct chos_pci_device *d=&h.pci[i];char row[]="0000:00:00.0 0000:0000 class 000000";
+        const char hex[]="0123456789abcdef";const unsigned at[]={0,5,8,11,13,18,29},width[]={4,2,2,1,4,4,6};
+        const uint32_t value[]={d->segment,d->bus,d->slot,d->function,d->vendor,d->device,((uint32_t)d->base_class<<16)|((uint32_t)d->subclass<<8)|d->interface};
+        for(unsigned j=0;j<7;j++)for(unsigned k=0;k<width[j];k++)row[at[j]+k]=hex[(value[j]>>((width[j]-k-1)*4))&15];
+        line(row);
+    }
+}
 static bool absolute(const char *s,char path[60]) {
     if(!s[0])return false;
     if(equal(s,"..")){copy(path,cwd,60);unsigned n=(unsigned)length(path);while(n && path[n]!='/')n--;path[n?n:1]=0;return true;}
@@ -23,7 +44,7 @@ static void execute(void) {
     char a[60],b[60];bool pa=absolute(words[1],a),pb=absolute(words[2],b);
     if(!words[0][0])return;
     if(equal(words[0],"help")) {
-        line("help dir cd mkdir copy move del cls");line("cat systeminfo reboot shutdown");line("run explorer|notepad|terminal|settings");line("run tasks|about");line(volume_status());return;
+        line("help dir cd mkdir copy move del cls");line("cat systeminfo hardware reboot shutdown");line("run explorer|notepad|terminal|settings");line("run tasks|about");line(volume_status());return;
     }
     if(equal(words[0],"cls")){lines=0;return;}
     if(equal(words[0],"pwd")){line(cwd);return;}
@@ -45,6 +66,7 @@ static void execute(void) {
         for(unsigned i=0;i<40;i++){struct chos_dirent e;if(api(SYS_LIST,i,(uintptr_t)&e,0)==0 && e.kind==2 && equal(e.path,a))exists=true;}
         if(exists)copy(cwd,a,sizeof(cwd));else line("Directory not found");return;
     }
+    if(equal(words[0],"hardware")){hardware();return;}
     if(equal(words[0],"systeminfo")) {
         struct chos_info info;if(api(SYS_INFO,(uintptr_t)&info,0,0)){line("System information unavailable");return;}
         line("CHOS pre-alpha ARM64. Original kernel.");char value[21];number(value,info.processes);line("Live user processes:");line(value);

@@ -21,13 +21,16 @@ Blue keyboard-driven disk selection and typed confirmation lead to native Royale
 configuration/progress/completion. Progress follows real operations and copied
 bytes. Original GPT/FAT32/CHFS writers verify the files and installed boot path.
 
-**VMware Fusion compatibility remains unverified.** GICv3, USB/xHCI input and EL2
-entry are unsupported. A native installation core and disk reboot are tested under QEMU; account/password
+**VMware Fusion compatibility remains unverified.** Original EL2→EL1 startup and
+ACPI GICv3 now pass QEMU tests. USB host/HID input remains unsupported. Actual Fusion
+device inventory and target validation are pending. Native installation and disk
+reboot are tested under QEMU; account/password
 and full time-zone/layout/mode setup, networking and CHOS 0.1 remain unfinished.
 
 ## Download testing images
 
-- [Current dedicated full-screen Setup ISO](artifacts/milestone-6d-setup/CHOS-ARM64.iso).
+- [Current M7A/7B boot/interrupt compatibility ISO](artifacts/milestone-7a-b/CHOS-ARM64.iso).
+- [Preserved dedicated full-screen Setup ISO](artifacts/milestone-6d-setup/CHOS-ARM64.iso).
 - [Preserved saved-configuration/widget ISO](artifacts/milestone-6d/CHOS-ARM64.iso).
 - [Previous Royale foundation ISO](artifacts/milestone-6c/CHOS-ARM64.iso).
 - [Previous native installer checkpoint](artifacts/milestone-6b/CHOS-ARM64.iso).
@@ -40,7 +43,7 @@ and full time-zone/layout/mode setup, networking and CHOS 0.1 remain unfinished.
 - [Older M2A ISO](artifacts/milestone-2a/CHOS-ARM64.iso).
 
 On GitHub choose **Download raw file**, then verify the adjacent SHA256SUMS.
-Read [current image notes](artifacts/milestone-6d-setup/README.md) before testing. The
+Read [current image notes](artifacts/milestone-7a-b/README.md) before testing. The
 separate STORAGE-TEST ISO is for the automated disposable-disk tests only, with
 an explicit boot-volume opt-in and exact device identity gate. It is not an installer.
 
@@ -60,7 +63,7 @@ El Torito FAT boot volume. Secure Boot must be off. The FAT volume is not an
 installed ESP. `kernel.elf` is a debug artifact; the separate static ELF loader
 runs original acceptance and application programs embedded in the kernel.
 
-Validation runs thirteen host C test programs (both ELF payloads) and thirty-five real
+Validation runs fourteen host C test programs (both ELF payloads) and forty-five real
 AArch64 UEFI QEMU cases, including 512 MiB/1 GiB boots, protection/IPC, keyboard/
 mouse window and application interactions, native restart/shutdown, three cold
 NVMe/CHFS boots, two GPT/ESP disk-only boots and expected error/safety cases.
@@ -78,7 +81,9 @@ Dedicated Setup tests inject an actual NVMe write error, stop/retry an active
 installation, boot a 70 MiB native installation, reject a too-small disk without
 writes and verify full-screen configuration at 640×480. Desktop tests explicitly
 choose Live Desktop from the ISO's Setup welcome page.
-Evidence: docs/evidence/m6d-setup.
+New tests cover real UEFI EL1/EL2 with GICv2/v3, native EL2/GICv3 installation
+and two disk-only boots for each sector geometry, ACPI-off refusal and a read-only
+native hardware query checked against QMP PCI inventory. Evidence: docs/evidence/m7ab.
 `bash scripts/sanitize.sh` additionally runs the portable modules with ASan/UBSan
 when host GCC/Clang supports them.
 
@@ -91,7 +96,8 @@ after toolchain installation. Tests start/stop their own QEMU processes.
 
 - [Acceptance criteria and evidence](docs/acceptance.md)
 - [Dedicated installation environment and safety](docs/setup-environment.md)
-- [Current iteration results](docs/milestone-6d-setup.md)
+- [Current M7A/7B iteration results](docs/milestone-7a-b.md)
+- [Account architecture and prerequisites](docs/accounts-design.md)
 - [Native installation results and limits](docs/milestone-6b.md)
 - [Installer-format foundations and disk boot](docs/milestone-6a.md)
 - [Desktop/application sequence results](docs/milestone-5.md)

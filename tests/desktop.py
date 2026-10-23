@@ -11,14 +11,14 @@ import time
 from boot import BUILD, read_ppm, save_png
 
 class Guest:
-    def __init__(self,label='desktop',ram=512,disk=None,sector_bytes=512,optical=False,live=True,fault_config=None):
+    def __init__(self,label='desktop',ram=512,disk=None,sector_bytes=512,optical=False,live=True,fault_config=None,gic_version=2,virtualization=False):
         self.label=label
         self.lock=(BUILD/'boot-test.lock').open('w')
         fcntl.flock(self.lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
         self.sockpath=Path(f'/tmp/chos-desktop-{os.getpid()}.sock')
         self.screen=BUILD/f'{label}.ppm'
         self.iso=BUILD/'CHOS-ARM64.iso'
-        self.command=['qemu-system-aarch64','-machine','virt,gic-version=2','-cpu','cortex-a72','-accel','tcg','-m',str(ram),'-smp','1',
+        self.command=['qemu-system-aarch64','-machine',f'virt,gic-version={gic_version},virtualization={"on" if virtualization else "off"}','-cpu','cortex-a72','-accel','tcg','-m',str(ram),'-smp','1',
             '-bios',os.environ.get('CHOS_UEFI_FIRMWARE','/usr/share/qemu-efi-aarch64/QEMU_EFI.fd'),
             '-device','ramfb','-device','virtio-keyboard-pci','-device','virtio-mouse-pci',
             '-display','none','-serial',f'file:{BUILD}/{label}.serial.log',

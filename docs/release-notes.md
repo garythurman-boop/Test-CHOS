@@ -1,3 +1,13 @@
+# M7A/7B development checkpoint
+
+Original non-VHE EL2→EL1 startup, ACPI GICv3 discovery/controller/CPU interface,
+read-only firmware PCI inventory and native `hardware` diagnostics are implemented.
+Shared binary-size labels refine existing Setup without changing Royale design.
+Expanded regression: 45 QEMU cases/14 host programs plus sanitizers and clean-source
+reproduction; see [iteration report](milestone-7a-b.md) for final recorded results.
+Fusion remains unverified, USB host/HID absent, accounts design-only. Previous
+images are preserved. This is not Milestone 7 completion or a CHOS 0.1 release.
+
 # M6D continuation — dedicated native Setup
 
 This development checkpoint preserves the previous M6D widget/configuration ISO

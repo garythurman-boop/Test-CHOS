@@ -17,12 +17,13 @@ static void leave(void){
 }
 static void line(int y,const char *s){ui_text(4,32,y,s,WHITE);}
 static void amount(int x,int y,uint64_t n,uint32_t color){char s[21];number(s,n);ui_text(4,x,y,s,color);}
+static void size(int x,int y,uint64_t bytes,uint32_t color){char s[32];if(ui_format_size(s,sizeof(s),bytes))ui_text(4,x,y,s,color);}
 static void information(void){
     static const char *const reasons[]={"Read checks passed. Confirmation required.","No supported NVMe disk was detected.","Disabled: this is not an optical-media boot.","Disk too small for the displayed layout.","Disk read failed. No installation is allowed.","Disk identity unavailable. Installation blocked.","Namespace reports write protection."};
     line(112,"NVMe controller 0 / namespace 1");
     line(144,"Serial:");ui_text(4,152,144,disk.serial,WHITE);
-    line(176,"Capacity MiB:");amount(224,176,disk.bytes/1048576,WHITE);
-    line(208,"Logical sector bytes:");amount(320,208,disk.sector,WHITE);
+    line(176,"Capacity:");size(224,176,disk.bytes,WHITE);
+    line(208,"Logical block size:");size(320,208,disk.sector,WHITE);
     line(240,target.layout==2?"Existing primary GPT verified:":target.layout==1?"Existing MBR partition table detected:":target.layout==3?"Existing layout unrecognized or invalid:":"No partition table detected:");
     if(target.layout==2){
         unsigned limit=target.reason==SETUP_TARGET_SMALL?3:4;
@@ -30,7 +31,7 @@ static void information(void){
         for(unsigned i=0;i<count;i++){
             char name[24];copy(name,target.existing[i].name,sizeof(name));
             ui_text(0,48,268+(int)i*22,name[0]?name:"Unnamed partition",WHITE);
-            amount(app_width-180,268+(int)i*22,target.existing[i].bytes/1048576,WHITE);ui_text(3,app_width-72,272+(int)i*22,"MiB",WHITE);
+            size(app_width-180,268+(int)i*22,target.existing[i].bytes,WHITE);
         }
     } else line(272,"Existing data will be replaced if confirmed.");
     if(target.reason==SETUP_TARGET_SMALL){ui_text(0,32,app_height-146,"Minimum required bytes:",WHITE);amount(224,app_height-146,target.minimum_bytes,WHITE);}
@@ -53,14 +54,14 @@ static void blue(void){
     } else if(page==DESTINATION){line(80,"Select installation destination");information();}
     else if(page==LAYOUT){
         line(92,"Partition layout for the selected disk");line(140,"ALL EXISTING PARTITIONS WILL BE REPLACED.");
-        line(184,"GPT: primary and backup metadata");line(220,"EFI System Partition / FAT32:");amount(440,220,target.esp_bytes/1048576,WHITE);
+        line(184,"GPT: primary and backup metadata");line(220,"EFI System Partition / FAT32:");size(440,220,target.esp_bytes,WHITE);
         line(256,"CHOS system partition: remaining disk");line(292,"CHFS currently uses the first 4 MiB.");
         line(328,"Minimum required bytes:");amount(344,328,target.minimum_bytes,WHITE);
         ui_text(0,32,app_height-96,"This layout is a preview. Nothing has been written.",0xc3d5ff);
     } else if(page==CONFIRMATION){
         line(92,"Confirm destruction of the selected disk");line(140,"WARNING: all data on this disk will be lost.");
         line(184,"NVMe serial:");ui_text(4,224,184,disk.serial,WHITE);
-        line(220,"Capacity MiB:");amount(224,220,disk.bytes/1048576,WHITE);
+        line(220,"Capacity:");size(224,220,disk.bytes,WHITE);
         line(264,"Type ERASE followed by the exact serial.");
         ui_textfield(&app_gui,80,32,306,app_width-64,confirm.erase,sizeof(confirm.erase));
         ui_text(0,32,app_height-96,"Enter authorizes actual partitioning and writes.",0xc3d5ff);
@@ -120,7 +121,7 @@ static void graphical(void){
         ui_text(0,x,164,operations[disk.phase<=6?disk.phase:6],WHITE);
         ui_text(3,x,206,"Overall progress counts completed installation stages.",0xc5dff3);
         ui_progress(&app_gui,x,236,w,24,disk.progress);amount(x,276,disk.progress,WHITE);ui_text(0,x+48,278,"percent",WHITE);
-        if(target.total_bytes){amount(x,320,target.completed_bytes,WHITE);ui_text(0,x+132,322,"of",WHITE);amount(x+164,320,target.total_bytes,WHITE);ui_text(3,x,352,"Actual file bytes copied. Verification follows.",0xc5dff3);}
+        if(target.total_bytes){size(x,320,target.completed_bytes,WHITE);ui_text(0,x+132,322,"of",WHITE);size(x+164,320,target.total_bytes,WHITE);ui_text(3,x,352,"Actual file data copied. Verification follows.",0xc5dff3);}
         else ui_text(0,x,322,"Working on the operation shown above.",WHITE);
         ui_text(3,x,app_height-86,"Do not power off while the disk writer is active.",0xffdea2);return;
     }

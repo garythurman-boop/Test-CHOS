@@ -43,6 +43,17 @@ int main(void) {
     d.type=11; assert(!platform_discover(&b,0x102,&p)); d.type=9;
     w32(r+20,8192); sum(r,36,32); assert(!platform_discover(&b,0x102,&p));
     w32(r+20,36);sum(r,36,32);
+    /* GICv3: region discovery and the current CPU's direct GICC base. */
+    dist[20]=3;w64(cpu+32,0);w32(m+4,164);unsigned char *rd=m+148;
+    rd[0]=14;rd[1]=16;w64(rd+4,0x90a0000);w32(rd+12,0x100000);sum(m,164,9);
+    assert(platform_discover(&b,0x102,&p) && p.gic_version==3 && p.redistributor_count==1 && p.redistributors[0].base==0x90a0000);
+    w32(rd+12,0x10000);sum(m,164,9);assert(!platform_discover(&b,0x102,&p));
+    w32(rd+12,0x100000);w64(rd+4,(uintptr_t)data);sum(m,164,9);assert(!platform_discover(&b,0x102,&p));
+    w64(rd+4,0x90a0000);sum(m,164,9);
+    w64(cpu+60,0x90a0000);w32(m+4,148);sum(m,148,9);assert(platform_discover(&b,0x102,&p) && p.gic_redistributor==0x90a0000);
+    w64(cpu+60,0x90a1234);sum(m,148,9);assert(!platform_discover(&b,0x102,&p));
+    w64(cpu+60,0);sum(m,148,9);assert(!platform_discover(&b,0x102,&p));
+    dist[20]=2;w64(cpu+32,0x8010000);sum(m,148,9);
     unsigned char *fadt=data+1024;memcpy(fadt,"FACP",4);w32(fadt+4,132);fadt[8]=5;fadt[129]=3;sum(fadt,132,9);
     w32(x+4,68);w64(x+60,(uintptr_t)fadt);sum(x,68,9);
     bool hvc=false;assert(platform_psci(&b,&hvc) && hvc);

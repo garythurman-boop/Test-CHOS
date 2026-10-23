@@ -1,6 +1,6 @@
 # CHOS acceptance evidence
 
-Current sequence: [M6D dedicated Setup](milestone-6d-setup.md),
+Current sequence: [M7A/7B boot/interrupt compatibility](milestone-7a-b.md),
 [setup architecture](setup-environment.md). Earlier tables below retain their
 checkpoint-specific evidence; each new sequence reruns the earlier core coverage.
 
@@ -14,7 +14,7 @@ These results are distinct. All VM results below are QEMU AArch64 UEFI, not Fusi
 | Guest installed GPT/ESP/CHFS/payload/configuration to disk | Pass | same native-install records; independent CRC/configuration/license parser |
 | Installed disk booted without ISO and retained native file saves across a second cold boot | Pass, both geometries | same records; installed-*.serial.log and screenshots |
 | Full setup configuration/accounts/password/timezone/layout/mode | Incomplete | milestone-6b.md and status.md |
-| VMware Fusion ISO/input/storage/installation/reboot | Not tested | No Apple Silicon/Fusion host; GICv3 and USB/xHCI unsupported |
+| VMware Fusion ISO/input/storage/installation/reboot | Not tested | No Apple Silicon/Fusion host; actual devices unknown and USB host/HID unsupported |
 | CHOS 0.1 release readiness | Not ready | status.md |
 
 The suite covers twenty QEMU boots (seventeen positive, three expected refusals),
@@ -65,3 +65,17 @@ writes. The workspace case arranges Explorer, Notepad and Task Manager together
 and verifies full-screen Setup can return to those existing apps. Current results
 and actual captures are recorded in milestone-6d-setup.md and evidence/m6d-setup.
 Fusion and authentication/account acceptance remain open.
+
+## M7A/7B additions
+
+Preserve all 35 prior cases. Replace the former GICv3 refusal with ACPI-off refusal.
+Require three additional real UEFI boots: EL1/GICv3, EL2/GICv2, EL2/GICv3, each
+with exception/MMU/protection/scheduler/IPC/input checks and observed firmware EL.
+Require six additional native install/disk-only/reopen boots using EL2/GICv3 at
+512/4096-byte sectors, preserving explicit ERASE, payload verification, Restart
+and saved settings/files. Add native hardware query/QMP PCI cross-check and an
+unchanged unconfirmed-disk hash. Total: 45 QEMU cases, 14 host programs including
+portable GICv3 resources/affinity/routing/mask/timeout tests, both ELF validators
+and ASan/UBSan. Require clean tracked-source ISO reproduction. Actual Fusion
+ISO/input/storage/install/reboot criteria remain pending separately; this is an
+intermediate checkpoint, not Milestone 7 completion or CHOS 0.1.

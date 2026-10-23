@@ -12,7 +12,7 @@ build/boot.obj: boot/uefi/main.c boot/uefi/efi.h include/boot.h include/display_
 	$(CC) $(CFLAGS) --target=aarch64-pc-windows-msvc -c $< -o $@
 build/BOOTAA64.EFI: build/boot.obj
 	lld-link /subsystem:efi_application /entry:efi_main /nodefaultlib /machine:arm64 /timestamp:0 /out:$@ $<
-KSOURCES := kernel/config/format.c kernel/config/store.c installer/inventory.c installer/policy.c installer/service.c installer/gpt.c installer/fat32.c filesystem/ram.c kernel/arch/arm64/power.c desktop/desktop.c desktop/window-manager/model.c desktop/graphics/render.c desktop/graphics/primitives.c desktop/graphics/fontcache.c desktop/graphics/font.c drivers/input/virtio.c drivers/input/events.c filesystem/vfs.c filesystem/chfs.c drivers/storage/nvme.c kernel/storage_test.c kernel/runtime.c kernel/main.c kernel/console.c kernel/process/elf.c kernel/process/process.c kernel/syscall/syscall.c kernel/arch/arm64/acpi.c kernel/memory/physical.c kernel/memory/heap.c kernel/memory/virtual.c kernel/interrupts/exception.c kernel/scheduler/scheduler.c drivers/interrupts/gicv2_timer.c
+KSOURCES := kernel/arch/arm64/hardware.c kernel/config/format.c kernel/config/store.c installer/inventory.c installer/policy.c installer/service.c installer/gpt.c installer/fat32.c filesystem/ram.c kernel/arch/arm64/power.c desktop/desktop.c desktop/window-manager/model.c desktop/graphics/render.c desktop/graphics/primitives.c desktop/graphics/fontcache.c desktop/graphics/font.c drivers/input/virtio.c drivers/input/events.c filesystem/vfs.c filesystem/chfs.c drivers/storage/nvme.c kernel/storage_test.c kernel/runtime.c kernel/main.c kernel/console.c kernel/process/elf.c kernel/process/process.c kernel/syscall/syscall.c kernel/arch/arm64/acpi.c kernel/memory/physical.c kernel/memory/heap.c kernel/memory/virtual.c kernel/interrupts/exception.c kernel/scheduler/scheduler.c drivers/interrupts/gicv3.c drivers/interrupts/gicv2_timer.c
 KASM := desktop/graphics/assets.S kernel/arch/arm64/entry.S kernel/arch/arm64/vectors.S kernel/arch/arm64/mmu.S kernel/arch/arm64/test_worker.S kernel/process/image.S
 KOBJECTS := $(patsubst %.c,build/%.o,$(KSOURCES)) $(patsubst %.S,build/%.o,$(KASM))
 build/%.o: %.c $(wildcard include/*.h) Makefile
@@ -117,3 +117,8 @@ test-gui: | build
 test-inventory: | build
 	$(CC) -std=c11 -Wall -Wextra -Werror -Iinclude tests/inventory.c installer/inventory.c installer/gpt.c -o build/test-inventory
 	./build/test-inventory
+
+.PHONY: test-gic
+test-gic: | build
+	$(CC) -std=c11 -Wall -Wextra -Werror -Iinclude tests/gic.c drivers/interrupts/gicv3.c -o build/test-gic
+	./build/test-gic

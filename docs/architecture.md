@@ -23,8 +23,11 @@ addresses requiring an unavailable runtime relocator. Text/rodata are page align
 image plus BSS must remain below 512 KiB. The upper half of the reservation contains
 the temporary stack, with a guard at the 512 KiB boundary.
 
-Current firmware entry must be **EL1**. EL2 entry is rejected clearly; no privilege
-transition is implemented. Firmware mappings are used only during early setup.
+Firmware may enter at EL1 or supported non-VHE EL2. The original transition
+converts firmware TTBR0/TCR/MAIR to EL1 while keeping identity mappings and cache
+attributes active, configures HCR/counter/timer/trap controls and GIC system-register
+access, and ERETs with DAIF masked to EL1h. VHE, LPA2/52-bit, MMU-off and big-endian
+EL2 handoffs are rejected. Firmware mappings are used only during early setup.
 An original 2 KiB-aligned vector table then handles all 16 vector slots, preserving
 x0-x30, SP_EL0, ELR/SPSR and ESR/FAR in a 304-byte frame. Unknown faults display
 syndrome/address/PC and halt. Only exact armed self-test instructions recover.
@@ -61,10 +64,16 @@ private process spaces are bounded, with no general mmap/demand-paging API.
 No GIC MMIO addresses or PPI numbers are hardcoded in the kernel. A bounded ACPI
 parser validates RSDP/XSDT/table checksums and memory ownership. MADT selects the
 boot CPU's GICC using MPIDR, plus GICD; GTDT supplies the non-secure physical timer
-PPI. Only GICv2 and a high-active timer PPI are currently supported. Unsupported
-GICv3, missing ACPI and EL2 entry halt with a useful error rather than probing
+PPI. GICv2 and GICv3 with a high-active physical timer PPI are supported. GICv3
+selects a direct GICC redistributor or bounded MADT GICR ranges using MPIDR affinity,
+including VLPIS stride/Last handling. Misaligned, overlapping, RAM-owned or invalid
+resources are rejected. Missing ACPI/unsupported resources halt rather than probing
 QEMU addresses. ACPI structures are read bytewise to avoid unaligned loads.
 
+The GICv3 driver initializes distributor and redistributor Group-1 NS interrupts,
+priority/trigger/masks, affinity routing, CPU SRE/PMR/BPR/IGRPEN and ICC_IAR1/EOIR1.
+Wake and RWP waits use bounded physical-counter timeouts. Only the boot CPU and
+physical timer interrupt are used; no ITS/LPI/MSI or SMP support is implied.
 The GICv2 driver enables and acknowledges the timer interrupt; AckCtl permits
 Group-1 acknowledgement in the unified view. The physical generic timer is rearmed
 at nominal 100 Hz based on CNTFRQ_EL0. Rearming from the current counter allows
@@ -202,3 +211,18 @@ using a bounded cooperative kernel-thread yield, without synthetic progress time
 See [setup-environment.md](setup-environment.md) for the flow, layout, authority,
 failure model and limits. No second OS/kernel, firmware disk writer or new GUI
 framework is introduced.
+
+## M7A/7B diagnostics and refinement
+
+Read-only EFI PCI I/O enumeration runs before final GetMemoryMap; at most 32
+records and bounded firmware vendor text enter private boot info. Static offsets
+protect the assembly entry contract. A kernel-owned 688-byte versioned snapshot
+reports actual EL, selected GICR, ACPI resources, initialized drivers and GOP, not
+assumed platform constants. Syscall 33 validates the entire user destination before
+copying. No firmware protocol calls occur after ExitBootServices. Full USB/HID
+and ACPI dump facilities are not present. See [matrix](fusion-compatibility-matrix.md).
+
+Native Setup uses the shared integer-only binary-size formatter for capacities,
+partitions, logical sectors and real byte progress. No geometry or theme redesign.
+Account authority/entropy/hash/session prerequisites are specified separately in
+[accounts-design.md](accounts-design.md); none are implied by this checkpoint.

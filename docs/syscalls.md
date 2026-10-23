@@ -181,3 +181,17 @@ PRESENT behavior. The compositor acknowledges the submitted phase only after
 copying the actual full-screen frame to GOP; a stale frame cannot acknowledge a
 newer operation. Refreshes are queued before waking the client, avoiding a lost
 wake if a stage changes during painting.
+
+## M7A/7B hardware snapshot
+
+33 HARDWARE: x0 points to a writable 688-byte `chos_hardware` (include/hardware.h);
+returns 0, or -14 for an invalid/protected span. Structure version is 1. It contains
+firmware entry/current kernel EL, GIC/timer, initialized input/NVMe, sector size,
+GOP dimensions/stride/format, ACPI GICD/selected GICR/ECAM, NVMe BAR, bounded firmware
+vendor/serial strings and at most 32 16-byte PCI BDF/vendor/device/class records.
+`pci_total` counts valid enumerated records, `pci_count` retained records. The
+original firmware enumeration is read-only and bounded at 256 handles. Unavailable
+resources are zero; storage/input fields indicate actual driver initialization,
+not mere device presence. All apps may query the immutable kernel snapshot; it
+provides diagnostics, not new device access or authentication authority. Terminal
+`hardware` shows the first eight PCI records within its bounded text history.

@@ -5,6 +5,7 @@
 #include "vfs.h"
 #include "desktop.h"
 #include "setup.h"
+#include "platform.h"
 struct exception_frame *syscall_dispatch(struct exception_frame *f) {
     struct process *p=process_current();
     if(!p || (f->spsr&15)!=0) panic("INVALID USER SYSCALL CONTEXT");
@@ -17,6 +18,7 @@ struct exception_frame *syscall_dispatch(struct exception_frame *f) {
     }
     int64_t result=-38;
     switch(f->x[8]) {
+    case SYS_HARDWARE: result=user_copy(p,f->x[0],(void *)platform_hardware(),sizeof(struct chos_hardware),true)?0:-14;break;
     case SYS_ABI: result=1; break;
     case SYS_PID: result=(int64_t)p->pid; break;
     case SYS_TICKS: result=(int64_t)timer_ticks(); break;

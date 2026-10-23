@@ -8,10 +8,11 @@
 | 4: CHOS Desktop/window manager/taskbar/Start | Working core; Royale widgets and multi-window usage tested; dedicated Search/Help and wallpaper file loading remain |
 | 5: six native applications | Functional bounded native apps with installed persistence and shared widgets; see desktop.md |
 | 6: graphical installer/GPT/ESP/installed boot | Dedicated full-screen blue/Royale native setup, disk boot and persistent system volume; saved computer/theme/fixed clock offset implemented; account/password/layout and graphical mode configuration unfinished |
-| 7: VMware Fusion validation | Not run: no Apple Silicon/Fusion host available |
+| 7: VMware Fusion validation | 7A/7B original EL2/GICv3 and diagnostics tested under QEMU; actual Fusion/7C device support blocked by missing target inventory/host |
 | 8: CHOS 0.1 | Not ready |
 
-Current ISO/results: [M6D dedicated Setup iteration](milestone-6d-setup.md).
+Current ISO/results: [M7A/7B boot and interrupts](milestone-7a-b.md).
+Preserved [M6D dedicated Setup iteration](milestone-6d-setup.md).
 [Setup flow and safety](setup-environment.md). Preserved [M6D widgets/settings checkpoint](milestone-6d.md). [Saved configuration](configuration.md), [native toolkit](gui-toolkit.md). Previous visual checkpoint: [milestone 6C](milestone-6c.md). [Royale visual architecture](royale.md). Previous installer core: [milestone 6B](milestone-6b.md). Earlier foundations: [milestone 6A](milestone-6a.md). Ordinary images
 boot dedicated Setup after kernel tests. L/F3 starts Live Desktop; installed disks
 start the regular desktop directly. Their live
@@ -22,8 +23,9 @@ not an installer or desktop persistence environment.
 
 ## Limits
 
-- One CPU, EL1 entry, ACPI 2.x, GICv2/GTDT. GICv3 is rejected. No EL2 startup,
-  DT-only discovery, SMP, USB/xHCI or confirmed Fusion device inventory.
+- One CPU, EL1 or supported non-VHE EL2→EL1 entry, ACPI 2.x, GICv2/v3 and GTDT.
+  No VHE/LPA2/52-bit/MMU-off/big-endian EL2 handoff, DT-only discovery, SMP,
+  GIC ITS/LPI/MSI, USB host/HID drivers or confirmed Fusion device inventory.
 - Eight user processes/twelve threads; private static AArch64 ELF subset, no
   dynamic linker, public arbitrary-executable spawn/wait or signals. Application
   launch selects one embedded ELF entry role. FP/SIMD traps; general registers only.
@@ -54,9 +56,14 @@ not an installer or desktop persistence environment.
   Full-screen Setup lacks account/password/DST/layout/mode configuration, cancellation of
   an active writer, repair/fsck and full transactional rollback. No Fusion evidence.
 
-The dedicated Setup sequence passed 35 QEMU cases, 13 portable host programs,
+The preserved dedicated Setup sequence passed 35 QEMU cases, 13 portable host programs,
 ASan/UBSan and clean tracked-source ISO reproduction. Actual captures and hashes:
 [evidence/m6d-setup/summary.json](evidence/m6d-setup/summary.json). Native 70 MiB
 installation/boot, both logical-sector geometries, typed confirmation, failure/
 interruption/retry and 640×480 setup are covered. This does not complete accounts,
 repair, production reliability or Fusion compatibility.
+
+The M7A/7B sequence expands acceptance to 45 QEMU cases and 14 host programs,
+including EL2/GICv3 native installation/persistence and firmware/native hardware
+diagnostics. See the [iteration report](milestone-7a-b.md) for final evidence.
+[Account architecture](accounts-design.md) is design only; no new security claim.

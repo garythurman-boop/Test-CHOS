@@ -28,6 +28,15 @@ static bool checksum(const uint8_t *p,size_t len) {
     for(size_t i=0;i<len;i++) sum=(uint8_t)(sum+p[i]);
     return sum==0;
 }
+static bool mmio(const struct chos_boot_info *b,uint64_t base,uint64_t size){
+    if(!base || base%PAGE_SIZE || !size || size%PAGE_SIZE || base>=(1ULL<<48)-size)return false;
+    for(uint64_t off=0;off<b->memory_map_size;off+=b->descriptor_size){
+        const struct memory_descriptor *d=(void *)(uintptr_t)(b->memory_map+off);
+        if(d->pages>(UINT64_MAX-d->physical)/PAGE_SIZE)return false;
+        if(d->type>=1 && d->type<=10 && base<d->physical+d->pages*PAGE_SIZE && d->physical<base+size)return false;
+    }
+    return true;
+}
 static const uint8_t *table(const struct chos_boot_info *b,uint64_t address) {
     if(!memory(b,address,36)) return 0;
     const uint8_t *p=(void *)(uintptr_t)address;
@@ -62,11 +71,15 @@ bool platform_discover(const struct chos_boot_info *b,uint64_t mpidr,struct plat
                     if(e[1]<76) return false;
                     if((u32(e+12)&1) && (u64(e+68)&0xff00ffffffULL)==(mpidr&0xff00ffffffULL)) {
                         if(got_cpu) return false;
-                        got_cpu=true; out->gic_cpu=u64(e+32);
+                        got_cpu=true; out->gic_cpu=u64(e+32);out->gic_redistributor=u64(e+60);out->mpidr=mpidr;
                     }
                 } else if(e[0]==12) {
                     if(e[1]<24 || out->gic_distributor) return false;
                     out->gic_distributor=u64(e+8); out->gic_version=e[20];
+                } else if(e[0]==14) {
+                    if(e[1]<16 || out->redistributor_count==8)return false;
+                    unsigned at=out->redistributor_count++;
+                    out->redistributors[at].base=u64(e+4);out->redistributors[at].size=u32(e+12);
                 }
                 j+=e[1];
             }
@@ -75,11 +88,22 @@ bool platform_discover(const struct chos_boot_info *b,uint64_t mpidr,struct plat
             got_timer=true; out->timer_irq=u32(t+56); out->timer_flags=u32(t+60);
         }
     }
-    return got_madt && got_timer && got_cpu && out->gic_version==2 &&
+    bool valid=got_madt && got_timer && got_cpu &&
            out->gic_distributor && out->gic_cpu &&
            !(out->gic_distributor%PAGE_SIZE) && !(out->gic_cpu%PAGE_SIZE) &&
            out->gic_distributor<(1ULL<<39)-0x10000 && out->gic_cpu<(1ULL<<39)-0x2000 &&
            out->timer_irq>=16 && out->timer_irq<=31 && !(out->timer_flags&2);
+    if(!mmio(b,out->gic_distributor,0x10000))return false;
+    if(out->gic_version==2)return valid && mmio(b,out->gic_cpu,0x2000);
+    if(out->gic_version!=3 || !got_madt || !got_timer || !got_cpu || !out->gic_distributor || out->gic_distributor%65536 || out->gic_distributor>=(1ULL<<48)-65536 || out->timer_irq<16 || out->timer_irq>31 || (out->timer_flags&2))return false;
+    if(out->gic_redistributor && (out->gic_redistributor%65536 || !mmio(b,out->gic_redistributor,0x20000)))return false;
+    for(unsigned i=0;i<out->redistributor_count;i++) {
+        uint64_t base=out->redistributors[i].base,size=out->redistributors[i].size;
+        if(!base || base%65536 || size<0x20000 || size%65536 || size>64*1024*1024 || base>=(1ULL<<48)-size)return false;
+        if(!mmio(b,base,size) || (base<out->gic_distributor+0x10000 && out->gic_distributor<base+size))return false;
+        for(unsigned j=0;j<i;j++)if(base<out->redistributors[j].base+out->redistributors[j].size && out->redistributors[j].base<base+size)return false;
+    }
+    return out->gic_redistributor || out->redistributor_count;
 }
 
 bool platform_pcie(const struct chos_boot_info *b,uint64_t *base) {

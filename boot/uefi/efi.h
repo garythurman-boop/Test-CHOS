@@ -33,7 +33,8 @@ struct boot_services {
     void *get_next_monotonic_count,*stall;
     status (*set_watchdog_timer)(uint64_t,uint64_t,uint64_t,char16 *);
     void *connect_controller,*disconnect_controller,*open_protocol,*close_protocol;
-    void *open_protocol_information,*protocols_per_handle,*locate_handle_buffer;
+    void *open_protocol_information,*protocols_per_handle;
+    status (*locate_handle_buffer)(uint32_t,struct guid *,void *,uint64_t *,handle **);
     status (*locate_protocol)(struct guid *,void *,void **);
 };
 struct efi_time { uint16_t year; uint8_t month,day,hour,minute,second,pad; uint32_t nanosecond; int16_t timezone; uint8_t daylight,pad2; };
@@ -87,6 +88,14 @@ struct gop_mode {
     uint64_t info_size,framebuffer,framebuffer_size;
 };
 struct gop { status (*query_mode)(struct gop *,uint32_t,uint64_t *,struct gop_info **); status (*set_mode)(struct gop *,uint32_t); void *blt; struct gop_mode *mode; };
+struct pci_io {
+    void *poll_mem,*poll_io,*mem_read,*mem_write,*io_read,*io_write;
+    status (*pci_read)(struct pci_io *,uint32_t,uint32_t,uint64_t,void *);
+    void *pci_write,*copy_mem,*map,*unmap,*allocate_buffer,*free_buffer,*flush;
+    status (*get_location)(struct pci_io *,uint64_t *,uint64_t *,uint64_t *,uint64_t *);
+};
+_Static_assert(offsetof(struct pci_io,pci_read)==48,"UEFI PCI read ABI");
+_Static_assert(offsetof(struct pci_io,get_location)==112,"UEFI PCI location ABI");
 _Static_assert(offsetof(struct boot_services,exit_boot_services)==24+26*8,"UEFI boot ABI");
 _Static_assert(offsetof(struct system_table,boot)==96,"UEFI system ABI");
 #endif

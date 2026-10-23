@@ -1,5 +1,20 @@
 #include "gui.h"
 #include "royale.h"
+bool ui_format_size(char *out,unsigned capacity,uint64_t bytes){
+    static const char units[7][4]={"B","KiB","MiB","GiB","TiB","PiB","EiB"};
+    if(!out || !capacity)return false;
+    uint64_t unit=1;unsigned which=0;
+    while(which<6 && bytes/unit>=1024){unit*=1024;which++;}
+    char value[32],digits[21];unsigned n=0,j=0;uint64_t whole=bytes/unit;
+    do{digits[j++]=(char)('0'+whole%10);whole/=10;}while(whole);
+    while(j)value[n++]=digits[--j];
+    unsigned tenth=(unsigned)((bytes%unit)*10/unit);
+    if(tenth){value[n++]='.';value[n++]=(char)('0'+tenth);}
+    value[n++]=' ';for(unsigned i=0;units[which][i];i++)value[n++]=units[which][i];
+    out[0]=0;if(n>=capacity)return false;
+    for(unsigned i=0;i<n;i++)out[i]=value[i];
+    out[n]=0;return true;
+}
 static unsigned length(const char *s,unsigned cap) {unsigned n=0;if(s)while(n<cap && s[n])n++;return n;}
 static void draw(struct ui_context *g,unsigned op,int x,int y,int w,int h,const char *text,uint32_t color) {
     struct chos_draw d={.op=op,.x=x,.y=y,.w=w,.h=h,.color=color};

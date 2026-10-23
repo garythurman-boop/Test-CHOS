@@ -11,9 +11,40 @@ static status fail(struct system_table *st,const char16 *msg,status code) {
     st->console_out->output(st->console_out,msg);
     return EFI_ERROR(code)?code:EFI_INVALID_PARAMETER;
 }
+static void pci_inventory(struct system_table *st,struct chos_boot_info *b){
+    struct guid protocol={0x4cf5b200,0x68b8,0x4ca5,{0x9e,0xec,0xb2,0x3e,0x3f,0x50,0x02,0x9a}};
+    handle *handles=0;uint64_t count=0;
+    if(!st->boot->locate_handle_buffer || EFI_ERROR(st->boot->locate_handle_buffer(2,&protocol,0,&count,&handles)))return;
+    if(count<=256 && handles){
+        b->pci_total=(uint32_t)count;
+        for(unsigned i=0;i<count && b->pci_count<32;i++){
+            struct pci_io *p=0;uint64_t segment,bus,slot,function;uint32_t header[3];
+            if(EFI_ERROR(st->boot->handle_protocol(handles[i],&protocol,(void **)&p)) || !p || !p->pci_read || !p->get_location || EFI_ERROR(p->get_location(p,&segment,&bus,&slot,&function)) || segment>65535 || bus>255 || slot>31 || function>7 || EFI_ERROR(p->pci_read(p,2,0,3,header)) || (header[0]&65535)==65535)continue;
+            struct chos_pci_device *d=&b->pci[b->pci_count++];
+            *d=(struct chos_pci_device){.vendor=(uint16_t)header[0],.device=(uint16_t)(header[0]>>16),.base_class=(uint8_t)(header[2]>>24),.subclass=(uint8_t)(header[2]>>16),.interface=(uint8_t)(header[2]>>8),.revision=(uint8_t)header[2],.segment=(uint16_t)segment,.bus=(uint8_t)bus,.slot=(uint8_t)slot,.function=(uint8_t)function};
+            char16 line[]=u"CHOS: PCI 0000:00:00.0 ID 0000:0000 CLASS 000000\r\n";
+            const char16 hex[]=u"0123456789abcdef";
+            const unsigned at[]={10,15,18,21,26,31,42};
+            const unsigned widths[]={4,2,2,1,4,4,6};
+            const uint32_t values[]={(uint32_t)segment,(uint32_t)bus,(uint32_t)slot,(uint32_t)function,d->vendor,d->device,header[2]>>8};
+            for(unsigned j=0;j<7;j++)for(unsigned k=0;k<widths[j];k++)line[at[j]+k]=hex[(values[j]>>((widths[j]-k-1)*4))&15];
+            st->console_out->output(st->console_out,line);
+        }
+    }
+    if(handles)st->boot->free_pool(handles);
+}
 status efi_main(handle image,struct system_table *st) {
     struct boot_services *bs=st->boot;
     st->console_out->output(st->console_out,(char16 *)u"CHOS - ARM64 UEFI loader\r\n");
+    uint64_t entry_el;__asm__ volatile("mrs %0, CurrentEL":"=r"(entry_el));
+    if(entry_el!=4 && entry_el!=8)return fail(st,(char16 *)u"CHOS: firmware must enter at EL1 or EL2\r\n",EFI_INVALID_PARAMETER);
+    st->console_out->output(st->console_out,entry_el==8?(char16 *)u"CHOS: firmware entry EL2\r\n":(char16 *)u"CHOS: firmware entry EL1\r\n");
+    if(entry_el==8){
+        uint64_t hcr,tcr,sctlr;
+        __asm__ volatile("mrs %0, hcr_el2; mrs %1, tcr_el2; mrs %2, sctlr_el2":"=r"(hcr),"=r"(tcr),"=r"(sctlr));
+        if((hcr&(1ULL<<34)) || !(sctlr&1) || (sctlr&(1ULL<<25)) || (tcr&(1ULL<<32)) || (tcr&63)<16 || (tcr&63)>39 || ((tcr>>16)&7)>5 || ((tcr>>14)&3)==3)
+            return fail(st,(char16 *)u"CHOS: unsupported EL2 firmware translation regime\r\n",EFI_INVALID_PARAMETER);
+    }
     bs->set_watchdog_timer(0,0,0,0);
     struct loaded_image *loaded=0;
     struct filesystem *fs=0;
@@ -63,6 +94,8 @@ status efi_main(handle image,struct system_table *st) {
     if (EFI_ERROR(s)) return fail(st,(char16 *)u"CHOS: boot information allocation failed\r\n",s);
     for (uint64_t i=0;i<sizeof(*bi);i++) ((uint8_t *)bi)[i]=0;
     bi->magic=CHOS_BOOT_MAGIC; bi->reserved=test_flags;
+    if(st->vendor)for(unsigned i=0;i<63 && st->vendor[i];i++)bi->firmware_vendor[i]=st->vendor[i]>=32 && st->vendor[i]<127?(char)st->vendor[i]:'?';
+    pci_inventory(st,bi);
     void *pristine=0;
     s=bs->allocate_pool(2,file_size,&pristine);
     if(EFI_ERROR(s))return fail(st,(char16 *)u"CHOS: payload snapshot allocation failed\r\n",s);

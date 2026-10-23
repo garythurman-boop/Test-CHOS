@@ -88,6 +88,8 @@ def main():
     parser.add_argument('--expect-missing-kernel',action='store_true')
     parser.add_argument('--gic-version',choices=['2','3'],default='2')
     parser.add_argument('--expect-platform-reject',action='store_true')
+    parser.add_argument('--virtualization',action='store_true')
+    parser.add_argument('--no-acpi',action='store_true')
     parser.add_argument('--label')
     parser.add_argument('--expect-disk-reject',action='store_true')
     parser.add_argument('--disk',type=Path)
@@ -109,7 +111,7 @@ def main():
     screen=BUILD/f'{name}.ppm'
     screen.unlink(missing_ok=True)
     firmware=os.environ.get('CHOS_UEFI_FIRMWARE','/usr/share/qemu-efi-aarch64/QEMU_EFI.fd')
-    command=['qemu-system-aarch64','-machine',f'virt,gic-version={args.gic_version}','-cpu','cortex-a72',
+    command=['qemu-system-aarch64','-machine',f'virt,gic-version={args.gic_version},virtualization={"on" if args.virtualization else "off"},acpi={"off" if args.no_acpi else "on"}','-cpu','cortex-a72',
              '-accel','tcg','-m',str(args.ram),'-smp','1','-bios',firmware,
              '-device','ramfb','-device','virtio-keyboard-pci','-device','virtio-mouse-pci','-device','virtio-scsi-pci',
              '-drive',f'if=none,id=cd,media=cdrom,readonly=on,file={args.iso.resolve()}',
@@ -183,13 +185,15 @@ def main():
                 raise RuntimeError('Boot acceptance timed out; inspect screenshot and logs')
             if not args.expect_missing_kernel:
                 save_png(screen)
-            outcome['milestone']='3'
+            outcome['milestone']='7B'
+            outcome['gic_version']=int(args.gic_version)
+            outcome['firmware_entry_el']=2 if 'CHOS: firmware entry EL2' in serial.read_text(errors='replace') else 1
             if args.storage_phase: outcome['storage_phase']=args.storage_phase
             outcome['result_kind']=('expected_rejection' if args.expect_platform_reject or args.expect_missing_kernel or args.expect_disk_reject else 'functional_boot')
             if outcome['result_kind']=='functional_boot':
                 outcome['kernel_checks']=['BRK exception return','physical page integrity and double-free rejection',
                     'heap allocate/free','null translation fault','stack guard translation fault',
-                    'read-only code permission fault','NX heap instruction fault','ACPI GICv2/GTDT discovery',
+                    'read-only code permission fault','NX heap instruction fault',f'ACPI GICv{args.gic_version}/GTDT discovery',
                     'timer-driven non-yielding worker preemption','register context canaries',
                     'strict priority and round-robin selection','thread exit and continued scheduling','EL0 static ELF execution and syscalls',
                     'per-process private mappings and IPC','invalid user buffer rejection',

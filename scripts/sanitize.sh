@@ -33,3 +33,6 @@ build/sanitized/gui
 
 cc "${flags[@]}" tests/inventory.c installer/inventory.c installer/gpt.c -o build/sanitized/inventory
 build/sanitized/inventory
+
+cc "${flags[@]}" tests/gic.c drivers/interrupts/gicv3.c -o build/sanitized/gic
+build/sanitized/gic

@@ -33,4 +33,5 @@ void ui_tab(struct ui_context *,unsigned,unsigned,int,int,int,const char *,bool)
 void ui_toolbar(struct ui_context *,int,int,int,int);
 void ui_dialog(struct ui_context *,int,int,int,int,const char *);
 void ui_progress(struct ui_context *,int,int,int,int,unsigned);
+bool ui_format_size(char *,unsigned,uint64_t);
 #endif

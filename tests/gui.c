@@ -6,6 +6,13 @@ static unsigned commands;
 static void emit(void *unused,const struct chos_draw *d){(void)unused;assert(d->op<=DRAW_UI_TEXT && d->w>=0 && d->h>=0);commands++;}
 static struct ui_result event(struct ui_context *g,unsigned type,unsigned code,int x,int y){struct chos_event e={.type=type,.code=code,.x=x,.y=y};return ui_event(g,&e);}
 int main(void) {
+    char formatted[32];
+    assert(ui_format_size(formatted,sizeof(formatted),0) && !strcmp(formatted,"0 B"));
+    assert(ui_format_size(formatted,sizeof(formatted),1536) && !strcmp(formatted,"1.5 KiB"));
+    assert(ui_format_size(formatted,sizeof(formatted),128*1048576) && !strcmp(formatted,"128 MiB"));
+    assert(ui_format_size(formatted,sizeof(formatted),UINT64_MAX) && !strcmp(formatted,"15.9 EiB"));
+    assert(!ui_format_size(formatted,3,1536) && !formatted[0]);
+    assert(!ui_format_size(0,32,1) && !ui_format_size(formatted,0,1));
     struct ui_context g={.emit=emit,.mouse_x=-1,.mouse_y=-1};char field[8]="ab";
     ui_begin(&g);ui_button(&g,1,'a',10,10,100,28,"Action",true);ui_button(&g,2,'b',120,10,100,28,"Disabled",false);ui_textfield(&g,3,10,50,100,field,sizeof(field));ui_scrollbar(&g,4,230,10,200,0,100,10);ui_end(&g);
     assert(commands && event(&g,EVENT_POINTER,0,20,20).repaint && g.hot==1);
