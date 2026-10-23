@@ -16,6 +16,8 @@ bool equal(const char *,const char *);
 void number(char *,uint64_t);
 void text(int,int,const char *,uint32_t);
 void box(int,int,int,int,uint32_t);
+void rounded(int,int,int,int,uint32_t);
+void ui_text(unsigned,int,int,const char *,uint32_t);
 void label(int,const char *);
 void status(const char *);
 void begin(uint32_t);

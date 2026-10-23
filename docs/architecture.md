@@ -158,3 +158,19 @@ then mounts a bounded CHFS partition and reads the saved computer name. The ISO
 uses RAM by default; installed disk sessions use persistent native file APIs. No
 login or per-user authority is implied by a saved computer name. Incomplete or
 unmountable volumes must not be reported as successfully mounted installations.
+
+## M6C decisions
+
+Retain the original command-list window system and private EL0 application model.
+Use build-time licensed outline fonts baked to a compact A8 cache rather than
+adding a guest font library. Preserve the existing editor's 12-pixel advance and
+introduce proportional text as an additive command. Cache original procedural
+wallpaper in a second RGB surface; repaint-time drawing allocates nothing.
+Begin dirty painting with pointer-only damage; leave app/window changes fully
+invalidated until independently tested. See [Royale](royale.md).
+
+Enumerate/choose supported GOP modes while boot services are active, never call
+firmware graphics after ExitBootServices. Reject modes above allocation limits.
+Installed-volume mount failures expose an explicit error state and temporary RAM
+warning. A mount failure must not trigger repair/format; the disposable-corruption
+acceptance verifies the disk hash is unchanged.

@@ -7,6 +7,7 @@
 struct process;
 void setup_initialize(struct block_device *,struct chos_boot_info *,struct pmm *);
 bool setup_persistent(void);
+unsigned setup_volume_state(void);
 const char *setup_computer(void);
 int64_t setup_syscall(struct process *,uint64_t,uint64_t,uint64_t);
 void setup_step(void);

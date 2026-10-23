@@ -29,10 +29,15 @@ def main():
     if os.environ.get('CHOS_TEST_MISSING_KERNEL'):
         inputs = inputs[:1]
     inputs.append((ROOT / 'LICENSE', '::/CHOS/LICENSE.TXT'))
+    inputs.append((ROOT / 'assets/fonts/OFL.txt', '::/CHOS/FONT-OFL.TXT'))
     if os.environ.get('CHOS_TEST_STORAGE'):
         config=BUILD/'storage-test.cfg'
         config.write_text('CHOS STORAGE TEST V1')
         inputs.append((config,'::/CHOS/TEST.CFG'))
+    if os.environ.get('CHOS_DISPLAY_MODE'):
+        config=BUILD/'display.cfg'
+        config.write_text(os.environ['CHOS_DISPLAY_MODE'])
+        inputs.append((config,'::/CHOS/DISPLAY.CFG'))
     for source, target in inputs:
         run('mcopy', '-i', image, source, target)
     # FAT directory timestamps created by mmd/mformat are normalized separately.

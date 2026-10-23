@@ -1,4 +1,6 @@
 #include "desktop.h"
+#include "graphics.h"
+#include "royale.h"
 #include "boot.h"
 #include "process.h"
 #include "timer.h"
@@ -11,9 +13,62 @@ static struct pmm *physical;
 static struct chos_boot_info *boot;
 static struct surface screen;
 static bool active;
+static void rect(int,int,int,int,uint32_t);
+static uint32_t *wallpaper;
+static unsigned wallpaper_theme=99;
+static int damage_x,damage_y,damage_w,damage_h;
+static void clip(int x,int y,int w,int h) {
+    int right=x+w,bottom=y+h;
+    if(x<damage_x)x=damage_x;if(y<damage_y)y=damage_y;
+    if(right>damage_x+damage_w)right=damage_x+damage_w;
+    if(bottom>damage_y+damage_h)bottom=damage_y+damage_h;
+    gfx_clip(&screen,x,y,right>x?right-x:0,bottom>y?bottom-y:0);
+}
+static void ui(unsigned font,int x,int y,const char *s,uint32_t c) {gfx_ui_text(&screen,font,x,y,s,c);}
+static void round_box(int x,int y,int w,int h,int radius,uint32_t top,uint32_t bottom) {gfx_round(&screen,x,y,w,h,radius,top,bottom,255);}
+static bool hit(int x,int y,int w,int h) {return model.mouse_x>=x && model.mouse_y>=y && model.mouse_x<x+w && model.mouse_y<y+h;}
+static void make_wallpaper(void) {
+    /* Original analytical artwork: a luminous sky with flowing cyan ribbons.
+     * Cached once per palette, no image codec or per-frame scene allocation. */
+    for(int y=0;y<screen.height;y++)for(int x=0;x<screen.width;x++) {
+        int u=x*1024/screen.width,v=y*768/screen.height;
+        uint32_t c=gfx_blend(model.theme?0x123b52:0x102c67,model.theme?0x278e91:0x2377b4,(unsigned)(v*220/768));
+        int light=255-(u*u/5500+(v-110)*(v-110)/1800);
+        if(light>0)c=gfx_blend(c,0xb8edff,(unsigned)light*2/3);
+        int curve=470-u/3+(u-500)*(u-500)/2400;
+        int d=v-curve;if(d<0)d=-d;
+        if(d<76)c=gfx_blend(c,model.theme?0x67d8c7:0x67c9ef,(unsigned)(76-d)*100/76);
+        int second=v-(650-u/5+(u-500)*(u-500)/3600);if(second<0)second=-second;
+        if(second<20)c=gfx_blend(c,0x8cddfa,(unsigned)(20-second)*25/20);
+        wallpaper[(size_t)y*screen.width+x]=c;
+    }
+    wallpaper_theme=model.theme;
+}
+/* Small original vector icons share a 32-pixel canvas and palette. */
+static void icon(int x,int y,unsigned app) {
+    if(app==1) {
+        round_box(x+2,y+5,17,10,3,0xffdf89,0xd39635);
+        round_box(x,y+10,32,21,3,0xffe9ac,0xe5ae46);rect(x+3,y+12,26,1,0xfff5d3);
+    } else if(app==2) {
+        round_box(x+4,y+1,24,30,3,0xffffff,0xd4e8f5);
+        for(int i=0;i<4;i++)rect(x+9,y+9+i*5,14,1,0x6d9ebc);
+        round_box(x+23,y+8,4,20,1,0xf4bd64,0xc57d2b);
+    } else if(app==3) {
+        round_box(x,y+3,32,25,4,0x9dd6f0,0x4c88bd);round_box(x+2,y+5,28,21,2,0x112f4c,0x071d34);
+        ui(FONT_BOLD,x+5,y+6,">",0xb0f1de);rect(x+15,y+20,8,2,0xb0f1de);
+    } else if(app==4 || app==5) {
+        round_box(x+1,y+3,30,25,4,0xe7f5fd,0x77b4d9);
+        for(int i=0;i<3;i++){rect(x+6+i*8,y+8,2,15,0x386b97);round_box(x+4+i*8,y+10+(i%2)*7,6,4,1,0xffffff,0x649fc8);}
+    } else if(app==6) {
+        round_box(x+1,y+1,30,30,15,0xc6f4ff,0x328bc9);ui(FONT_TITLE,x+13,y+3,"i",0xffffff);
+    } else {
+        round_box(x+1,y+3,30,25,4,0xbfe6f7,0x498bc0);round_box(x+10,y+10,12,12,6,0xffffff,0xd3ecfa);rect(x+15,y+7,2,18,0xffffff);rect(x+7,y+15,18,2,0xffffff);
+    }
+}
 struct commands { struct chos_draw *front,*back; uint64_t memory; unsigned count,pending; };
 static struct commands drawings[WM_WINDOWS];
 static uint64_t last_second;
+static struct chos_render metrics;
 static void text(int x,int y,const char *s,uint32_t c) { gfx_text(&screen,x,y,s,c); }
 static void rect(int x,int y,int w,int h,uint32_t c) { gfx_rect(&screen,x,y,w,h,c); }
 static void decimal(char *s,uint64_t n) {
@@ -56,10 +111,11 @@ int64_t desktop_syscall(struct process *p,struct exception_frame *f) {
     if(op==SYS_INFO) {
         struct chos_info info={.ticks=timer_ticks(),.total_pages=physical->total,.used_pages=physical->used,.switches=scheduler_switches(),.width=(uint32_t)screen.width,.height=(uint32_t)screen.height,.theme=model.theme};
         for(unsigned i=0;i<PROCESS_MAX;i++) { struct process *q=process_at(i);if(q && !q->exited) info.processes++; }
-        info.persistent=setup_persistent();
+        info.persistent=setup_persistent();info.reserved=setup_volume_state();
         const char *name=setup_computer();for(unsigned i=0;i<31 && name[i];i++)info.computer[i]=name[i];
         return user_copy(p,a,&info,sizeof(info),true)?0:-14;
     }
+    if(op==SYS_RENDER)return user_copy(p,a,&metrics,sizeof(metrics),true)?0:-14;
     if(op==SYS_POWER)return a>2?-22:platform_power(boot,(unsigned)a);
     if(op==SYS_TASK) {
         if(a>=PROCESS_MAX)return -22;
@@ -87,7 +143,8 @@ int64_t desktop_syscall(struct process *p,struct exception_frame *f) {
     if(op==SYS_DRAW) {
         struct chos_draw command;
         if(!user_copy(p,b,&command,sizeof(command),false)) return -14;
-        if(command.op>DRAW_TEXT || command.x < -4096 || command.x>4096 || command.y < -4096 || command.y>4096 || command.w<0 || command.w>4096 || command.h<0 || command.h>4096) return -22;
+        if(command.op>DRAW_UI_TEXT || command.x < -4096 || command.x>4096 || command.y < -4096 || command.y>4096 || command.w<0 || command.w>4096 || command.h<0 || command.h>4096) return -22;
+        if(command.op==DRAW_UI_TEXT && command.w>FONT_MONO)return -22;
         command.text[79]=0;
         if(command.op==DRAW_CLEAR) c->pending=0;
         if(c->pending==WM_COMMANDS) return -12;
@@ -99,83 +156,121 @@ static void window_draw(unsigned slot) {
     struct wm_window *w=&model.windows[slot];
     if(w->minimized || w->closing) return;
     bool focus=model.focus==w->id;
-    rect(w->x+5,w->y+6,w->w,w->h,0x071323);
-    rect(w->x,w->y,w->w,w->h,focus?0x428ce0:0x445d7d);
-    for(int y=2;y<30;y++) rect(w->x+2,w->y+y,w->w-4,1,focus?(0x22549a+(uint32_t)(30-y)*0x010201):0x3a5270);
-    gfx_clip(&screen,w->x+8,w->y+4,w->w-96,22);text(w->x+10,w->y+8,w->title,0xffffff);
-    gfx_clip(&screen,0,0,screen.width,screen.height);
-    for(int b=0;b<3;b++) { int x=w->x+w->w-78+b*26;rect(x,w->y+5,22,21,b==2?0xb74950:0x397fc5);text(x+5,w->y+8,b==0?"_":(b==1?"+":"x"),0xffffff); }
-    gfx_clip(&screen,w->x+4,w->y+32,w->w-8,w->h-36);
-    rect(w->x+4,w->y+32,w->w-8,w->h-36,0xe5eef8);
+    gfx_shadow(&screen,w->x,w->y,w->w,w->h,8);
+    round_box(w->x,w->y,w->w,w->h,8,focus?0x5c9bdf:0x85a5c9,ROYALE_BORDER);
+    round_box(w->x+1,w->y+1,w->w-2,31,7,focus?0x6ea6eb:0x9bb5d3,focus?0x174b9b:0x587ba6);
+    gfx_gradient(&screen,w->x+4,w->y+15,w->w-8,15,focus?0x286bc2:0x7498be,focus?0x17468f:0x486c94);
+    clip(w->x+8,w->y+4,w->w-96,22);
+    ui(FONT_BOLD,w->x+12,w->y+8,w->title,0x102c60);ui(FONT_BOLD,w->x+12,w->y+7,w->title,0xffffff);
+    clip(0,0,screen.width,screen.height);
+    for(int b=0;b<3;b++) {
+        int x=w->x+w->w-78+b*26,y=w->y+5;bool hover=hit(x,y,22,21);
+        round_box(x,y,22,21,4,b==2?0xd77b74:0x92c4f2,b==2?0xa43237:0x2e6eb8);
+        round_box(x+1,y+1,20,9,3,hover?0xe4f5ff:(b==2?0xf2b2a2:0xb0d8fa),b==2?0xd46b60:0x6ba8e3);
+        if(b==0)rect(x+6,y+14,10,2,0xffffff);
+        if(b==1){rect(x+6,y+6,10,9,0xffffff);rect(x+7,y+9,8,5,0x437fbd);}
+        if(b==2)for(int k=0;k<9;k++){rect(x+7+k,y+6+k,2,2,0xffffff);rect(x+15-k,y+6+k,2,2,0xffffff);}
+    }
+    clip(w->x+4,w->y+32,w->w-8,w->h-36);
+    rect(w->x+4,w->y+32,w->w-8,w->h-36,ROYALE_PAPER);
     struct commands *c=&drawings[slot];
     for(unsigned i=0;i<c->count;i++) {
         struct chos_draw *d=&c->front[i];
         if(d->op==DRAW_CLEAR) rect(w->x+4,w->y+32,w->w-8,w->h-36,d->color);
         else if(d->op==DRAW_RECT) rect(w->x+4+d->x,w->y+32+d->y,d->w,d->h,d->color);
+        else if(d->op==DRAW_ROUND)round_box(w->x+4+d->x,w->y+32+d->y,d->w,d->h,5,d->color,d->color);
+        else if(d->op==DRAW_UI_TEXT)ui((unsigned)d->w,w->x+4+d->x,w->y+32+d->y,d->text,d->color);
         else text(w->x+4+d->x,w->y+32+d->y,d->text,d->color);
     }
-    gfx_clip(&screen,0,0,screen.width,screen.height);
+    clip(0,0,screen.width,screen.height);
     for(int i=0;i<3;i++) rect(w->x+w->w-5-i*4,w->y+w->h-3,2,2,0xffffff);
 }
 static void render(void) {
-    gfx_clip(&screen,0,0,screen.width,screen.height);
-    uint32_t base=model.theme?0x102d31:0x102b52;
-    for(int y=0;y<screen.height;y++) {
-        unsigned shade=(unsigned)((screen.height-y)*30/screen.height);
-        rect(0,y,screen.width,1,base+(shade<<16)+(shade<<8)+shade);
-    }
-    text(screen.width-248,34,"CHOS Desktop",0x80bee8);
-    text(screen.width-248,56,setup_persistent()?"System disk - persistent":"RAM volume - volatile",0x80bee8);
+    uint64_t started;__asm__ volatile("mrs %0, cntpct_el0":"=r"(started));
+    clip(0,0,screen.width,screen.height);
+    if(wallpaper_theme!=model.theme)make_wallpaper();
+    for(int y=screen.y;y<screen.y+screen.h;y++)for(int x=screen.x;x<screen.x+screen.w;x++)screen.pixels[(size_t)y*screen.width+x]=wallpaper[(size_t)y*screen.width+x];
+    ui(FONT_TITLE,screen.width-230,34,"CHOS Royale",0xc4e8fa);
+    ui(FONT_SMALL,screen.width-230,62,setup_persistent()?"System disk - persistent":"Live session - RAM volume",0xb0d7ef);
     static const char names[7][16]={"Explorer","Notepad","Terminal","Control Panel","Task Manager","About CHOS","CHOS Setup"};
     for(unsigned i=0;i<7;i++) {
-        int y=60+(int)i*66;rect(34,y,28,28,0x7bb6df);rect(38,y+4,20,20,0x245a9a);
-        text(10,y+36,names[i],0xe3f2ff);
+        int y=60+(int)i*66;icon(34,y,i+1);
+        int x=50-gfx_ui_width(FONT_SMALL,names[i])/2;
+        ui(FONT_SMALL,x+1,y+37,names[i],0x153759);ui(FONT_SMALL,x,y+36,names[i],0xf3fbff);
+    }
+    if(setup_volume_state()>VOLUME_PERSISTENT) {
+        round_box(128,screen.height-92,screen.width-300,34,5,0xffe8b3,0xf0c97d);
+        ui(FONT_BODY,140,screen.height-84,"System volume unavailable. Temporary RAM files only.",0x613b0d);
     }
     for(unsigned i=0;i<model.count;i++) window_draw(model.order[i]);
     int task_y=screen.height-44;
-    for(int y=0;y<44;y++) rect(0,task_y+y,screen.width,1,0x163965+(uint32_t)(44-y)*0x010202);
-    rect(7,task_y+5,91,34,0x5b9dcc);rect(10,task_y+7,85,29,0x23649b);text(28,task_y+14,"CHOS",0xffffff);
+    gfx_gradient(&screen,0,task_y,screen.width,44,0x71a7e5,0x133e86);
+    rect(0,task_y+1,screen.width,1,0xb0d9fc);gfx_gradient(&screen,0,task_y+9,screen.width,35,0x2c6bc0,0x174897);
+    round_box(6,task_y+4,92,36,12,0x99d9d8,0x126d84);
+    round_box(8,task_y+5,88,17,10,model.menu?0xc7f3f4:0x8cd3e1,0x2987a9);
+    ui(FONT_TITLE,28,task_y+8,"CHOS",0xffffff);
     unsigned n=0;int button_width=wm_task_width(&model);
     for(unsigned i=0;i<WM_WINDOWS;i++) if(model.windows[i].owner) {
         struct wm_window *w=&model.windows[i]; int x=108+(int)n++*button_width;
         if(x>=screen.width-160)break;
-        rect(x,task_y+7,button_width-6,29,w->id==model.focus?0x6996c0:0x2c5685);
-        gfx_clip(&screen,x+3,task_y+7,button_width-12,29);text(x+5,task_y+15,w->title,0xffffff);
-        gfx_clip(&screen,0,0,screen.width,screen.height);
+        bool focused=w->id==model.focus;
+        round_box(x,task_y+7,button_width-6,29,5,focused?0x173e82:0x78abe6,focused?0x397bc7:0x306bbb);
+        clip(x+6,task_y+7,button_width-18,29);ui(FONT_SMALL,x+7,task_y+14,w->title,0xffffff);
+        clip(0,0,screen.width,screen.height);
     }
+    round_box(screen.width-155,task_y+4,150,36,5,0x4c98d6,0x2266a8);
     char timer[21];decimal(timer,timer_ticks()/100);
     if(boot->clock_valid) {
         uint64_t now,freq;__asm__ volatile("mrs %0, cntpct_el0":"=r"(now));__asm__ volatile("mrs %0, cntfrq_el0":"=r"(freq));
         uint64_t seconds=(boot->clock_seconds+(now-boot->clock_counter)/freq)%86400;
         char clock[6]={(char)('0'+seconds/36000),(char)('0'+seconds/3600%10),':',(char)('0'+seconds/60%60/10),(char)('0'+seconds/60%10),0};
-        text(screen.width-142,task_y+8,"Clock",0xcce4ff);text(screen.width-142,task_y+25,clock,0xffffff);
-    } else { text(screen.width-142,task_y+8,"Uptime",0xcce4ff);text(screen.width-142,task_y+25,timer,0xffffff); }
+        ui(FONT_SMALL,screen.width-137,task_y+6,"System time",0xd9f1ff);ui(FONT_BOLD,screen.width-137,task_y+20,clock,0xffffff);
+    } else { ui(FONT_SMALL,screen.width-137,task_y+6,"Uptime",0xd9f1ff);ui(FONT_BOLD,screen.width-137,task_y+20,timer,0xffffff); }
     rect(screen.width-14,task_y+14,6,6,0x8dd9b3);
     if(model.menu) {
-        static const char items[12][18]={"Applications","Documents","Computer","Control Panel","Settings","Search","Run","Help","Log Off","Restart","Shut Down","Close menu"};
-        int top=task_y-340;rect(8,top,260,340,0xe2eefa);rect(8,top,260,34,0x286caf);text(24,top+9,"CHOS",0xffffff);
+        static const char items[12][18]={"All applications","Documents","Computer","Control Panel","Settings","Search","Run","Help","Log Off","Restart","Shut Down","x"};
+        int top=task_y-400;
+        gfx_shadow(&screen,8,top,420,400,9);
+        round_box(8,top,420,400,9,0x8cb7e8,0x194c94);
+        round_box(10,top+2,416,54,8,0xc0ddf8,0x3977bb);
+        round_box(23,top+11,34,34,7,0x6cb3e8,0x205ba9);ui(FONT_TITLE,34,top+15,"C",0xffffff);
+        ui(FONT_TITLE,68,top+10,"CHOS",0xffffff);
+        ui(FONT_SMALL,69,top+34,setup_computer(),0xebf6ff);
+        rect(10,top+56,207,300,0xf6f9fd);rect(217,top+56,209,300,0xddeafa);rect(217,top+56,1,300,0xabc6e7);
         unsigned count=model.applications?7:12;
+        if(!model.applications)for(unsigned i=0;i<7;i++) {
+            int y=top+64+(int)i*36;
+            if(hit(18,y,194,34))round_box(18,y,194,34,4,0x9fc9ef,0x69a0d5);
+            icon(23,y,i+1);ui(FONT_BODY,64,y+8,names[i],ROYALE_INK);
+        }
         for(unsigned i=0;i<count;i++) {
-            if(i==model.selection)rect(12,top+40+(int)i*25,252,24,0xadcfe9);
-            text(22,top+44+(int)i*25,model.applications?names[i]:items[i],0x183b64);
+            int x,y,w,h;if(!wm_menu_item(&model,i,&x,&y,&w,&h))continue;
+            bool selected=i==model.selection;
+            if(selected)round_box(x,y,w,h,4,0x6da8e5,0x326eb4);
+            if(model.applications){icon(x+5,y,i+1);ui(FONT_BODY,x+46,y+8,names[i],selected?0xffffff:ROYALE_INK);}
+            else ui(i==0?FONT_BOLD:FONT_BODY,x+10,y+8,items[i],selected?0xffffff:(i>=8?0xf1f7ff:ROYALE_INK));
         }
     }
     if(model.confirm) {
         int x=(screen.width-540)/2,y=(screen.height-150)/2;
         rect(x,y,540,150,0xc9deee);rect(x,y,540,32,0x286caf);
-        text(x+14,y+9,model.confirm==1?"Restart CHOS":(model.confirm==2?"Shut down CHOS":"End graphical session"),0xffffff);
-        text(x+14,y+52,"Unsaved edits will be lost.",0x183b64);
-        text(x+14,y+80,model.confirm==3?"Applications close. No account security.":"RAM files are lost on restart/shutdown.",0x183b64);
-        text(x+14,y+114,"Y confirms. N or Escape cancels.",0x183b64);
+        ui(FONT_BOLD,x+14,y+9,model.confirm==1?"Restart CHOS":(model.confirm==2?"Shut down CHOS":"End graphical session"),0xffffff);
+        ui(FONT_BODY,x+14,y+52,"Unsaved edits will be lost.",0x183b64);
+        ui(FONT_BODY,x+14,y+80,model.confirm==3?"Applications close. No account security.":"RAM files are lost on restart/shutdown.",0x183b64);
+        ui(FONT_BODY,x+14,y+114,"Y confirms. N or Escape cancels.",0x183b64);
     }
     static const uint8_t arrow[10]={0x80,0xc0,0xe0,0xf0,0xf8,0xfc,0xe0,0xb0,0x18,0x18};
     for(unsigned y=0;y<10;y++) for(unsigned x=0;x<8;x++) if(arrow[y]&(0x80>>x)) rect(model.mouse_x+(int)x,model.mouse_y+(int)y,1,1,0xffffff);
     volatile uint32_t *fb=(void *)(uintptr_t)boot->framebuffer;
-    for(int y=0;y<screen.height;y++) for(int x=0;x<screen.width;x++) {
+    for(int y=damage_y;y<damage_y+damage_h;y++) for(int x=damage_x;x<damage_x+damage_w;x++) {
         uint32_t rgb=screen.pixels[(size_t)y*screen.width+x];
         fb[(uint64_t)y*boot->stride+x]=boot->pixel_format==1?rgb:((rgb&255)<<16)|(rgb&0xff00)|((rgb>>16)&255);
     }
     __asm__ volatile("dsb sy":::"memory");model.dirty=false;
+    uint64_t now,freq;__asm__ volatile("mrs %0, cntpct_el0":"=r"(now));__asm__ volatile("mrs %0, cntfrq_el0":"=r"(freq));
+    metrics.frames++;metrics.pixels+=(uint64_t)damage_w*damage_h;
+    if(damage_w<screen.width || damage_h<screen.height)metrics.partial_frames++;
+    metrics.last_us=(now-started)*1000000/freq;metrics.total_us+=metrics.last_us;
 }
 void desktop_start(struct pmm *p,struct chos_boot_info *b) {
     if(b->width>1920 || b->height>1200) panic("DESKTOP MODE TOO LARGE");
@@ -183,6 +278,8 @@ void desktop_start(struct pmm *p,struct chos_boot_info *b) {
     unsigned pages=(unsigned)(((uint64_t)b->width*b->height*4+4095)/4096);
     uint64_t memory=pmm_alloc(p,pages);if(!memory) panic("DESKTOP BACKBUFFER FAILED");
     screen=(struct surface){.pixels=(void *)(uintptr_t)memory,.width=(int)b->width,.height=(int)b->height,.stride=(int)b->width};
+    uint64_t art=pmm_alloc(p,pages);if(!art)panic("WALLPAPER CACHE FAILED");wallpaper=(void *)(uintptr_t)art;
+    damage_x=damage_y=0;damage_w=screen.width;damage_h=screen.height;
     wm_init(&model,screen.width,screen.height);
     model.mouse_x=input_get()->x;model.mouse_y=input_get()->y;
     struct input_event event;while(input_next(&event)) {} /* discard diagnostic input */
@@ -194,8 +291,11 @@ void desktop_start(struct pmm *p,struct chos_boot_info *b) {
 }
 void desktop_step(void) {
     setup_step();
+    bool pointer_only=!model.dirty;
+    int old_x=model.mouse_x,old_y=model.mouse_y;
     input_poll();struct input_event event;
     while(input_next(&event)) {
+        if(event.type!=2 || model.drag>=0 || model.menu || model.confirm)pointer_only=false;
         if(event.type==2) {
             int64_t x=model.mouse_x,y=model.mouse_y;
             if(event.code==0) x+=event.value;
@@ -211,15 +311,32 @@ void desktop_step(void) {
             struct process *p=process_at(i);
             if(p && !p->exited && scheduler_cancel(p->pid)){desktop_process_exit(p->pid);p->exited=true;p->status=0;}
         }
-        model.logout=false;model.launch=6;
+        model.logout=false;model.launch=6;pointer_only=false;
     }
     for(unsigned i=0;i<PROCESS_MAX;i++) {
         struct process *p=process_at(i);if(!p)continue;
-        if(p->exited) { if(!process_reap(p->pid)) panic("DESKTOP REAP FAILED");continue; }
+        if(p->exited) { pointer_only=false;if(!process_reap(p->pid)) panic("DESKTOP REAP FAILED");continue; }
         for(unsigned j=0;j<WM_WINDOWS;j++) if(model.windows[j].owner==p->pid && model.windows[j].count) scheduler_wake(p->pid);
     }
-    if(model.launch) { (void)desktop_launch(model.launch);model.launch=0; }
+    if(model.launch) { pointer_only=false; (void)desktop_launch(model.launch);model.launch=0; }
     uint64_t second=timer_ticks()/100;
-    if(second!=last_second) { last_second=second;model.dirty=true; }
-    if(model.dirty) render();
+    if(second!=last_second) { last_second=second;model.dirty=true;pointer_only=false; }
+    if(model.dirty) {
+        /* Hover changes are part of chrome. Plain pointer motion repaints only
+         * the union of old/new cursor bounds; app presents remain full damage. */
+        for(unsigned i=0;i<model.count;i++) {
+            struct wm_window *w=&model.windows[model.order[i]];
+            if((old_y>=w->y && old_y<w->y+32) || (model.mouse_y>=w->y && model.mouse_y<w->y+32))pointer_only=false;
+        }
+        if(old_y>=screen.height-44 || model.mouse_y>=screen.height-44)pointer_only=false;
+        damage_x=damage_y=0;damage_w=screen.width;damage_h=screen.height;
+        if(pointer_only) {
+            damage_x=old_x<model.mouse_x?old_x:model.mouse_x;damage_y=old_y<model.mouse_y?old_y:model.mouse_y;
+            damage_w=(old_x>model.mouse_x?old_x:model.mouse_x)-damage_x+10;
+            damage_h=(old_y>model.mouse_y?old_y:model.mouse_y)-damage_y+12;
+            if(damage_x+damage_w>screen.width)damage_w=screen.width-damage_x;
+            if(damage_y+damage_h>screen.height)damage_h=screen.height-damage_y;
+        }
+        render();
+    }
 }

@@ -8,12 +8,12 @@ export SOURCE_DATE_EPOCH
 all: iso
 build:
 	mkdir -p build
-build/boot.obj: boot/uefi/main.c boot/uefi/efi.h include/boot.h | build
+build/boot.obj: boot/uefi/main.c boot/uefi/efi.h include/boot.h include/display_mode.h | build
 	$(CC) $(CFLAGS) --target=aarch64-pc-windows-msvc -c $< -o $@
 build/BOOTAA64.EFI: build/boot.obj
 	lld-link /subsystem:efi_application /entry:efi_main /nodefaultlib /machine:arm64 /timestamp:0 /out:$@ $<
-KSOURCES := installer/policy.c installer/service.c installer/gpt.c installer/fat32.c filesystem/ram.c kernel/arch/arm64/power.c desktop/desktop.c desktop/window-manager/model.c desktop/graphics/render.c desktop/graphics/font.c drivers/input/virtio.c drivers/input/events.c filesystem/vfs.c filesystem/chfs.c drivers/storage/nvme.c kernel/storage_test.c kernel/runtime.c kernel/main.c kernel/console.c kernel/process/elf.c kernel/process/process.c kernel/syscall/syscall.c kernel/arch/arm64/acpi.c kernel/memory/physical.c kernel/memory/heap.c kernel/memory/virtual.c kernel/interrupts/exception.c kernel/scheduler/scheduler.c drivers/interrupts/gicv2_timer.c
-KASM := kernel/arch/arm64/entry.S kernel/arch/arm64/vectors.S kernel/arch/arm64/mmu.S kernel/arch/arm64/test_worker.S kernel/process/image.S
+KSOURCES := installer/policy.c installer/service.c installer/gpt.c installer/fat32.c filesystem/ram.c kernel/arch/arm64/power.c desktop/desktop.c desktop/window-manager/model.c desktop/graphics/render.c desktop/graphics/primitives.c desktop/graphics/fontcache.c desktop/graphics/font.c drivers/input/virtio.c drivers/input/events.c filesystem/vfs.c filesystem/chfs.c drivers/storage/nvme.c kernel/storage_test.c kernel/runtime.c kernel/main.c kernel/console.c kernel/process/elf.c kernel/process/process.c kernel/syscall/syscall.c kernel/arch/arm64/acpi.c kernel/memory/physical.c kernel/memory/heap.c kernel/memory/virtual.c kernel/interrupts/exception.c kernel/scheduler/scheduler.c drivers/interrupts/gicv2_timer.c
+KASM := desktop/graphics/assets.S kernel/arch/arm64/entry.S kernel/arch/arm64/vectors.S kernel/arch/arm64/mmu.S kernel/arch/arm64/test_worker.S kernel/process/image.S
 KOBJECTS := $(patsubst %.c,build/%.o,$(KSOURCES)) $(patsubst %.S,build/%.o,$(KASM))
 build/%.o: %.c $(wildcard include/*.h) Makefile
 	mkdir -p $(dir $@)
@@ -75,7 +75,7 @@ build/desktop.elf: $(AOBJECTS) build/app/runtime.o build/user-entry.o userspace/
 
 .PHONY: test-desktop
 test-desktop: | build
-	$(CC) -std=c11 -Wall -Wextra -Werror -Iinclude tests/desktop.c desktop/window-manager/model.c desktop/graphics/render.c desktop/graphics/font.c -o build/test-desktop
+	$(CC) -std=c11 -Wall -Wextra -Werror -Iinclude tests/desktop.c desktop/window-manager/model.c desktop/graphics/render.c desktop/graphics/primitives.c desktop/graphics/fontcache.c desktop/graphics/font.c desktop/graphics/assets.S -o build/test-desktop
 	./build/test-desktop
 
 build/mkdisk: scripts/mkdisk.c installer/gpt.c installer/fat32.c include/install.h include/filesystem.h | build
@@ -95,3 +95,10 @@ test-installer: build/mkdisk build/BOOTAA64.EFI build/KERNEL.BIN
 test-setup: | build
 	$(CC) -std=c11 -Wall -Wextra -Werror -Iinclude tests/setup.c installer/policy.c -o build/test-setup
 	./build/test-setup
+
+build/desktop/graphics/assets.o: assets/royale/fonts.bin assets/fonts/OFL.txt
+
+.PHONY: test-graphics
+test-graphics: | build
+	$(CC) -std=c11 -Wall -Wextra -Werror -Iinclude tests/graphics.c desktop/graphics/render.c desktop/graphics/primitives.c desktop/graphics/fontcache.c desktop/graphics/assets.S -o build/test-graphics
+	./build/test-graphics

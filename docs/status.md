@@ -5,13 +5,13 @@
 | 1: UEFI, original ARM64 kernel, bootable ISO | Verified under QEMU UEFI |
 | 2: protected memory, exceptions/timer, scheduling, EL0 ELF/syscalls/IPC | Core implemented and tested |
 | 3: display/input/NVMe/CHFS persistent operations | QEMU GOP + Virtio PCI + NVMe tested; three cold storage boots |
-| 4: CHOS Desktop/window manager/taskbar/Start | Working core; dedicated Search/Run/Help and image wallpaper remain |
+| 4: CHOS Desktop/window manager/taskbar/Start | Working core; Royale foundation tested; dedicated Search/Run/Help and wallpaper file loading remain |
 | 5: six native applications | Functional bounded live-session versions; see desktop.md |
-| 6: graphical installer/GPT/ESP/installed boot | Native graphical installation core, disk boot and persistent system volume tested; account/password/timezone/layout/mode configuration unfinished |
+| 6: graphical installer/GPT/ESP/installed boot | Native graphical installation core, disk boot and persistent system volume tested; account/password/timezone/layout and graphical mode configuration unfinished |
 | 7: VMware Fusion validation | Not run: no Apple Silicon/Fusion host available |
 | 8: CHOS 0.1 | Not ready |
 
-Current ISO/results: [milestone 6B](milestone-6b.md). Earlier foundations: [milestone 6A](milestone-6a.md). Ordinary images
+Current ISO/results: [milestone 6C](milestone-6c.md). [Royale visual architecture](royale.md). Previous installer core: [milestone 6B](milestone-6b.md). Earlier foundations: [milestone 6A](milestone-6a.md). Ordinary images
 start a genuine original desktop and native EL0 apps after kernel tests. Their live
 CHFS volume is RAM backed. Native Setup requires explicit destructive confirmation.
 Installed sessions mount the verified CHFS system partition and persist files.
@@ -37,11 +37,12 @@ not an installer or desktop persistence environment.
   integrity and injected failure-model tests pass; production reliability is open.
 - Native handles are path based; rename/unlink invalidates old path handles. File
   calls cap transfers at 4 KiB. Notepad/GUI copy/cat cap files at 4095 bytes. Text
-  editing is basic ASCII with no clipboard/undo, proportional fonts or IME.
+  editing is basic ASCII with no clipboard/undo, proportional editing or IME.
 - Virtio PCI keyboard/relative mouse only; fixed queues and counted software drops.
   Basic US modifiers/punctuation/navigation; no Caps Lock, LEDs or keyboard layouts.
-- GOP RGB/BGR 640×480 through 1920×1200; no mode switch, GPU acceleration, alpha
-  compositor or image-file wallpaper loader. Full software frame copy when dirty.
+- GOP RGB/BGR 640×480 through 1920×1200; UEFI mode selection before boot, no runtime switch/GPU acceleration/full alpha
+  compositor or image-file wallpaper loader. Pointer-only damage is clipped; other
+  state changes still copy full frames. Cached grayscale fonts are ASCII only.
 - Clock follows firmware time plus the generic counter; no date/timezone setup or
   persistence. Settings only change the actual session color theme/display report.
 - Task Manager uses real process IDs, memory counters and scheduled timer samples,

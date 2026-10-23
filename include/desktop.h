@@ -27,6 +27,7 @@ void wm_key(struct wm *,unsigned,int);
 bool wm_event(struct wm *,uint64_t,uint32_t,struct chos_event *,bool consume);
 void wm_focus(struct wm *,uint32_t);
 int wm_task_width(const struct wm *);
+bool wm_menu_item(const struct wm *,unsigned,int *,int *,int *,int *);
 struct surface { uint32_t *pixels; int width,height,stride; int x,y,w,h; };
 void gfx_clip(struct surface *,int,int,int,int);
 void gfx_rect(struct surface *,int,int,int,int,uint32_t);

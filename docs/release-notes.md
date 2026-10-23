@@ -1,3 +1,12 @@
+# M6C — Royale visual foundation
+
+Continues M6B with licensed anti-aliased fonts, original wallpaper/icons, blue
+rounded chrome/taskbar and two-column Start menu, shared native presentation
+primitives, pointer damage, real paint counters, supported UEFI mode selection and
+explicit installed-volume failure diagnostics. Native installer/persistent reboot
+regressions remain acceptance requirements. See [M6C evidence and limitations](milestone-6c.md).
+This is an engineering checkpoint, not CHOS 0.1 or Fusion validation.
+
 # CHOS native installation core (milestone 6B)
 
 Adds original EL0 graphical Setup with identity/capacity review and typed erase

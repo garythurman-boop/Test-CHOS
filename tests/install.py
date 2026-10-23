@@ -23,23 +23,23 @@ result={'passed':False,'disk':str(disk),'iso_sha256':digest(BUILD/'CHOS-ARM64.is
 before=digest(disk);guest=Guest(f'native-install-{sector}',disk=disk,optical=True,sector_bytes=sector)
 try:
     guest.wait(lambda p:p(60,250)==0x326bb0,'live ISO desktop',120)
-    launch(guest,7);guest.wait(lambda p:matches(p,200,94,'CHOS',0x204b72),'native setup welcome')
+    launch(guest,7);guest.wait(lambda p:matches(p,68,94,'Welcome to CHOS Setup',0x204b72,0),'native setup welcome')
     guest.key('ret');guest.key('ret')
-    guest.wait(lambda p:matches(p,68,276,'GPT',0x204b72),'optical-media destination eligibility')
+    guest.wait(lambda p:matches(p,68,276,'GPT',0x204b72,0),'optical-media destination eligibility')
     guest.snapshot(f'setup-destination-{sector}')
     assert digest(disk)==before,'Disk changed before selection/confirmation'
     guest.key('ret');replace_prompt(guest,'CHOSTEST')
     guest.key('ret');type_text(guest,'WRONG\n');time.sleep(.3)
     assert digest(disk)==before,'Rejected typed confirmation modified disk'
     guest.key('ret');type_text(guest,'ERASE CHOS-GPT-BOOT\n')
-    guest.wait(lambda p:matches(p,68,142,'CHOS',0x204b72),'native installation completion',90)
+    guest.wait(lambda p:matches(p,68,142,'CHOS',0x204b72,0),'native installation completion',90)
     guest.snapshot(f'setup-complete-{sector}');result['boots'].append({'kind':'native_installer_from_iso','command':guest.command,'passed':True,'confirmation_no_write_checks':True})
 finally:guest.close()
 # The ISO is entirely absent from the next two VMs. This is not the host builder.
 guest=Guest(f'installed-write-{sector}',disk=disk,sector_bytes=sector)
 try:
     guest.wait(lambda p:p(60,250)==0x326bb0,'installed boot with no ISO',120)
-    guest.wait(lambda p:matches(p,44,294,'CHOSTEST',0x204b72),'persisted computer configuration')
+    guest.wait(lambda p:matches(p,44,294,'CHOSTEST',0x204b72,0),'persisted computer configuration')
     guest.snapshot(f'installed-desktop-{sector}')
     launch(guest,2);guest.wait(lambda p:p(60,180)==0xffffff,'installed native Notepad')
     type_text(guest,'INSTALLED CHOS 123');guest.key('s',('ctrl',));guest.key('ret');time.sleep(.5)
@@ -52,7 +52,7 @@ try:
     guest.wait(lambda p:matches(p,66,140,'INSTALLED CHOS 123',0x152b40),'native editor persisted data after cold boot')
     guest.snapshot(f'installed-notepad-reopen-{sector}')
     saved=digest(disk);launch(guest,7);guest.key('ret');guest.key('ret')
-    guest.wait(lambda p:matches(p,92,298,'I',0x204b72),'refusal to reinstall over own boot disk')
+    guest.wait(lambda p:matches(p,92,298,'Installation disabled',0x204b72,0),'refusal to reinstall over own boot disk')
     guest.key('ret');type_text(guest,'ERASE CHOS-GPT-BOOT\n');time.sleep(.3)
     assert digest(disk)==saved,'Boot disk exclusion failed'
     result['boots'].append({'kind':'installed_cold_boot_persistent_read_and_self_erase_refusal','command':guest.command,'passed':True})
@@ -72,6 +72,7 @@ with disk.open('rb') as file:
             file.seek(system_start+first*4096);data=file.read(size);assert len(data)==size and zlib.crc32(data)==crc;contents[name]=data
     assert contents['/system/computer']==b'CHOSTEST'
     assert contents['/system/license']==(BUILD.parent/'LICENSE').read_bytes()
+    assert contents['/system/font-ofl']==(BUILD.parent/'assets/fonts/OFL.txt').read_bytes()
     assert contents['/documents/note.txt']==b'INSTALLED CHOS 123'
 result.update(passed=True,filesystem_generation=generation,independent_disk_parser=True,disk_sha256=digest(disk),limitations=['accounts/password setup absent','timezone/keymap/display configuration incomplete','VMware Fusion unverified'])
 (BUILD/f'native-install-{sector}.json').write_text(json.dumps(result,indent=2)+'\n');print(json.dumps(result,indent=2))

@@ -46,8 +46,9 @@ void explorer_click(int x,int y) {
 }
 void explorer_paint(void) {
     refresh();begin(0xf2f6fa);box(0,0,app_width,30,0xd5e5f2);label(8,cwd);
-    label(44,"Up      New     Copy    Move    Delete");
-    label(70,"Name                          Bytes");
+    static const char actions[5][8]={"Up","New","Copy","Move","Delete"};
+    for(unsigned i=0;i<5;i++){rounded(4+(int)i*100,36,92,29,0xd8e8f6);ui_text(0,16+(int)i*100,43,actions[i],0x204b72);}
+    label(70,"Name");ui_text(0,app_width-110,70,"Bytes",0x204b72);
     unsigned rows=(unsigned)(app_height-120)/22;if(offset>=count)offset=0;if(rows>count-offset)rows=count-offset;
     for(unsigned row=0;row<rows;row++) {
         unsigned i=offset+row;

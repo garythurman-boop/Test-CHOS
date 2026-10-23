@@ -1,0 +1,60 @@
+{
+  "passed": true,
+  "date": "2026-10-23",
+  "stable_parent": "e6a7dbe670eb696d3eb6957c154e4b5834584e93",
+  "iso_sha256": "6b1c1c662db25a4c16da609c3e80ad865a2bc266f7ae605cfb6b104306a01a56",
+  "iso_bytes": 17154048,
+  "efi_bytes": 7168,
+  "kernel_binary_bytes": 192552,
+  "kernel_elf_size": {
+    "text": 188530,
+    "data": 40,
+    "bss": 176832
+  },
+  "qemu_boots": 24,
+  "host_test_programs": 10,
+  "sanitizers": [
+    "AddressSanitizer",
+    "UndefinedBehaviorSanitizer"
+  ],
+  "width": 1024,
+  "height": 768,
+  "font_cache_bytes": 48974,
+  "graphics_surfaces_bytes": 6291456,
+  "managed_ram_kib": 489364,
+  "allocated_managed_ram_kib_two_apps": 14664,
+  "desktop_ready_seconds_tcg_including_firmware": 15.752,
+  "partial_frames_before": 0,
+  "partial_frames_after": 10,
+  "performance_limits": [
+    "No native Apple Silicon measurements",
+    "Idle CPU not measured",
+    "Allocator totals exclude firmware and non-conventional reservations"
+  ],
+  "vmware_fusion": "not tested",
+  "screenshots": {
+    "royale-desktop.png": "67668e28c5562712b196c751d074bfa0cbe6bac22ffb9445b512dc83ab729b71",
+    "royale-wallpaper.png": "2400212b2e667f2c94fe09f889d725d9c9b07e0ff8cf812207508774b3a6a2ff",
+    "royale-start.png": "3b756bd097d37c73e95dd40f4aadab6d20d080f73efefe6675cde74e3f43ddea",
+    "royale-notepad.png": "f18b217dcefda0d958e2e6dec26848e4f8524c92c7cb2e17ea5a25820659691c",
+    "royale-render-metrics.png": "417333c63b47a15f4abe3ef57092817be47ff94abe3c1f7f6f0a4c5dd2dfd0f9",
+    "royale-mode-800x600.png": "80376bdf3accb99ec84404f1f8d35fa91b45a67ffe8312eba9ae35722f29ac1d",
+    "royale-mode-1500x900.png": "80376bdf3accb99ec84404f1f8d35fa91b45a67ffe8312eba9ae35722f29ac1d",
+    "royale-volume-error.png": "036c9b0f5e188b3f6d7efa8327c49485fb6eee45595e80ff437ebb80d491f1a5",
+    "apps-explorer.png": "9591e753fa47a692282726abf51765020ecbf846376d183f0cb438ae90aeb4cb",
+    "apps-notepad.png": "df9155dc09f238491ba5bb419c9860c1d371b8807b76562e5ab7640eb4e5c7da",
+    "apps-terminal.png": "8aca1fa0e98f644046712bb06549dd21c6fa5dee2fbdcdd47c91341028c2a6b1",
+    "apps-settings.png": "265728ae727dfd092c3a360380b7e9fcb6642a948df93b2923e59f0675a41c93",
+    "apps-tasks.png": "542aa93b70d74db46a7ee6a3313206f3f49b7ac13476d06e2b27612fac8046ba",
+    "desktop-interaction.png": "a3d8c8da0c217282c99b709587d41625ed3db40c7cbf1a3f684977088a9dfc91",
+    "setup-destination-512.png": "b5944c57948f4569ba34d9747989e5df53fcdff699f0d74e86e10c175b07d5f3",
+    "setup-destination-4096.png": "47c1d803baaf9a107af9a16a4f0aa260fba39e45bf00daa4e522c7a31c1aea2e",
+    "setup-complete-512.png": "98bc1ea6c7f1fd6dd7b8f1bb51a6cba90a5a1d1b740345f2eba4b30dd176665d",
+    "setup-complete-4096.png": "be70ee76f2559a76c346efa12a25a74b09f33baef2386a4b19bd6a64420295ba",
+    "installed-desktop-512.png": "7a3b965b0df90219ff339920b1fffdfb944720a4689d3f6dc6de8bc6c8fad602",
+    "installed-desktop-4096.png": "bab9c716e0b75693d08b2664bc0f2f2d9890bbae55366bfef5dfac2a338daa71",
+    "installed-notepad-reopen-512.png": "8f881ec9603395a5dcf0b4afb8cb79373686af9c4aaa02e72d2ac4347d54e7e8",
+    "installed-notepad-reopen-4096.png": "7f243d7329ad91cc4cde7f7f6c21daabeb5839cab992f910968f35c9bebfdac2",
+    "boot-512.png": "3f0ea62f50daaeec6bdfa80f525cd32d004cbd0972ad564b10d7986ef5e13df3"
+  }
+}

@@ -39,14 +39,14 @@ trusted. Copy spans are bounded to 4096 bytes internally; console is capped at 6
 
 Kernel code creates processes from a validated embedded ELF. There is no public
 spawn/wait API, filesystem-based executable loading, dynamic linker, POSIX
-compatibility, time zone service or GUI API yet. File operations added at checkpoint
+compatibility or time zone service yet. File operations added at checkpoint
 3A are documented below. Graphics, broader time,
 process control and IPC extensions must get documented numbers when implemented.
 
 Unknown EL0 synchronous faults terminate only that process. Exited contexts remain
 until the bootstrap supervisor switches back to the kernel address space and
 reaps them. The reaper releases user regions, private tables and guarded kernel
-stacks. Current limits are four live process records, eight thread slots and
+stacks. Current limits are eight live process records, twelve thread slots and
 sixteen regions/tables per process. All management operations run with IRQs masked;
 SMP and hostile-device DMA isolation are outside this milestone.
 
@@ -87,7 +87,7 @@ KEY gives ASCII/navigation plus KEY_CTRL, CLICK gives client coordinates, CLOSE
 requests voluntary exit (an editor may confirm/cancel).
 
 24 INFO copies real `chos_info` counters/dimensions. 25 LAUNCH selects built-in
-app 1–6; returns PID or negative error. 26 THEME selects session colors 0/1.
+app 1–7 (Setup is 7); returns PID or negative error. 26 THEME selects session colors 0/1.
 27 REPLACE takes absolute path, data pointer, length <=4096: validate all input,
 then commit one CHFS whole-file replacement atomically. 28 POWER takes 1 reset or
 2 shutdown via ACPI-declared PSCI, otherwise reports unsupported. 29 TASK takes
@@ -111,3 +111,21 @@ is rechecked before destructive work. Invalid confirmations do not write.
 INFO now includes the persistent-volume flag and saved computer name. LAUNCH
 accepts app 7 for the native installer. These are development ABI extensions;
 applications and kernel must be built together.
+
+## Royale additions (M6C)
+
+Existing syscall numbers and structure sizes are preserved. DRAW adds op 3,
+ROUNDED_RECT (x/y/w/h/color, radius 5), and op 4, UI_TEXT (w selects font 0 body,
+1 bold, 2 title, 3 small, 4 mono; h ignored). Existing TEXT now renders the same
+12-pixel advance with A8 coverage. All text remains 79-byte bounded ASCII. UI font
+IDs outside 0–4 are rejected; no application supplies glyph or physical pointers.
+
+31 RENDER takes x0 writable `chos_render`: five uint64 values `frames`, `pixels`,
+`partial_frames`, `last_us`, `total_us`. Frames/pixels count completed paints and
+actual framebuffer copy area. Counter-derived microseconds measure software paint
+cost, not CPU utilization. It requires an active desktop and validates the buffer.
+
+INFO's former `reserved` uint32 now reports VOLUME_* from include/abi.h: 0 live,
+1 persistent, 2 no disk device, 3 invalid GPT, 4 ESP identity mismatch, 5 invalid
+CHFS, 6 invalid installed computer configuration. `persistent` remains authoritative
+for mounted persistent files; values 2–6 identify a temporary fallback session.

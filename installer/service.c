@@ -13,6 +13,7 @@ static struct chos_setup state;
 static uint64_t owner;
 static int worker=-1;
 static bool persistent;
+static unsigned volume_state;
 static char computer[32]="CHOS-PC";
 static struct chos_confirm confirmed;
 static uint64_t first_block,partition_blocks;
@@ -29,22 +30,28 @@ static void partition(void){
     system_device=(struct block_device){0,partition_blocks,system_read,system_write,system_flush};
 }
 bool setup_persistent(void){return persistent;}
+unsigned setup_volume_state(void){return volume_state;}
 const char *setup_computer(void){return computer;}
 void setup_initialize(struct block_device *device,struct chos_boot_info *b,struct pmm *p){
     boot=b;physical=p;state.medium=b->boot_medium;
+    if(b->boot_medium==1)volume_state=VOLUME_NO_DEVICE;
     if(!device)return;
     disk=*device;state.bytes=disk.blocks*4096;state.sector=nvme_sector_size();copy(state.serial,nvme_serial(),sizeof(state.serial));
+    if(b->boot_medium==1)volume_state=VOLUME_BAD_GPT;
     if(b->boot_medium==1 && install_gpt_probe(disk,state.sector,&plan,&workspace)){
         uint8_t guid[16];for(unsigned i=0;i<16;i++)guid[i]=plan.disk_guid[i];guid[0]^=0xa5;guid[15]^=1;
+        volume_state=VOLUME_IDENTITY;
         bool match=true;for(unsigned i=0;i<16;i++)if(guid[i]!=b->esp_guid[i])match=false;
         if(match){
             partition();
+            volume_state=VOLUME_BAD_CHFS;
             if(!chfs_mount(&system_volume,system_device))return;
+            volume_state=VOLUME_BAD_CONFIG;
             size_t size=0;
             char name[32]={0};
             if(!chfs_read(&system_volume,"/system/computer",0,name,31,&size) || !size || size>31)return;
             for(unsigned i=0;i<size;i++)if(!((name[i]>='A' && name[i]<='Z') || (name[i]>='a' && name[i]<='z') || (name[i]>='0' && name[i]<='9') || name[i]=='-'))return;
-            copy(computer,name,sizeof(computer));vfs_mount(&system_volume);persistent=true;
+            copy(computer,name,sizeof(computer));vfs_mount(&system_volume);persistent=true;volume_state=VOLUME_PERSISTENT;
         }
     }
     /* Optical boot is required: no path exists to erase the currently booted
@@ -71,9 +78,9 @@ static void install(void *unused){
     if(!install_fat32_write(target,&plan,&files,true,&workspace)){state.error=3;return;}
     state.phase=3;partition();
     static const char welcome[]="Welcome to installed CHOS.\nThis system volume persists across reboot.\n";
-    extern const uint8_t license_text[],license_text_end[];
+    extern const uint8_t license_text[],license_text_end[],font_license[],font_license_end[];
     unsigned length=0;while(confirmed.computer[length])length++;
-    if(!chfs_format(&system_volume,system_device,true) || !chfs_mkdir(&system_volume,"/system") || !chfs_mkdir(&system_volume,"/documents") || !chfs_write(&system_volume,"/system/computer",confirmed.computer,length) || !chfs_write(&system_volume,"/documents/welcome.txt",welcome,sizeof(welcome)-1) || !chfs_write(&system_volume,"/system/license",license_text,(size_t)(license_text_end-license_text))){state.error=4;return;}
+    if(!chfs_format(&system_volume,system_device,true) || !chfs_mkdir(&system_volume,"/system") || !chfs_mkdir(&system_volume,"/documents") || !chfs_write(&system_volume,"/system/computer",confirmed.computer,length) || !chfs_write(&system_volume,"/documents/welcome.txt",welcome,sizeof(welcome)-1) || !chfs_write(&system_volume,"/system/license",license_text,(size_t)(license_text_end-license_text)) || !chfs_write(&system_volume,"/system/font-ofl",font_license,(size_t)(font_license_end-font_license))){state.error=4;return;}
     if(!chfs_mount(&system_volume,system_device) || !install_gpt_verify(disk,state.sector,&plan,&workspace) || !install_fat32_verify(disk,&plan,&files,&workspace)){state.error=5;return;}
     state.progress=100;state.phase=4;
 }

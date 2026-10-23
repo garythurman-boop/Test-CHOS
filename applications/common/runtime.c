@@ -20,10 +20,12 @@ static void draw(unsigned op,int x,int y,int w,int h,const char *s,uint32_t colo
     (void)api(SYS_DRAW,(uint64_t)app_window,(uintptr_t)&d,0);
 }
 void text(int x,int y,const char *s,uint32_t c) { draw(DRAW_TEXT,x,y,0,0,s,c); }
+void rounded(int x,int y,int w,int h,uint32_t c) { draw(DRAW_ROUND,x,y,w,h,0,c); }
+void ui_text(unsigned font,int x,int y,const char *s,uint32_t c) { draw(DRAW_UI_TEXT,x,y,(int)font,0,s,c); }
 void box(int x,int y,int w,int h,uint32_t c) { draw(DRAW_RECT,x,y,w,h,0,c); }
 void begin(uint32_t c) { draw(DRAW_CLEAR,0,0,0,0,0,c); }
 void status(const char *s) { copy(app_status,s,sizeof(app_status)); }
-void label(int y,const char *s) { text(12,y,s,0x204b72); }
+void label(int y,const char *s) { ui_text(0,12,y,s,0x204b72); }
 void prompt(const char *title,const char *initial) { copy(prompt_title,title,sizeof(prompt_title));copy(prompt_value,initial,sizeof(prompt_value));prompting=true; }
 bool prompt_key(unsigned key) {
     if(key==('u'|KEY_CTRL)){prompt_value[0]=0;return false;}
@@ -36,12 +38,12 @@ bool prompt_key(unsigned key) {
 }
 void present(void) {
     if(prompting) {
-        box(4,app_height-110,app_width-8,84,0xb9d5ee);
-        text(12,app_height-102,prompt_title,0x163b65);
+        rounded(4,app_height-110,app_width-8,84,0xb9d5ee);
+        ui_text(1,12,app_height-102,prompt_title,0x163b65);
         box(12,app_height-78,app_width-24,25,0xffffff);text(16,app_height-73,prompt_value,0x163b65);
-        text(12,app_height-46,"Enter accepts. Escape cancels.",0x163b65);
+        ui_text(3,12,app_height-46,"Enter accepts. Escape cancels.",0x163b65);
     }
-    box(0,app_height-23,app_width,23,0xc1d7e9);text(8,app_height-18,app_status,0x163b65);
+    box(0,app_height-23,app_width,23,0xc1d7e9);ui_text(3,8,app_height-18,app_status,0x163b65);
     (void)api(SYS_PRESENT,(uint64_t)app_window,0,0);
 }
 int read_file(const char *path,char *buffer,unsigned cap) {

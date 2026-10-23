@@ -40,5 +40,6 @@ void setup_paint(void){
         label(230,"Requires optical boot and adequate capacity.");label(266,"No disk has been modified. Enter selects.");
     }
     if(stage>=3){label(62,"WARNING: ALL DATA ON THIS DISK IS ERASED");label(102,disk.serial);char size[21];number(size,disk.bytes/1048576);label(138,"Disk capacity MiB:");text(250,138,size,0xa13030);label(174,"Computer name:");text(220,174,confirm.computer,0x204b72);label(214,"Enter opens the final typed confirmation.");label(250,"Accounts, password and timezone setup later.");}
+    rounded(app_width-160,app_height-64,140,30,0x2e6bb4);ui_text(1,app_width-140,app_height-57,stage==0?"Begin setup":"Continue",0xffffff);
     status("Enter continues. Escape exits. No silent erase.");
 }

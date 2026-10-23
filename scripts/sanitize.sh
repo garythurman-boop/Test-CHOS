@@ -9,7 +9,7 @@ cc "${flags[@]}" tests/acpi.c kernel/arch/arm64/acpi.c -o build/sanitized/acpi
 cc "${flags[@]}" tests/elf.c kernel/process/elf.c -o build/sanitized/elf
 cc "${flags[@]}" tests/filesystem.c filesystem/chfs.c -o build/sanitized/filesystem
 cc "${flags[@]}" tests/input.c drivers/input/events.c -o build/sanitized/input
-cc "${flags[@]}" tests/desktop.c desktop/window-manager/model.c desktop/graphics/render.c desktop/graphics/font.c -o build/sanitized/desktop
+cc "${flags[@]}" tests/desktop.c desktop/window-manager/model.c desktop/graphics/render.c desktop/graphics/font.c desktop/graphics/primitives.c desktop/graphics/fontcache.c desktop/graphics/assets.S -o build/sanitized/desktop
 for test in memory acpi filesystem input desktop; do "build/sanitized/$test"; done
 build/sanitized/elf build/init.elf
 build/sanitized/elf build/desktop.elf
@@ -22,3 +22,6 @@ build/sanitized/installer "$gpt_test_dir/disk"
 
 cc "${flags[@]}" tests/setup.c installer/policy.c -o build/sanitized/setup
 build/sanitized/setup
+
+cc "${flags[@]}" tests/graphics.c desktop/graphics/render.c desktop/graphics/primitives.c desktop/graphics/fontcache.c desktop/graphics/assets.S -o build/sanitized/graphics
+build/sanitized/graphics

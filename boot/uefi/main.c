@@ -1,5 +1,6 @@
 #include "efi.h"
 #include "boot.h"
+#include "display_mode.h"
 static const struct guid acpi_guid={0x8868e871,0xe4f1,0x11d3,{0xbc,0x22,0,0x80,0xc7,0x3c,0x88,0x81}};
 static struct guid path_guid={0x09576e91,0x6d3f,0x11d2,{0x8e,0x39,0,0xa0,0xc9,0x69,0x72,0x3b}};
 static struct guid loaded_guid={0x5b1b31a1,0x9562,0x11d2,{0x8e,0x3f,0,0xa0,0xc9,0x69,0x72,0x3b}};
@@ -48,6 +49,13 @@ status efi_main(handle image,struct system_table *st) {
         for(unsigned i=0;equal && i<sizeof(expected)-1;i++) if(content[i]!=expected[i]) equal=0;
         if(equal) test_flags=1;
     }
+    uint32_t requested_w=1024,requested_h=768;
+    if(!EFI_ERROR(root->open(root,&config,(char16 *)u"\\CHOS\\DISPLAY.CFG",1,0))) {
+        char content[16];uint64_t bytes=sizeof(content);
+        status cs=config->read(config,&bytes,content);config->close(config);
+        if(EFI_ERROR(cs) || !display_request(content,(unsigned)bytes,&requested_w,&requested_h))
+            st->console_out->output(st->console_out,(char16 *)u"CHOS: invalid DISPLAY.CFG; using preferred mode\r\n");
+    }
     root->close(root);
     if (EFI_ERROR(s)||read_size!=file_size) return fail(st,(char16 *)u"CHOS: incomplete kernel read\r\n",EFI_INVALID_PARAMETER);
     struct chos_boot_info *bi=0;
@@ -91,8 +99,25 @@ status efi_main(handle image,struct system_table *st) {
     s=bs->locate_protocol(&gop_guid,0,(void **)&gop);
     if (EFI_ERROR(s)||!gop||!gop->mode||!gop->mode->info)
         return fail(st,(char16 *)u"CHOS: GOP framebuffer required\r\n",EFI_INVALID_PARAMETER);
+    /* QueryMode may allocate a firmware pool. Release every result before the
+     * final memory-map snapshot. Only request a mode the firmware enumerated. */
+    uint32_t candidate=UINT32_MAX;
+    if(gop->query_mode && gop->set_mode && gop->mode->max_mode<=256) {
+        for(uint32_t i=0;i<gop->mode->max_mode;i++) {
+            struct gop_info *info=0;uint64_t bytes=0;
+            status qs=gop->query_mode(gop,i,&bytes,&info);
+            if(!EFI_ERROR(qs) && info && bytes>=sizeof(*info) &&
+               display_mode_supported(info->width,info->height,info->stride,info->pixel_format) &&
+               info->width==requested_w && info->height==requested_h)candidate=i;
+            if(info)bs->free_pool(info);
+        }
+        if(candidate!=UINT32_MAX && candidate!=gop->mode->mode && EFI_ERROR(gop->set_mode(gop,candidate)))
+            st->console_out->output(st->console_out,(char16 *)u"CHOS: mode switch failed; retaining firmware mode\r\n");
+        if(candidate==UINT32_MAX)st->console_out->output(st->console_out,(char16 *)u"CHOS: requested mode unavailable; retaining firmware mode\r\n");
+    }
+    if(!gop->mode || !gop->mode->info)return fail(st,(char16 *)u"CHOS: missing active mode\r\n",EFI_INVALID_PARAMETER);
     struct gop_info *gi=gop->mode->info;
-    if (gi->pixel_format>1 || gi->width<640 || gi->height<480 || gi->stride<gi->width ||
+    if (!display_mode_supported(gi->width,gi->height,gi->stride,gi->pixel_format) ||
         (uint64_t)gi->stride*gi->height*4>gop->mode->framebuffer_size)
         return fail(st,(char16 *)u"CHOS: unsupported framebuffer mode\r\n",EFI_INVALID_PARAMETER);
     bi->framebuffer=gop->mode->framebuffer;

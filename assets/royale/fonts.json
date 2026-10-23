@@ -1,0 +1,58 @@
+{
+  "format": "CHOSFNT1",
+  "coverage": "8-bit grayscale",
+  "characters": [
+    32,
+    126
+  ],
+  "styles": [
+    {
+      "id": 0,
+      "name": "body",
+      "size": 14,
+      "baseline": 14,
+      "line_height": 20,
+      "fixed_advance": 0
+    },
+    {
+      "id": 1,
+      "name": "bold",
+      "size": 14,
+      "baseline": 14,
+      "line_height": 20,
+      "fixed_advance": 0
+    },
+    {
+      "id": 2,
+      "name": "title",
+      "size": 18,
+      "baseline": 18,
+      "line_height": 25,
+      "fixed_advance": 0
+    },
+    {
+      "id": 3,
+      "name": "small",
+      "size": 12,
+      "baseline": 12,
+      "line_height": 17,
+      "fixed_advance": 0
+    },
+    {
+      "id": 4,
+      "name": "mono",
+      "size": 16,
+      "baseline": 13,
+      "line_height": 18,
+      "fixed_advance": 12
+    }
+  ],
+  "source_sha256": {
+    "NotoSans-Bold.ttf": "e83493c945848ecd4a9ad0f6d19164541a0d3e23a9c952304a00a46e00272ac5",
+    "NotoSans-Regular.ttf": "89c3c497f618fdaa0b2d1e98fef93582f28c71debd2c4a8cdf41f190ced2909d",
+    "NotoSansMono-Regular.ttf": "6b692c4b6d15ccf59f1c1fe8d11cb8a92f51960f3e9f1f523781755a3af7e29f"
+  },
+  "sha256": "07f0df18134f63224b346767907d7d9a5c493d76ad127956d29969e35be285ba",
+  "bytes": 48974,
+  "license": "SIL OFL 1.1 (assets/fonts/OFL.txt)"
+}

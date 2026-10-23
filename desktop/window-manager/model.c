@@ -85,11 +85,26 @@ int wm_task_width(const struct wm *m) {
     int width=m->count?(m->width-280)/(int)m->count:110;
     return width>110?110:width;
 }
+/* Shared menu geometry keeps keyboard selection, pointer hit testing and
+ * rendering on the same layout. Main entries retain their documented order. */
+bool wm_menu_item(const struct wm *m,unsigned item,int *x,int *y,int *w,int *h) {
+    int top=m->height-44-400;*w=194;*h=32;
+    if(m->applications) {if(item>=7)return false;*x=18;*y=top+64+(int)item*38;return true;}
+    if(item==0){*x=18;*y=top+324;return true;}
+    if(item>=1 && item<=7){*x=224;*y=top+64+(int)(item-1)*38;return true;}
+    if(item>=8 && item<=10){*x=18+(int)(item-8)*134;*y=top+362;*w=126;return true;}
+    if(item==11){*x=390;*y=top+12;*w=28;*h=26;return true;}
+    return false;
+}
 void wm_mouse(struct wm *m,int x,int y,int button) {
     m->mouse_x=x; m->mouse_y=y; m->dirty=true;
     if(m->confirm)return;
     if(button==0) { m->drag=-1; return; }
     if(button<0) {
+        if(m->menu) {
+            unsigned count=m->applications?7:12;
+            for(unsigned item=0;item<count;item++) {int a,b,w,h;if(wm_menu_item(m,item,&a,&b,&w,&h) && inside(x,y,a,b,w,h))m->selection=item;}
+        }
         if(m->drag<0) return;
         struct wm_window *w=&m->windows[m->drag];
         if(m->resize) {
@@ -121,12 +136,13 @@ void wm_mouse(struct wm *m,int x,int y,int button) {
         return;
     }
     if(m->menu) {
-        int top=m->height-44-12*25-40;
-        if(inside(x,y,8,top,260,340) && y>=top+40) {
-            unsigned item=(unsigned)(y-top-40)/25;
-            menu_activate(m,item);return;
+        unsigned count=m->applications?7:12;
+        for(unsigned item=0;item<count;item++) {
+            int a,b,w,h;if(wm_menu_item(m,item,&a,&b,&w,&h) && inside(x,y,a,b,w,h)){menu_activate(m,item);return;}
         }
-        m->menu=false; return;
+        int top=m->height-44-400;
+        if(!m->applications && inside(x,y,18,top+64,194,7*36)) {m->launch=(unsigned)(y-top-64)/36+1;m->menu=false;return;}
+        m->menu=false;return;
     }
     for(unsigned n=m->count;n;n--) {
         unsigned slot=m->order[n-1];struct wm_window *w=&m->windows[slot];

@@ -17,3 +17,13 @@ The suite covers twenty QEMU boots (seventeen positive, three expected refusals)
 nine portable host programs, both original ELF payloads, sanitizers, independent
 wire-format checks, repeatability and explicit disk safety gates. Builder-created
 GPT fixtures remain separate from the six native-installer/installed-boot cases.
+
+## M6C additions
+
+The complete M6B acceptance remains required. Add ten-host-program coverage with
+font bounds/coverage/alpha/clipping and display request validation. QEMU adds a
+native Start-menu pointer launch and partial-paint counter case; two alternate
+mode request/fallback cases; and a failed CHFS mount on a copied installed disk
+that must warn and leave the entire disk unchanged. The expanded validator runs
+24 VMs. See [M6C](milestone-6c.md) and [Royale](royale.md). The GUI polish/installer
+configuration/Fusion milestones remain partial until their own evidence exists.

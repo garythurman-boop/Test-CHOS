@@ -63,3 +63,13 @@ file saves persist across cold boots. About shows the installed-volume status an
 computer name. The earlier RAM-only description applies to live ISO/builder
 sessions. A disk-booted Setup cannot erase its own boot medium. See milestone-6b.md
 for tested geometry, safety/error limits and exact native-install evidence.
+
+## Royale presentation (M6C)
+
+The existing native applications and command/event protocol now use cached
+anti-aliased text, rounded blue chrome/taskbar, original wallpaper/icons and a
+two-column Start menu. See [Royale](royale.md) for architecture, actual captures
+and remaining widgets. Old 12-pixel editing cells and event geometry are preserved.
+UI labels/status bars are proportional, and toolbar labels align with hit regions.
+Boot-time UEFI mode enumeration prefers 1024×768. Disk mount failures explicitly
+report temporary RAM storage. Detailed evidence: [M6C](milestone-6c.md).

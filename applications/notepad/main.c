@@ -51,7 +51,7 @@ void notepad_click(int x,int y) {
     if(y<28) { if(x<88)action(1);else if(x<180)save();else action(2); }
 }
 void notepad_paint(void) {
-    begin(0xffffff);box(0,0,app_width,29,0xd4e4f1);label(7,"Open     Save    Save As");
+    begin(0xffffff);box(0,0,app_width,29,0xd4e4f1);rounded(4,2,80,25,0xe7f0f9);rounded(92,2,82,25,0xe7f0f9);rounded(184,2,94,25,0xe7f0f9);ui_text(0,16,7,"Open",0x204b72);ui_text(0,104,7,"Save",0x204b72);ui_text(0,196,7,"Save As",0x204b72);
     text(10,38,filename[0]?filename:"Untitled",0x2a5579);
     unsigned columns=(unsigned)(app_width-24)/12,rows=(unsigned)(app_height-105)/18;
     if(columns>78)columns=78;

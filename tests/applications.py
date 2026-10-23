@@ -6,22 +6,26 @@ import time
 from desktop import Guest
 from boot import BUILD, CHOS
 
-GLYPHS={
- 'G':[14,17,16,23,17,17,15], 'P':[30,17,17,30,16,16,16],
- 'A':[14,17,17,31,17,17,17], 'C':CHOS[0], 'D':[30,17,17,17,17,17,30],
- 'E':[31,16,16,30,16,16,31], 'F':[31,16,16,30,16,16,16], 'H':CHOS[1],
- 'I':[14,4,4,4,4,4,14], 'M':[17,27,21,21,17,17,17], 'L':[16,16,16,16,16,16,31], 'N':[17,25,21,19,17,17,17],
- 'O':CHOS[2], 'R':[30,17,17,30,20,18,17], 'S':CHOS[3], 'T':[31,4,4,4,4,4,4],
- '0':[14,17,19,21,25,17,14],'4':[2,6,10,18,31,2,2],'5':[31,16,16,30,1,1,30],
- '6':[14,16,16,30,17,17,14],'7':[31,1,2,4,8,8,8],'8':[14,17,17,14,17,17,14],'9':[14,17,17,15,1,1,14],
- '1':[4,12,4,4,4,4,14],'2':[14,17,1,2,4,8,31],'3':[30,1,1,14,1,1,30],
-}
-def matches(pixel,x,y,s,color):
+# Decode the checked-in A8 cache independently of the guest renderer. This
+# checks native raster output; it does not synthesize a screenshot or app state.
+import struct
+FONT=(BUILD.parent/'assets/royale/fonts.bin').read_bytes()
+BASELINE=struct.unpack_from('<I',FONT,24+4*16+4)[0]
+TABLE=struct.unpack_from('<I',FONT,24+4*16+12)[0]
+def matches(pixel,x,y,s,color,style=4):
+    baseline=struct.unpack_from('<I',FONT,24+style*16+4)[0]
+    table=struct.unpack_from('<I',FONT,24+style*16+12)[0]
+    pen=0
     for index,c in enumerate(s):
-        if c==' ':continue
-        for row,bits in enumerate(GLYPHS[c]):
-            for col in range(5):
-                if bits&(16>>col) and pixel(x+index*12+col*2,y+row*2)!=color:return False
+        offset,w,h,left,top,advance=struct.unpack_from('<IHHbbH',FONT,table+(ord(c)-32)*12)
+        for row in range(h):
+            for col in range(w):
+                coverage=FONT[offset+row*w+col]
+                actual=pixel(x+pen+left+col,y+baseline+top+row)
+                distance=max(abs(((actual>>shift)&255)-((color>>shift)&255)) for shift in (0,8,16))
+                if coverage>=250 and distance>6:return False
+                if coverage==0 and distance<=4:return False
+        pen+=advance
     return True
 
 def read_number(pixel,x,y,color):
@@ -85,7 +89,7 @@ def main():
         # /documents contains welcome.txt, note.txt, AS.TXT, work, FOLDER.
         guest.wait(lambda p:matches(p,70,252,'FOLDER',0x206ba5),'Explorer native mkdir and directory refresh')
         guest.click(100,254);time.sleep(.25)
-        guest.wait(lambda p:matches(p,200,86,'FOLDER',0x204b72),'Explorer directory navigation')
+        guest.wait(lambda p:matches(p,68,86,'/documents/FOLDER',0x204b72,0),'Explorer directory navigation')
         guest.key('u');time.sleep(.2)
         guest.click(100,188) # note.txt
         guest.key('c');type_text(guest,'GUI.TXT');guest.key('ret');time.sleep(.2)
@@ -112,8 +116,8 @@ def main():
         result['checks']+=['Control Panel changes desktop theme','Task Manager queries live process and memory instrumentation']
         # End the graphical session through its confirmation, then launch Terminal.
         width,height=guest.dimensions();guest.click(40,height-22)
-        guest.click(100,height-44-340+44+8*25)
-        guest.wait(lambda p:p(140,280)==0xc9deee,'session confirmation')
+        guest.click(70,height-44-400+378)
+        guest.wait(lambda p:p((width-540)//2+10,(height-150)//2+50)==0xc9deee,'session confirmation')
         guest.key('y');guest.wait(lambda p:p(60,250)==0x326bb0,'session reset and process reaping')
         result['checks']+=['confirmed session termination and fresh native About']
         guest.click(618,36);time.sleep(.2);launch(guest,3)

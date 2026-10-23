@@ -86,7 +86,7 @@ struct gop_mode {
     struct gop_info *info;
     uint64_t info_size,framebuffer,framebuffer_size;
 };
-struct gop { void *query_mode,*set_mode,*blt; struct gop_mode *mode; };
+struct gop { status (*query_mode)(struct gop *,uint32_t,uint64_t *,struct gop_info **); status (*set_mode)(struct gop *,uint32_t); void *blt; struct gop_mode *mode; };
 _Static_assert(offsetof(struct boot_services,exit_boot_services)==24+26*8,"UEFI boot ABI");
 _Static_assert(offsetof(struct system_table,boot)==96,"UEFI system ABI");
 #endif
