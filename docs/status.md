@@ -53,3 +53,10 @@ not an installer or desktop persistence environment.
 - Native installation and installed CHFS persistence pass QEMU cold-boot tests.
   Full-screen Setup lacks account/password/DST/layout/mode configuration, cancellation of
   an active writer, repair/fsck and full transactional rollback. No Fusion evidence.
+
+The dedicated Setup sequence passed 35 QEMU cases, 13 portable host programs,
+ASan/UBSan and clean tracked-source ISO reproduction. Actual captures and hashes:
+[evidence/m6d-setup/summary.json](evidence/m6d-setup/summary.json). Native 70 MiB
+installation/boot, both logical-sector geometries, typed confirmation, failure/
+interruption/retry and 640×480 setup are covered. This does not complete accounts,
+repair, production reliability or Fusion compatibility.

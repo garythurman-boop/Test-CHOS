@@ -1,0 +1,5 @@
+UEFI firmware (version 2025.02-8+deb13u1 built at 18:06:17 on Nov  8 2025)
+BdsDxe: loading Boot0001 "UEFI QEMU QEMU CD-ROM " from PciRoot(0x0)/Pci(0x4,0x0)/Scsi(0x0,0x0)
+BdsDxe: starting Boot0001 "UEFI QEMU QEMU CD-ROM " from PciRoot(0x0)/Pci(0x4,0x0)/Scsi(0x0,0x0)
+CHOS - ARM64 UEFI loader
+CHOS: kernel loaded; leaving firmware

@@ -65,7 +65,7 @@ operation, rather than showing a fake timer or remaining-time estimate.
 On a stage change the worker queues a refresh, wakes Setup and cooperatively yields until the
 compositor has displayed that stage's submitted frame. Setup submits the phase
 it actually painted; the compositor does not infer it from newer worker state. There is no minimum stage
-duration. A two-second upper bound and owner-liveness check prevent a lost UI from
+duration. A 200-tick upper bound (nominally two seconds) and owner-liveness check prevent a lost UI from
 stalling disk work indefinitely. This is presentation synchronization, not fake
 progress. Progress snapshots and WM notification queue mutations use IRQ exclusion, matching
 the single-CPU kernel synchronization contract. The private kernel yield SVC is

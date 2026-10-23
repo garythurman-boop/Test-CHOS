@@ -116,12 +116,40 @@ the painted phase and queueing refresh before wake; the full sequence was rerun
 after this correction. Runtime
 failures are not hidden or represented as successful evidence.
 
-A clean `git archive` of source commit `b5052cf` was built in a separate directory,
+A clean `git archive` of final source commit `4e447ae` was built in a separate directory,
 including all 13 host programs and both actual ELF validators. A final clean
 build also verifies the IRQ-protected notification/state update correction. Its ISO matches the
 final source image byte for byte. See [source-package build](evidence/m6d-setup/source-package-build.log).
-Final test results, hash/size and measured memory/timing are recorded below after
-completion of the current sequence.
+Final result: **all 35 QEMU cases and 13 portable host programs passed** on the
+IRQ-protected final source. Both actual ELF payload validators, ASan/UBSan,
+ISO/builder-disk repeatability, independent GPT/FAT32/CHFS/configuration parsers,
+invalid-input/no-write hashes, actual NVMe write-error handling, interrupted-disk
+retry, 70 MiB installed boot, both sector geometries, completion Restart,
+persistent files/settings and 640×480 configuration/confirmation passed.
+
+The final full run includes the improved three-app arrangement; no additional
+capture-only rerun is needed. **62 actual guest PNG captures** have hashes in
+[summary.json](evidence/m6d-setup/summary.json). Full logs:
+[validation](evidence/m6d-setup/m6d-setup-validation.log),
+[sanitizers](evidence/m6d-setup/m6d-setup-sanitize.log).
+
+The ISO is 17,154,048 bytes, SHA-256:
+
+```
+d97d3e5c923cd2baa75ecc7a1036c9d0c61c0fcdfd817a19fa714297988e8300
+```
+
+At 512 MiB, the two-app test measured 14,712 KiB of allocated
+conventional RAM out of 489,332 KiB managed. Desktop readiness was
+14.981 seconds including firmware, kernel self-tests and the explicit live choice
+under QEMU TCG. These exclude unmanaged/firmware reservations and do not establish
+idle CPU utilization or native Apple Silicon performance. Linked kernel text/data/
+BSS totals 416,850 bytes; the native application text segment is 38,744 bytes,
+within its 64 KiB loader limit. See [linked sizes](evidence/m6d-setup/linked-sizes.log).
+
+[Downloadable versioned ISO and instructions](../artifacts/milestone-6d-setup/README.md).
+The earlier M6D image remains preserved. **VMware Fusion was not tested**; there is
+no Apple Silicon/Fusion host here, and EL2, GICv3 and USB/xHCI remain unsupported.
 
 ## Source files and next steps
 
