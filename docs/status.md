@@ -7,12 +7,14 @@
 | 3: display/input/NVMe/CHFS persistent operations | QEMU GOP + Virtio PCI + NVMe tested; three cold storage boots |
 | 4: CHOS Desktop/window manager/taskbar/Start | Working core; Royale widgets and multi-window usage tested; dedicated Search/Help and wallpaper file loading remain |
 | 5: six native applications | Functional bounded native apps with installed persistence and shared widgets; see desktop.md |
-| 6: graphical installer/GPT/ESP/installed boot | Native graphical installation core, disk boot and persistent system volume tested; saved computer/theme/fixed clock offset implemented; account/password/layout and graphical mode configuration unfinished |
+| 6: graphical installer/GPT/ESP/installed boot | Dedicated full-screen blue/Royale native setup, disk boot and persistent system volume; saved computer/theme/fixed clock offset implemented; account/password/layout and graphical mode configuration unfinished |
 | 7: VMware Fusion validation | Not run: no Apple Silicon/Fusion host available |
 | 8: CHOS 0.1 | Not ready |
 
-Current ISO/results: [milestone 6D](milestone-6d.md). [Saved configuration](configuration.md), [native toolkit](gui-toolkit.md). Previous visual checkpoint: [milestone 6C](milestone-6c.md). [Royale visual architecture](royale.md). Previous installer core: [milestone 6B](milestone-6b.md). Earlier foundations: [milestone 6A](milestone-6a.md). Ordinary images
-start a genuine original desktop and native EL0 apps after kernel tests. Their live
+Current ISO/results: [M6D dedicated Setup iteration](milestone-6d-setup.md).
+[Setup flow and safety](setup-environment.md). Preserved [M6D widgets/settings checkpoint](milestone-6d.md). [Saved configuration](configuration.md), [native toolkit](gui-toolkit.md). Previous visual checkpoint: [milestone 6C](milestone-6c.md). [Royale visual architecture](royale.md). Previous installer core: [milestone 6B](milestone-6b.md). Earlier foundations: [milestone 6A](milestone-6a.md). Ordinary images
+boot dedicated Setup after kernel tests. L/F3 starts Live Desktop; installed disks
+start the regular desktop directly. Their live
 CHFS volume is RAM backed. Native Setup requires explicit destructive confirmation.
 Installed sessions mount the verified CHFS system partition and persist files.
 The separately gated storage-test ISO verifies persistent NVMe/CHFS data but is
@@ -49,5 +51,5 @@ not an installer or desktop persistence environment.
 - Task Manager uses real process IDs, memory counters and scheduled timer samples,
   not CPU percentage. Allocator figures exclude non-conventional reservations.
 - Native installation and installed CHFS persistence pass QEMU cold-boot tests.
-  Setup lacks account/password/DST/layout/mode configuration, cancellation of
+  Full-screen Setup lacks account/password/DST/layout/mode configuration, cancellation of
   an active writer, repair/fsck and full transactional rollback. No Fusion evidence.

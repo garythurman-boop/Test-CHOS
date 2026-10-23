@@ -9,6 +9,7 @@ bool thread_reap(struct pmm *,unsigned id);
 uint64_t scheduler_pid(void);
 struct exception_frame *scheduler_wait(struct exception_frame *,uint64_t);
 void scheduler_wake(uint64_t);
+void thread_yield(void);
 void scheduler_account(void);
 uint64_t scheduler_samples(uint64_t);
 bool scheduler_cancel(uint64_t);

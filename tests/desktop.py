@@ -11,7 +11,7 @@ import time
 from boot import BUILD, read_ppm, save_png
 
 class Guest:
-    def __init__(self,label='desktop',ram=512,disk=None,sector_bytes=512,optical=False):
+    def __init__(self,label='desktop',ram=512,disk=None,sector_bytes=512,optical=False,live=True,fault_config=None):
         self.label=label
         self.lock=(BUILD/'boot-test.lock').open('w')
         fcntl.flock(self.lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
@@ -24,7 +24,8 @@ class Guest:
             '-display','none','-serial',f'file:{BUILD}/{label}.serial.log',
             '-qmp',f'unix:{self.sockpath},server=on,wait=off','-no-reboot','-net','none']
         if disk:
-            self.command += ['-drive',f'if=none,id=nvme0,format=raw,file={disk}',
+            backend=f'blkdebug:{fault_config}:{disk}' if fault_config else str(disk)
+            self.command += ['-drive',f'if=none,id=nvme0,format=raw,file={backend}',
                 '-device',f'nvme,drive=nvme0,serial=CHOS-GPT-BOOT,logical_block_size={sector_bytes},physical_block_size={sector_bytes}',
                 '-boot','order=d' if optical else 'order=c']
         if not disk or optical:
@@ -40,6 +41,11 @@ class Guest:
         self.sock.connect(str(self.sockpath));self.stream=self.sock.makefile('rwb')
         assert 'QMP' in json.loads(self.stream.readline());self.qmp('qmp_capabilities')
         self.x,self.y=None,None;self.events=[]
+        self.boot_selection='installed desktop'
+        if live and (not disk or optical):
+            self.wait(lambda p:p(30,160)==0x244da8,'ISO boots directly to dedicated Setup',120)
+            # Explicit live selection; no test-only guest configuration bypass.
+            self.key('l');self.boot_selection='L: Live Desktop from ISO Setup'
     def qmp(self,name,args=None):
         req={'execute':name}
         if args:req['arguments']=args

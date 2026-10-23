@@ -52,7 +52,7 @@ x86 VMware device assumptions:
    native installer currently supports only one controller/namespace.
 3. Start the VM, select optical media in firmware if necessary, and record whether
    the EFI catalog is found, BOOTAA64.EFI executes, kernel load succeeds and
-   core-test completion followed by the desktop appears (or record the explicit unsupported-platform error). Capture an actual screenshot and firmware
+   core-test completion followed by dedicated CHOS Setup appears (or record the explicit unsupported-platform error). Capture an actual screenshot and firmware
    logs. Record resolution, pixel format, EL and displayed memory count.
 4. If optical boot fails, inspect the ISO catalog and firmware boot options. Try
    manually selecting EFI/BOOT/BOOTAA64.EFI from the firmware file browser, if the
@@ -93,3 +93,15 @@ This is evidence for the disk layout/firmware path, not Fusion support or a gues
 installation. Fusion disk-container conversion/import and its ARM64 virtual
 hardware still require an actual Fusion test. The supplied raw test fixture is
 not a validated Fusion VMDK and must not be described as one.
+
+## Dedicated Setup iteration
+
+The current ISO boots Setup directly; L/F3 selects the Live Desktop. Installed
+boot opens the regular Royale desktop. Fusion acceptance must independently
+exercise blue-page keyboard routing (including F3), destination identity/capacity,
+explicit ERASE, graphical progress, real write/flush/read-back failures, completion
+Restart, disk-only boot and persisted files/settings. These require actual target
+input/storage drivers; QEMU Virtio input support is not a Fusion USB implementation.
+The layout minimum is 69 MiB + 20 KiB for 512-byte sectors or 277 MiB + 20 KiB
+for 4096-byte sectors. Use a larger disposable target (e.g. 1 GiB) for manual tests;
+CHFS currently exposes at most its first 4 MiB. See setup-environment.md.

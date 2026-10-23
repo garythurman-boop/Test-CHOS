@@ -19,6 +19,15 @@ static bool write_block(void *ctx,uint64_t block,const void *in) {
     memcpy(d->slots[i].data,in,4096);return true;
 }
 static bool flush(void *ctx){return !((struct disk *)ctx)->fail_flush;}
+static unsigned last_phase,reports;
+static uint64_t last_done;
+static void report(void *unused,unsigned phase,uint64_t done,uint64_t total){
+    (void)unused;assert(phase>=last_phase && phase>=2 && phase<=4 && done<=total);
+    if(phase==last_phase)assert(done>=last_done);else assert(!done);
+    if(phase==3)assert(total==5133);
+    if(phase==4)assert(total==1025);
+    last_phase=phase;last_done=done;reports++;
+}
 int main(void) {
     struct disk *d=calloc(1,sizeof(*d));assert(d);
     uint8_t loader[1025],kernel[5133],guid[16]={1};
@@ -33,7 +42,9 @@ int main(void) {
         assert(!install_fat32_write(device,&plan,&payload,false,&workspace) && !d->reads && !d->writes);
         struct install_payload bad=payload;bad.kernel_size=512*1024+1;
         assert(!install_fat32_write(device,&plan,&bad,true,&workspace) && !d->writes);
-        assert(install_fat32_write(device,&plan,&payload,true,&workspace));
+        last_phase=reports=0;last_done=0;
+        assert(install_fat32_observed(device,&plan,&payload,true,&workspace,report,0));
+        assert(last_phase==4 && last_done==1025 && reports>=6);
         unsigned writes=d->writes;assert(install_fat32_verify(device,&plan,&payload,&workspace));
         struct block_device readonly=device;readonly.write=0;readonly.flush=0;
         assert(install_fat32_verify(readonly,&plan,&payload,&workspace));

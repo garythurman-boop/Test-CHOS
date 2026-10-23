@@ -1,86 +1,73 @@
 # Native CHOS Desktop and applications
 
-The normal ISO starts the original desktop after about eight seconds of kernel
-self-tests. No host operating system, JavaScript runtime, GUI toolkit, or firmware
-boot service runs the desktop. A software backbuffer is copied to the GOP surface.
-Rendering is event driven, with a one-second clock update; idle clients block.
+The optical ISO now starts [dedicated CHOS Setup](setup-environment.md) after the
+kernel self-tests. Press L or F3 at its welcome page to start Live Desktop. An
+installed disk boots the regular desktop directly. Setup and the desktop run on
+the same original kernel, software renderer and native EL0 application environment.
+No host UI framework or firmware boot service runs either environment.
 
-Click a desktop icon, choose Start → Applications, or press Meta then 1–6:
-Explorer, Notepad, Terminal, Control Panel, Task Manager, About. Alt-Tab cycles
-visible windows. Drag a title to move; drag the lower-right corner to resize.
-The title controls minimize, maximize/restore, and close; task buttons restore.
-Start supports arrows/Enter and confirms logoff/restart/shutdown. Logoff closes
-applications and opens a fresh About window; it is not an authentication boundary.
-Search/Help/Run currently open Explorer/About/Terminal respectively, without a
-separate search dialog, help browser or Run dialog.
+Click a desktop icon, choose Start → Applications, or press Meta then 1–7:
+Explorer, Notepad, Terminal, Control Panel, Task Manager, About, Setup. Alt-Tab
+cycles visible windows. Drag a title to move; drag the lower-right corner to
+resize. Title controls minimize, maximize/restore and close; task buttons restore.
+The maximized title now shows the restore glyph. Start uses pointer release,
+hover and arrows/Enter; it confirms logoff/restart/shutdown. Logoff closes apps and
+opens About; it is not an authenticated session. Search/Help/Run currently open
+Explorer/About/Terminal, without separate search/help/run services.
 
-**The desktop volume is RAM backed. All its files are lost on restart/shutdown.**
-This is displayed by the desktop and apps. Ordinary images never format, mount or
-write an attached disk. NVMe/CHFS persistence is independently tested only by the
-separately gated storage-test image; it is not desktop persistence or installation.
+**Live ISO files are RAM backed and lost on restart/shutdown. Installed sessions
+mount persistent CHFS.** About, app status and the live desktop identify the
+storage mode. Inventory and rejected/cancelled setup do not write disks. Only
+an explicitly confirmed native installation can replace an eligible target.
 
-- **Explorer:** directory navigation, Up, new folder, copy, move/rename, and
-  confirmed deletion. Select a file, then C/M/D; N creates an absolute folder path;
-  U goes up, R refreshes, Up/Down scroll the listing. Prompts take absolute paths.
-- **Notepad:** plain ASCII text up to 4095 bytes, insertion, backspace, left/right
-  cursor movement and scrolling. Ctrl-O opens; Ctrl-S saves; Ctrl-A opens Save As;
-  Ctrl-N explicitly discards into a new document. Unsaved close requests confirm.
-  Saves replace a complete file atomically using CHFS copy-on-write. An open/save
-  failure retains the editor buffer; a rejected replacement retains the old file.
+- **Explorer:** real directory navigation, Up, new folder, copy, move/rename and
+  confirmed deletion. Shared toolbar controls require a selection for file
+  actions. Select a file then C/M/D; N creates a folder, U goes up and R refreshes.
+  Up/Down and the scrollbar operate on actual directory contents.
+- **Notepad:** ASCII text up to 4095 bytes, insertion, backspace, cursor movement
+  and scrolling. Ctrl-O opens, Ctrl-S saves, Ctrl-A opens Save As, Ctrl-N starts
+  a new document. A native File menu invokes the same operations. Shared modal
+  fields/buttons support pointer and keyboard. Unsaved close requires confirmation.
+  Whole-file CHFS replacement retains the old file until commit; failed final
+  flushes have uncertain old/new durability, so full rollback is not promised.
 - **Terminal:** help, dir, cd, pwd, mkdir, copy, move, del, cat, cls, systeminfo,
-  run, reboot and shutdown. Paths may be absolute or relative; no shell quoting,
-  pipelines or scripting. Copy/cat are limited to 4095-byte files. Power commands
-  confirm and use the ACPI FADT's PSCI conduit; unsupported firmware returns an error.
-- **Control Panel:** changes the actual desktop color theme and reports the real
-  framebuffer dimensions. Mode switching and persistent configuration are absent.
-- **Task Manager:** lists real PIDs/app IDs, timer samples while each process was
-  scheduled, allocated/managed conventional RAM, and context switches. Samples
-  are not CPU percentage; numbers do not include every firmware/kernel reservation.
-- **About:** actual architecture, development build, managed memory and an input
-  swatch that exercises the same native event/drawing boundary as the apps.
+  run, reboot and shutdown through original APIs. Paths may be absolute or relative;
+  no quoting/pipelines/scripting. Copy/cat cap files at 4095 bytes. Power commands
+  confirm and use the ACPI FADT's PSCI conduit; unsupported platforms return errors.
+- **Control Panel:** Appearance, Clock and System tabs apply theme, clock offset/
+  seconds and computer name. Save/Ctrl-S persists on an installed mounted volume;
+  live Apply is explicitly volatile. Invalid settings do not write. It reports
+  actual display dimensions; graphical mode/layout selection is unfinished.
+- **Task Manager:** real PIDs, app IDs, scheduled timer samples, managed/allocated
+  conventional RAM, context switches and paint counters. Timer samples are not
+  CPU percentage; memory figures exclude firmware/unmanaged reservations.
+- **About:** actual ARM64/development build, managed RAM, computer/volume status
+  and native input swatch. Installed sessions have no permanent desktop overlay.
+- **Setup:** dedicated full-screen blue selection/confirmation and Royale
+  configuration/progress/completion. Launching it hides desktop chrome and routes
+  input exclusively to Setup. Exiting safely restores existing apps. An active
+  writer cannot be exited/cancelled; no password or repair features are simulated.
 
-Prompts accept Enter/Escape; Ctrl-U clears the input. Keyboard layout is basic US
-with Shift/Ctrl/Alt, punctuation and navigation; no IME, Caps Lock or clipboard.
-No font/artwork is copied from Microsoft. The compact original font is deliberately
-simple. There is no acceleration, alpha compositing or image-file wallpaper loader.
+Shared controls provide release/cancel behavior, disabled/hover/focus states,
+Tab/Shift-Tab navigation, bounded text fields and basic menus. Ctrl-U clears fields.
+Input is basic US ASCII with Shift/Ctrl/Alt and navigation; no Caps Lock/IME/
+clipboard. Small ordinary windows can still clip toolbar controls; keyboard
+shortcuts remain available. Rich text, full radio-group arrow semantics, file
+picker browsing, accessibility and menu outside-dismiss need further work.
 
-All applications currently share one embedded static ELF, selected by entry role.
-Each launch executes in its own private EL0 address space and owns its windows,
-event queue, handles and memory. Kernel-controlled launch is bounded at eight live
-processes. This is not an installed application/package loader.
+Royale retains original blue wallpaper, icons, taskbar and two-column Start menu,
+with cached anti-aliased Noto text under SIL OFL. No Microsoft assets/fonts/code
+are used. Supported GOP surfaces are bounded between 640×480 and 1920×1200, chosen
+before ExitBootServices. No runtime mode switch, GPU acceleration, general alpha
+compositor or wallpaper-file loader exists. Setup is exercised at 640×480; desktop
+mode and small-window limitations are not claims of complete responsive layout.
 
-## Native Setup and installed sessions
+Built-ins share one static embedded AArch64 ELF selected by role; each launch has
+private EL0 mappings/state, owned window, handles and memory. Eight process slots
+and 128 drawing commands per window bound the implementation. There is no general
+package/executable loader, login authentication or per-user filesystem authority.
 
-Meta-7 (or CHOS Setup) opens the original installer. Boot the ISO with a disposable
-NVMe disk attached; accept the license, select the displayed serial/capacity,
-enter a computer name and type `ERASE <exact serial>` only after reviewing the
-warning. Wait for successful completion, detach the ISO and restart. Current
-Setup configures the computer name only: user/password/timezone/layout/mode setup
-are explicitly unfinished. There is no account security.
-
-After a verified installed boot, the desktop uses the CHFS system partition and
-file saves persist across cold boots. About shows the installed-volume status and
-computer name. The earlier RAM-only description applies to live ISO/builder
-sessions. A disk-booted Setup cannot erase its own boot medium. See milestone-6b.md
-for tested geometry, safety/error limits and exact native-install evidence.
-
-## Royale presentation (M6C)
-
-The existing native applications and command/event protocol now use cached
-anti-aliased text, rounded blue chrome/taskbar, original wallpaper/icons and a
-two-column Start menu. See [Royale](royale.md) for architecture, actual captures
-and remaining widgets. Old 12-pixel editing cells and event geometry are preserved.
-UI labels/status bars are proportional, and toolbar labels align with hit regions.
-Boot-time UEFI mode enumeration prefers 1024×768. Disk mount failures explicitly
-report temporary RAM storage. Detailed evidence: [M6C](milestone-6c.md).
-
-## M6D shared widgets and installed preferences
-
-The Royale aesthetic is retained. Native apps now share a bounded C widget library
-for controls, fields, modal dialogs, menus, list rows/scrollbars, tabs and toolbars.
-Explorer/Notepad still operate on the real VFS. Control Panel applies supported
-settings in live RAM or atomically saves installed settings. Native Setup stages
-configuration before independent typed destructive confirmation and provides Back
-for correction. The installed desktop has no permanent session overlay.
-See [toolkit](gui-toolkit.md), [configuration](configuration.md), and [M6D real
-workspace/installation evidence](milestone-6d.md).
+See [configuration](configuration.md), [toolkit](gui-toolkit.md),
+[dedicated Setup](setup-environment.md) and [current status](status.md).
+Historical visual results remain in [M6C](milestone-6c.md) and
+[M6D widgets/settings](milestone-6d.md).

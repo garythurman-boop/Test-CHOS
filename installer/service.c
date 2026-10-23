@@ -3,6 +3,8 @@
 #include "process.h"
 #include "vfs.h"
 #include "console.h"
+#include "desktop.h"
+#include "timer.h"
 static struct block_device disk;
 static struct chos_boot_info *boot;
 static struct pmm *physical;
@@ -18,7 +20,8 @@ static struct chos_config configuration,pending_config;
 static struct chos_confirm confirmed;
 static uint64_t first_block,partition_blocks;
 static struct block_device system_device;
-static unsigned writes;
+static struct chos_destination destination={.reason=SETUP_TARGET_MISSING};
+static uint64_t live_request;
 static void copy(char *a,const char *b,unsigned n){unsigned i=0;while(i+1<n && b[i]){a[i]=b[i];i++;}a[i]=0;}
 static bool system_read(void *unused,uint64_t block,void *data){(void)unused;return block<partition_blocks && disk.read(disk.context,first_block+block,data);}
 static bool system_write(void *unused,uint64_t block,const void *data){(void)unused;return block<partition_blocks && disk.write(disk.context,first_block+block,data);}
@@ -39,6 +42,8 @@ void setup_initialize(struct block_device *device,struct chos_boot_info *b,struc
     if(b->boot_medium==1)volume_state=VOLUME_NO_DEVICE;
     if(!device)return;
     disk=*device;state.bytes=disk.blocks*4096;state.sector=nvme_sector_size();copy(state.serial,nvme_serial(),sizeof(state.serial));
+    destination.minimum_bytes=install_minimum_bytes(state.sector);
+    destination.reason=b->boot_medium==2?SETUP_TARGET_READ:SETUP_TARGET_MEDIUM;
     if(b->boot_medium==1)volume_state=VOLUME_BAD_GPT;
     if(b->boot_medium==1 && install_gpt_probe(disk,state.sector,&plan,&workspace)){
         uint8_t guid[16];for(unsigned i=0;i<16;i++)guid[i]=plan.disk_guid[i];guid[0]^=0xa5;guid[15]^=1;
@@ -69,35 +74,69 @@ void setup_initialize(struct block_device *device,struct chos_boot_info *b,struc
     uint64_t counter;__asm__ volatile("mrs %0, cntpct_el0":"=r"(counter));
     uint8_t guid[16];for(unsigned i=0;i<16;i++)guid[i]=(uint8_t)((counter>>(i%8)*8)^(uint64_t)(i*37+11));
     guid[7]=(guid[7]&15)|0x40;guid[8]=(guid[8]&63)|0x80;
-    if(state.serial[0] && b->boot_medium==2 && install_plan_make(disk.blocks,state.sector,guid,&plan))state.allowed=1;
+    bool inventoried=setup_inventory(disk,state.sector,&destination,&workspace);
+    destination.reason=SETUP_TARGET_OK;
+    if(b->boot_medium!=2)destination.reason=SETUP_TARGET_MEDIUM;
+    else if(!state.serial[0])destination.reason=SETUP_TARGET_IDENTITY;
+    else if(!inventoried)destination.reason=SETUP_TARGET_READ;
+    else if(!nvme_writable())destination.reason=SETUP_TARGET_READONLY;
+    else if(!install_plan_make(disk.blocks,state.sector,guid,&plan))destination.reason=SETUP_TARGET_SMALL;
+    else state.allowed=1;
 }
-static bool progress_write(void *unused,uint64_t block,const void *data){
-    (void)unused;bool ok=disk.write(disk.context,block,data);
-    if(ok){writes++;unsigned value=writes/6;if(value>99)value=99;state.progress=value;}return ok;
+static void report(void *unused,unsigned phase,uint64_t done,uint64_t total){
+    bool changed=phase!=state.phase;
+    (void)unused;destination.completed_bytes=done;destination.total_bytes=total;
+    state.progress=(phase-1)*100/6+(total?(unsigned)(done*100/total/6):0);state.phase=phase;
+    if(changed){
+        /* Synchronize a real stage change with its displayed native frame.
+         * No cosmetic timer or minimum stage duration. A lost client cannot
+         * stall disk work indefinitely: the wait is bounded to two seconds. */
+        desktop_setup_notify(owner);uint64_t deadline=timer_ticks()+200;
+        while(desktop_setup_displayed()!=phase && timer_ticks()<deadline){
+            struct process *p=process_find(owner);if(!p || p->exited)break;
+            thread_yield();
+        }
+    }
 }
-static bool progress_read(void *unused,uint64_t block,void *data){(void)unused;return disk.read(disk.context,block,data);}
-static bool progress_flush(void *unused){(void)unused;return disk.flush(disk.context);}
+static bool verify_file(const char *path,const void *bytes,size_t size){
+    const struct chfs_entry *entry=chfs_stat(&system_volume,path);
+    if(!entry || entry->kind!=1 || entry->size!=size)return false;
+    for(size_t at=0;at<size;){size_t n=size-at,got=0;if(n>4096)n=4096;
+        if(!chfs_read(&system_volume,path,at,workspace.scratch,n,&got) || got!=n)return false;
+        for(size_t i=0;i<n;i++)if(workspace.scratch[i]!=((const uint8_t *)bytes)[at+i])return false;at+=n;}
+    return true;
+}
 static void install(void *unused){
-    (void)unused;state.phase=1;
-    if(!nvme_recheck()){state.error=1;return;}
-    struct block_device target={0,disk.blocks,progress_read,progress_write,progress_flush};
+    (void)unused;report(0,SETUP_PREPARE,0,0);
+    if(!nvme_recheck() || !nvme_writable()){state.error=1;return;}
+    struct block_device target=disk;
     if(!install_gpt_write(target,state.sector,&plan,true,&workspace)){state.error=2;return;}
-    state.phase=2;
+    report(0,SETUP_FORMAT,0,0);partition();
+    if(!chfs_format(&system_volume,system_device,true)){state.error=4;return;}
+
     extern const uint8_t boot_efi[],boot_efi_end[];
     struct install_payload files={boot_efi,(const uint8_t *)(uintptr_t)boot->kernel_source,(size_t)(boot_efi_end-boot_efi),(size_t)boot->kernel_size};
-    if(!install_fat32_write(target,&plan,&files,true,&workspace)){state.error=3;return;}
-    state.phase=3;partition();
+    if(!install_fat32_observed(target,&plan,&files,true,&workspace,report,0)){state.error=3;return;}
+    report(0,SETUP_CONFIGURE,0,0);
     static const char welcome[]="Welcome to installed CHOS.\nThis system volume persists across reboot.\n";
     extern const uint8_t license_text[],license_text_end[],font_license[],font_license_end[];
     unsigned length=0;while(confirmed.computer[length])length++;
     copy(pending_config.computer,confirmed.computer,sizeof(pending_config.computer));
     unsigned char config_wire[CHOS_CONFIG_BYTES];if(!config_encode(&pending_config,config_wire)){state.error=4;return;}
-    if(!chfs_format(&system_volume,system_device,true) || !chfs_mkdir(&system_volume,"/system") || !chfs_mkdir(&system_volume,"/documents") || !chfs_write(&system_volume,CHOS_CONFIG_PATH,config_wire,sizeof(config_wire)) || !chfs_write(&system_volume,"/system/computer",confirmed.computer,length) || !chfs_write(&system_volume,"/documents/welcome.txt",welcome,sizeof(welcome)-1) || !chfs_write(&system_volume,"/system/license",license_text,(size_t)(license_text_end-license_text)) || !chfs_write(&system_volume,"/system/font-ofl",font_license,(size_t)(font_license_end-font_license))){state.error=4;return;}
-    if(!chfs_mount(&system_volume,system_device) || !install_gpt_verify(disk,state.sector,&plan,&workspace) || !install_fat32_verify(disk,&plan,&files,&workspace)){state.error=5;return;}
-    state.progress=100;state.phase=4;
+    if(!chfs_mkdir(&system_volume,"/system") || !chfs_mkdir(&system_volume,"/documents") || !chfs_write(&system_volume,CHOS_CONFIG_PATH,config_wire,sizeof(config_wire)) || !chfs_write(&system_volume,"/system/computer",confirmed.computer,length) || !chfs_write(&system_volume,"/documents/welcome.txt",welcome,sizeof(welcome)-1) || !chfs_write(&system_volume,"/system/license",license_text,(size_t)(license_text_end-license_text)) || !chfs_write(&system_volume,"/system/font-ofl",font_license,(size_t)(font_license_end-font_license))){state.error=4;return;}
+    report(0,SETUP_VERIFY,0,0);
+    if(!chfs_mount(&system_volume,system_device) || !install_gpt_verify(disk,state.sector,&plan,&workspace) || !install_fat32_verify(disk,&plan,&files,&workspace) || !verify_file(CHOS_CONFIG_PATH,config_wire,sizeof(config_wire)) || !verify_file("/system/computer",confirmed.computer,length) || !verify_file("/documents/welcome.txt",welcome,sizeof(welcome)-1) || !verify_file("/system/license",license_text,(size_t)(license_text_end-license_text)) || !verify_file("/system/font-ofl",font_license,(size_t)(font_license_end-font_license))){state.error=5;return;}
+    static const char log[]="CHOS Setup log v1\nGPT primary/backup and partition arrays: verified\nFAT32 metadata and EFI/BOOT/BOOTAA64.EFI: verified\nCHOS/KERNEL.BIN: exact payload verified\nCHFS configuration, computer, welcome and licenses: verified\nBoot uses the ARM64 UEFI fallback path; no NVRAM entry required.\nAccounts/authentication, keyboard layout and runtime display setup: unfinished\n";
+    if(!chfs_write(&system_volume,"/system/install-log",log,sizeof(log)-1) || !verify_file("/system/install-log",log,sizeof(log)-1)){state.error=6;return;}
+    destination.completed_bytes=destination.total_bytes=0;state.progress=100;state.phase=SETUP_COMPLETE;
 }
 int64_t setup_syscall(struct process *p,uint64_t op,uint64_t argument,uint64_t token){
     if(p->application!=7)return -13;
+    if(op==2){
+        if(worker>=0 || (state.phase && !state.error && state.phase!=SETUP_COMPLETE))return -16;
+        live_request=p->pid;return 0;
+    }
+    if(op==3)return user_copy(p,argument,&destination,sizeof(destination),true)?0:-14;
     if(op==0){
         struct chos_setup out=state;
         if(!state.phase){owner=p->pid;state.token=out.token=(p->pid<<32)^state.bytes^0x43484f5353455455ULL;}
@@ -108,7 +147,7 @@ int64_t setup_syscall(struct process *p,uint64_t op,uint64_t argument,uint64_t t
     if(!user_copy(p,argument,&input,sizeof(input),false))return -14;
     input.erase[47]=0;input.computer[31]=0;
     if(!setup_confirmation_valid(&state,&input))return -22;
-    confirmed=input;state.phase=1;writes=0;
+    confirmed=input;state.phase=SETUP_PREPARE;
     worker=thread_create(physical,install,0,1);
     if(worker<0){state.phase=0;return -12;}
     state.allowed=0;return 0;
@@ -126,7 +165,7 @@ int64_t setup_configure(struct process *p,uint64_t op,uint64_t argument,uint64_t
         if(p->application!=7 || state.phase || !state.allowed)return -13;
         pending_config=input;return 0;
     }
-    if(state.phase && state.phase!=4)return -16;
+    if(state.phase && state.phase!=SETUP_COMPLETE)return -16;
     if(save) {
         if(!persistent)return -30;
         return config_save(&system_volume,&input,&configuration)?0:-5;
@@ -134,3 +173,9 @@ int64_t setup_configure(struct process *p,uint64_t op,uint64_t argument,uint64_t
     configuration=input;return 0;
 }
 void setup_step(void){if(worker>=0 && thread_dead((unsigned)worker)){if(!thread_reap(physical,(unsigned)worker))panic("SETUP WORKER REAP FAILED");worker=-1;}}
+
+bool setup_take_live(void){
+    if(!live_request)return false;
+    struct process *p=process_find(live_request);if(p && !p->exited)return false;
+    live_request=0;return true;
+}

@@ -17,6 +17,19 @@ static void post(struct wm_window *w,struct chos_event e) {
     if(e.type==EVENT_RELEASE && w->count==WM_EVENTS){w->head=(w->head+1)%WM_EVENTS;w->count--;}
     if(w->count<WM_EVENTS) { w->events[(w->head+w->count)%WM_EVENTS]=e; w->count++; }
 }
+struct wm_window *wm_exclusive(struct wm *m) {
+    for(unsigned n=m->count;n;n--){struct wm_window *w=&m->windows[m->order[n-1]];if(w->fullscreen && !w->closing)return w;}
+    return 0;
+}
+void wm_refresh(struct wm *m,uint64_t owner){
+    for(unsigned i=0;i<m->count;i++){struct wm_window *w=&m->windows[m->order[i]];if(w->owner==owner)post(w,(struct chos_event){.type=EVENT_REFRESH});}
+}
+bool wm_fullscreen(struct wm *m,uint64_t owner,uint32_t id) {
+    struct wm_window *w=wm_owned(m,owner,id);if(!w || wm_exclusive(m))return false;
+    w->fullscreen=true;w->x=w->y=0;w->w=m->width;w->h=m->height;
+    m->menu=m->applications=false;m->confirm=m->shell_press=0;m->drag=m->client_capture=m->client_hover=-1;
+    wm_focus(m,id);post(w,(struct chos_event){.type=EVENT_RESIZE,.width=w->w,.height=w->h});return true;
+}
 void wm_init(struct wm *m,int w,int h) {
     *m=(struct wm){.width=w,.height=h,.next_id=1,.drag=-1,.client_capture=-1,.client_hover=-1,.dirty=true};
 }
@@ -143,6 +156,10 @@ static void shell_activate(struct wm *m,unsigned id) {
 void wm_mouse(struct wm *m,int x,int y,int button) {
     m->mouse_x=x; m->mouse_y=y; m->dirty=true;
     if(button>=0)m->button_down=button!=0;
+    struct wm_window *exclusive=wm_exclusive(m);
+    if(exclusive){
+        post(exclusive,(struct chos_event){.type=button<0?EVENT_POINTER:(button?EVENT_CLICK:EVENT_RELEASE),.x=x,.y=y});return;
+    }
     if(button==0) {
         unsigned pressed=m->shell_press;m->shell_press=0;
         if(pressed && pressed==wm_shell_hit(m,x,y))shell_activate(m,pressed);
@@ -213,6 +230,8 @@ void wm_key(struct wm *m,unsigned code,int value) {
     if(code==29 || code==97) { m->ctrl=value!=0; return; }
     if(code==42 || code==54) { m->shift=value!=0; return; }
     if(!value) return;
+    struct wm_window *exclusive=wm_exclusive(m);
+    if(exclusive)goto client_key;
     if(m->confirm) {
         if(code==21){if(m->confirm==3)m->logout=true;else m->power=m->confirm;m->confirm=0;m->dirty=true;}
         if(code==49 || code==1){m->confirm=0;m->dirty=true;}
@@ -237,6 +256,7 @@ void wm_key(struct wm *m,unsigned code,int value) {
         return;
     }
     if(m->menu && code>=2 && code<=8) { m->launch=code-1;m->menu=false;m->dirty=true;return; }
+client_key:;
     unsigned key=0;
     static const uint8_t codes[26]={30,48,46,32,18,33,34,35,23,36,37,38,50,49,24,25,16,19,31,20,22,47,17,45,21,44};
     for(unsigned i=0;i<26;i++) if(code==codes[i]) key=(m->shift?'A':'a')+i;
@@ -248,8 +268,9 @@ void wm_key(struct wm *m,unsigned code,int value) {
     case 26:key=m->shift?'{':'[';break;case 27:key=m->shift?'}':']';break;case 41:key=m->shift?'~':'`';break;
     case 40:key=m->shift?'"':'\'';break;case 43:key=m->shift?'|':'\\';break;
     case 103:key=KEY_UP;break;case 108:key=KEY_DOWN;break;case 105:key=KEY_LEFT;break;case 106:key=KEY_RIGHT;break;
+    case 61:key=KEY_F3;break;
     }
-    struct wm_window *w=by_id(m,m->focus);
+    struct wm_window *w=exclusive?exclusive:by_id(m,m->focus);
     if(w && !w->closing && key) post(w,(struct chos_event){.type=EVENT_KEY,.code=key|(m->ctrl?KEY_CTRL:0)|(m->alt?KEY_ALT:0)|((key==9 && m->shift)?KEY_SHIFT:0)});
 }
 bool wm_event(struct wm *m,uint64_t owner,uint32_t id,struct chos_event *e,bool consume) {

@@ -51,8 +51,8 @@ void present(void) {
         ui_button(&app_gui,UI_PROMPT_CANCEL,27,app_width-98,app_height-50,82,24,"Cancel",true);
     }
     ui_end(&app_gui);
-    box(0,app_height-23,app_width,23,ROYALE_STATUS_BG);ui_text(3,8,app_height-18,app_status,0x163b65);
-    (void)api(SYS_PRESENT,(uint64_t)app_window,0,0);
+    if(app_role!=7){box(0,app_height-23,app_width,23,ROYALE_STATUS_BG);ui_text(3,8,app_height-18,app_status,0x163b65);}
+    (void)api(SYS_PRESENT,(uint64_t)app_window,app_role==7?setup_painted_phase():0,0);
 }
 int read_file(const char *path,char *buffer,unsigned cap) {
     int64_t fd=api(SYS_OPEN,(uintptr_t)path,1,0);if(fd<0)return (int)fd;

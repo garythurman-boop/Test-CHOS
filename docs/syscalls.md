@@ -149,3 +149,35 @@ CLICK=2 is press. KEY_SHIFT=131072 is added to Shift-Tab; KEY_ALT=262144 preserv
 Alt combinations (Alt-Tab remains the window-manager shortcut). Buffers are still
 validated before dequeue. Pointer events coalesce only with the same event type;
 release and close survive a full 128-entry window queue.
+
+## Dedicated Setup extension (M6D continuation)
+
+The 64-byte `chos_setup` inventory structure is unchanged. SETUP operation 2
+requests exit to Live Desktop, available only to Setup before writes or after
+worker completion/failure; an active writer returns -16. The supervisor waits
+for the requesting process to exit before changing the session. Operation 3 copies
+`chos_destination`: minimum/ESP/CHFS bytes, copied/total payload bytes, target
+eligibility reason, existing layout category, total GPT partition count and four
+bounded partition summaries (byte start/length and ASCII name). The complete
+structure is validated before copying; no writes occur during inventory.
+
+The development phase enum is now 0 idle, 1 GPT prepare, 2 EFI format, 3 kernel
+copy, 4 UEFI boot copy, 5 CHFS configuration, 6 verification, 7 verified completion.
+The former development phase-4 completion meaning has changed: rebuild Setup and
+kernel together. This extension is not a stable external application ABI yet.
+Progress semantics and capacity policy are in [setup-environment.md](setup-environment.md).
+
+Setup windows use full framebuffer dimensions and exclusive input, without
+window-manager decorations or taskbar. Other roles cannot obtain this mode.
+F3 is `KEY_F3=260`; Start/Alt-Tab are suppressed while Setup owns the screen.
+LAUNCH returns -16 while an exclusive Setup window is present. Existing native
+apps retain their normal owned-window coordinates and geometry.
+
+Setup PRESENT additionally supplies x1 = the phase captured when that frame was
+painted (0–7), rather than sampling worker state at submission time. Invalid
+values return -22 before swapping command lists. EVENT_REFRESH=7 requests a
+repaint after a worker stage change. Other apps keep x1=0 and their existing
+PRESENT behavior. The compositor acknowledges the submitted phase only after
+copying the actual full-screen frame to GOP; a stale frame cannot acknowledge a
+newer operation. Refreshes are queued before waking the client, avoiding a lost
+wake if a stage changes during painting.

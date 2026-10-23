@@ -20,25 +20,37 @@ parser=argparse.ArgumentParser();parser.add_argument('--sector',type=int,choices
 run=Path(tempfile.mkdtemp(prefix=f'native-install-{sector}-',dir=BUILD));disk=run/'target.img'
 with disk.open('wb') as file:file.truncate((128 if sector==512 else 512)*1024*1024)
 result={'passed':False,'disk':str(disk),'iso_sha256':digest(BUILD/'CHOS-ARM64.iso'),'boots':[],'logical_sector_bytes':sector}
-before=digest(disk);guest=Guest(f'native-install-{sector}',disk=disk,optical=True,sector_bytes=sector)
+before=digest(disk);guest=Guest(f'native-install-{sector}',disk=disk,optical=True,sector_bytes=sector,live=False)
 try:
-    guest.wait(lambda p:p(60,250)==0x326bb0,'live ISO desktop',120)
-    launch(guest,7);guest.wait(lambda p:matches(p,68,94,'Welcome to CHOS Setup',0x204b72,0),'native setup welcome')
+    guest.wait(lambda p:p(30,160)==0x244da8,'dedicated full-screen Setup from ISO',120)
+    guest.snapshot(f'setup-blue-{sector}')
     guest.key('ret');guest.key('ret')
-    guest.wait(lambda p:matches(p,68,276,'GPT',0x204b72,0),'optical-media destination eligibility')
+    guest.wait(lambda p:matches(p,32,112,'NVMe',0xf2f6ff),'native destination inventory')
     guest.snapshot(f'setup-destination-{sector}')
     assert digest(disk)==before,'Disk changed before selection/confirmation'
-    guest.key('ret');replace_prompt(guest,'BAD/NAME');guest.key('ret')
-    guest.wait(lambda p:matches(p,64,484,'Invalid system configuration',0x163b65,3),'invalid setup configuration feedback')
+    guest.key('ret');guest.snapshot(f'setup-layout-{sector}');guest.key('ret')
+    guest.wait(lambda p:matches(p,256,100,'Personalize CHOS',0xf2f6ff,2),'full-screen native configuration')
+    guest.key('u',('ctrl',));type_text(guest,'BAD/NAME');guest.key('ret')
+    guest.wait(lambda p:matches(p,256,658,'Invalid computer name',0xffdea2,0),'invalid setup configuration feedback')
     assert digest(disk)==before,'Invalid setup configuration modified disk'
-    guest.click(110,452);guest.wait(lambda p:p(64,400)==0xb9d5ee,'configuration correction dialog');replace_prompt(guest,'CHOSTEST')
-    guest.key('2');guest.key('bracket_right');guest.key('s')
+    guest.click(380,184);guest.key('u',('ctrl',));type_text(guest,'CHOSTEST')
+    guest.click(462,225);guest.click(602,264);guest.click(260,308)
     guest.snapshot(f'setup-configuration-{sector}')
-    guest.key('ret');type_text(guest,'WRONG\n');time.sleep(.3)
+    guest.click(920,703)
+    guest.wait(lambda p:matches(p,32,92,'Confirm destruction',0xf2f6ff),'exact disk erase confirmation')
+    type_text(guest,'WRONG');guest.key('ret')
+    guest.wait(lambda p:matches(p,32,703,'Confirmation refused',0xffe7a5,0),'wrong erase rejection')
     assert digest(disk)==before,'Rejected typed confirmation modified disk'
-    guest.key('ret');type_text(guest,'ERASE CHOS-GPT-BOOT\n')
-    guest.wait(lambda p:matches(p,68,142,'CHOS',0x204b72,0),'native installation completion',90)
-    guest.snapshot(f'setup-complete-{sector}');result['boots'].append({'kind':'native_installer_from_iso','command':guest.command,'passed':True,'confirmation_no_write_checks':True})
+    guest.snapshot(f'setup-confirmation-{sector}')
+    guest.key('u',('ctrl',));type_text(guest,'ERASE CHOS-GPT-BOOT');guest.key('ret')
+    guest.wait(lambda p:matches(p,256,100,'Installing CHOS',0xf2f6ff,2),'graphical disk installation in progress',90)
+    guest.snapshot(f'setup-progress-{sector}')
+    guest.wait(lambda p:matches(p,256,154,'CHOS installation completed successfully.',0xf2f6ff,0),'verified installation completion',90)
+    guest.snapshot(f'setup-complete-{sector}')
+    guest.key('r');deadline=time.monotonic()+8
+    while guest.proc.poll() is None and time.monotonic()<deadline:time.sleep(.1)
+    assert guest.proc.poll()==0 and guest.power_reason()=='guest-reset','Setup Restart did not produce a guest reset'
+    result['boots'].append({'kind':'dedicated_native_installer_from_iso','command':guest.command,'passed':True,'confirmation_no_write_checks':True,'completion_restart_button':True})
 finally:guest.close()
 # The ISO is entirely absent from the next two VMs. This is not the host builder.
 guest=Guest(f'installed-write-{sector}',disk=disk,sector_bytes=sector)
@@ -57,7 +69,7 @@ try:
     guest.wait(lambda p:matches(p,66,140,'INSTALLED CHOS 123',0x152b40),'native editor persisted data after cold boot')
     guest.snapshot(f'installed-notepad-reopen-{sector}')
     saved=digest(disk);launch(guest,7);guest.key('ret');guest.key('ret')
-    guest.wait(lambda p:matches(p,92,298,'Installation disabled',0x204b72,0),'refusal to reinstall over own boot disk')
+    guest.wait(lambda p:matches(p,32,654,'Disabled: this is not an optical-media boot.',0xf2f6ff,0),'refusal to reinstall over own boot disk')
     guest.key('ret');type_text(guest,'ERASE CHOS-GPT-BOOT\n');time.sleep(.3)
     assert digest(disk)==saved,'Boot disk exclusion failed'
     result['boots'].append({'kind':'installed_cold_boot_persistent_read_and_self_erase_refusal','command':guest.command,'passed':True})
@@ -75,6 +87,7 @@ with disk.open('rb') as file:
         at=160+i*80;name=raw[at:at+60].split(b'\0',1)[0].decode();first,blocks,size,kind,crc=struct.unpack_from('<IIIII',raw,at+60)
         if kind==1:
             file.seek(system_start+first*4096);data=file.read(size);assert len(data)==size and zlib.crc32(data)==crc;contents[name]=data
+    assert b'GPT primary/backup' in contents['/system/install-log']
     assert contents['/system/computer']==b'CHOSTEST'
     assert contents['/system/license']==(BUILD.parent/'LICENSE').read_bytes()
     assert contents['/system/font-ofl']==(BUILD.parent/'assets/fonts/OFL.txt').read_bytes()

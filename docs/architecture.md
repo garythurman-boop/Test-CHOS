@@ -1,4 +1,4 @@
-# CHOS architecture: boot and Milestones 2–3
+# CHOS architecture
 
 ## Boot contract
 
@@ -107,12 +107,10 @@ indices/completion IDs/lengths before decoding. Two independent input queues fee
 a bounded raw event FIFO and pointer/key state. The idle loop polls and draws a
 small original cursor and last uppercase character. USB/desktop work is not implied.
 
-## Next boundary
+## Original components
 
-Milestone 4 requires an original window/compositor protocol, per-application event
-routing and bounded graphics access, followed by launcher/taskbar and native apps.
-GPT/ESP, FAT and installation remain separate later work. No existing OS kernel,
-filesystem, GUI framework or input stack is linked into CHOS.
+The following sections record the subsequent desktop and installer implementation.
+No existing OS kernel, filesystem, GUI framework or input stack is linked into CHOS.
 
 ## Desktop and native apps
 
@@ -190,3 +188,17 @@ preference files. Validate before writes and apply active settings after a succe
 commit. Support legacy reads without migration writes. CRC provides corruption
 detection, not authentication; a final flush error has uncertain old/new durability.
 No account/login or ACL claim is made. See [configuration](configuration.md).
+
+## Dedicated setup session (M6D continuation)
+
+Optical boot launches only the native Setup role on an exclusive borderless client
+using the existing kernel/display/input/storage services. Desktop wallpaper is
+allocated only after an explicit Live Desktop choice. Installed boot retains the
+regular desktop and persistent mount path. The existing installer worker and all
+identity/confirmation checks are preserved. Original read-only partition inventory,
+measured payload copying, complete CHFS read-back and installation logging extend
+that worker. UI stage changes synchronize with actual displayed native frames,
+using a bounded cooperative kernel-thread yield, without synthetic progress timers.
+See [setup-environment.md](setup-environment.md) for the flow, layout, authority,
+failure model and limits. No second OS/kernel, firmware disk writer or new GUI
+framework is introduced.

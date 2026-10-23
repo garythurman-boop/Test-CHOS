@@ -111,7 +111,10 @@ def main():
         guest.snapshot('apps-settings')
         launch(guest,5)
         guest.wait(lambda p:p(60,120)==0xe5eef8,'native Task Manager')
-        pixel=guest.wait(lambda p:matches(p,70,150,'12',0x204b72) and matches(p,70,172,'13',0x204b72),'Task Manager live PIDs')
+        pixel=guest.wait(lambda p:matches(p,202,150,'4',0x204b72) and matches(p,202,172,'5',0x204b72),'Task Manager live application roles')
+        first_pid=read_number(pixel,70,150,0x204b72);second_pid=read_number(pixel,70,172,0x204b72)
+        assert first_pid>0 and second_pid==first_pid+1,'Task Manager PID lifecycle is inconsistent'
+        result['observed_task_pids']=[first_pid,second_pid]
         result['allocated_conventional_ram_kib_two_apps']=read_number(pixel,334,342,0x204b72)
         guest.snapshot('apps-tasks')
         result['checks']+=['Control Panel changes desktop theme','Task Manager queries live process and memory instrumentation']

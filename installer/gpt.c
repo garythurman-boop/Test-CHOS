@@ -14,9 +14,14 @@ static bool same(const uint8_t *a,const uint8_t *b,size_t n){for(size_t i=0;i<n;
 static void w32(uint8_t *p,uint32_t n){for(unsigned i=0;i<4;i++)p[i]=(uint8_t)(n>>(8*i));}
 static void w64(uint8_t *p,uint64_t n){for(unsigned i=0;i<8;i++)p[i]=(uint8_t)(n>>(8*i));}
 static bool nonzero(const uint8_t *p){for(unsigned i=0;i<16;i++)if(p[i])return true;return false;}
+uint64_t install_minimum_bytes(uint32_t sector) {
+    if(sector!=512 && sector!=4096)return 0;
+    /* 1 MiB alignment + FAT32 ESP + 4 MiB CHFS + five 4 KiB backup blocks. */
+    return (1ULL+(sector==512?64:272)+4)*1048576+5*4096;
+}
 bool install_plan_make(uint64_t blocks,uint32_t sector,const uint8_t guid[16],struct install_plan *p) {
     /* Bound byte arithmetic, GPT LBAs and the existing allocator/driver contract. */
-    if(!p || !guid || !nonzero(guid) || (sector!=512 && sector!=4096) || blocks>UINT64_MAX/4096 || blocks<32768)return false;
+    if(!p || !guid || !nonzero(guid) || (sector!=512 && sector!=4096) || blocks>UINT64_MAX/4096 || blocks<8 || blocks<install_minimum_bytes(sector)/4096)return false;
     uint64_t sectors=blocks*(4096/sector),align=1048576/sector;
     uint64_t esp_bytes=sector==512?64ULL*1048576:272ULL*1048576;
     uint64_t first=align,last=first+esp_bytes/sector-1,system=last+1;

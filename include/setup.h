@@ -14,5 +14,7 @@ const struct chos_config *setup_configuration(void);
 int64_t setup_configure(struct process *,uint64_t,uint64_t,uint64_t);
 int64_t setup_syscall(struct process *,uint64_t,uint64_t,uint64_t);
 void setup_step(void);
+bool setup_take_live(void);
 bool setup_confirmation_valid(const struct chos_setup *,const struct chos_confirm *);
+bool setup_inventory(struct block_device,uint32_t,struct chos_destination *,struct gpt_workspace *);
 #endif

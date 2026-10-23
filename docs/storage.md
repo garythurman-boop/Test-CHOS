@@ -1,4 +1,9 @@
-# CHOS storage checkpoint 3A
+# CHOS storage checkpoint 3A (historical)
+
+Current installer/persistent-system behavior is documented in
+[dedicated Setup](setup-environment.md), [configuration](configuration.md), and
+[feature status](status.md). The raw-test-only descriptions below record M3A,
+not the current desktop/installer feature set.
 
 Original polling NVMe, discovered through validated ACPI MCFG and PCI bus 0,
 with one controller/namespace, 16-entry admin/I/O queues, 4 KiB DMA bounce buffer,

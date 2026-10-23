@@ -12,6 +12,8 @@ void explorer_widget(unsigned,unsigned);
 extern bool app_persistent;
 const char *volume_status(void);
 void setup_paint(void);void setup_key(unsigned);
+void setup_widget(unsigned);
+unsigned setup_painted_phase(void);
 extern int app_window,app_width,app_height;
 extern char app_status[80];
 int64_t api(unsigned,uint64_t,uint64_t,uint64_t);

@@ -4,8 +4,9 @@ CHOS is an original C/AArch64 operating system under development. A native UEFI
 loader boots its own kernel, with no Linux/BSD kernel or GRUB in the guest. Debian
 is used only as a build/test host. No Microsoft code, artwork or fonts are used.
 
-The current checkpoint boots an original graphical desktop and six native EL0
-applications: Explorer, Notepad, Terminal, Control Panel, Task Manager and About.
+The current optical image boots dedicated full-screen CHOS Setup. L/F3 selects
+the original Live Desktop; installed disks open the desktop directly. Six native
+EL0 applications remain available: Explorer, Notepad, Terminal, Control Panel, Task Manager and About.
 Protected memory, preemptive scheduling, ELF/syscalls/IPC, NVMe/CHFS and Virtio
 input are implemented and tested. **Live ISO files use volatile RAM. Installed sessions use a persistent CHFS
 system volume.** Native Setup writes a selected NVMe disk only after explicit
@@ -15,7 +16,10 @@ identity/capacity review and typed destructive confirmation.
 widget library. Explorer, Notepad, Control Panel and Setup share real controls,
 keyboard focus, menus and dialogs. Installed computer/theme/clock settings persist;
 invalid configuration is rejected before writing. Normal installed sessions have
-no permanent session overlay. See [M6D results and actual screenshots](docs/milestone-6d.md).
+no permanent session overlay. See [dedicated Setup results and actual screenshots](docs/milestone-6d-setup.md).
+Blue keyboard-driven disk selection and typed confirmation lead to native Royale
+configuration/progress/completion. Progress follows real operations and copied
+bytes. Original GPT/FAT32/CHFS writers verify the files and installed boot path.
 
 **VMware Fusion compatibility remains unverified.** GICv3, USB/xHCI input and EL2
 entry are unsupported. A native installation core and disk reboot are tested under QEMU; account/password
@@ -23,7 +27,8 @@ and full time-zone/layout/mode setup, networking and CHOS 0.1 remain unfinished.
 
 ## Download testing images
 
-- [Current saved-configuration/widget ISO](artifacts/milestone-6d/CHOS-ARM64.iso).
+- [Current dedicated full-screen Setup ISO](artifacts/milestone-6d-setup/CHOS-ARM64.iso).
+- [Preserved saved-configuration/widget ISO](artifacts/milestone-6d/CHOS-ARM64.iso).
 - [Previous Royale foundation ISO](artifacts/milestone-6c/CHOS-ARM64.iso).
 - [Previous native installer checkpoint](artifacts/milestone-6b/CHOS-ARM64.iso).
 - [Earlier live desktop/application ISO](artifacts/milestone-5/CHOS-ARM64.iso).
@@ -35,7 +40,7 @@ and full time-zone/layout/mode setup, networking and CHOS 0.1 remain unfinished.
 - [Older M2A ISO](artifacts/milestone-2a/CHOS-ARM64.iso).
 
 On GitHub choose **Download raw file**, then verify the adjacent SHA256SUMS.
-Read [current image notes](artifacts/milestone-6d/README.md) before testing. The
+Read [current image notes](artifacts/milestone-6d-setup/README.md) before testing. The
 separate STORAGE-TEST ISO is for the automated disposable-disk tests only, with
 an explicit boot-volume opt-in and exact device identity gate. It is not an installer.
 
@@ -55,7 +60,7 @@ El Torito FAT boot volume. Secure Boot must be off. The FAT volume is not an
 installed ESP. `kernel.elf` is a debug artifact; the separate static ELF loader
 runs original acceptance and application programs embedded in the kernel.
 
-Validation runs twelve host C test programs (both ELF payloads) and twenty-nine real
+Validation runs thirteen host C test programs (both ELF payloads) and thirty-five real
 AArch64 UEFI QEMU cases, including 512 MiB/1 GiB boots, protection/IPC, keyboard/
 mouse window and application interactions, native restart/shutdown, three cold
 NVMe/CHFS boots, two GPT/ESP disk-only boots and expected error/safety cases.
@@ -69,7 +74,11 @@ telemetry and a corrupt installed-volume warning with an unchanged disk hash.
 Saved configuration tests verify native Save/shutdown/cold boot, invalid-save
 no-write behavior, legacy loading and corrupt-record fallback. A real workspace
 VM checks overlapping apps, menus/dialogs, file scrolling and bounded fast typing.
-Evidence: docs/evidence/m6d.
+Dedicated Setup tests inject an actual NVMe write error, stop/retry an active
+installation, boot a 70 MiB native installation, reject a too-small disk without
+writes and verify full-screen configuration at 640×480. Desktop tests explicitly
+choose Live Desktop from the ISO's Setup welcome page.
+Evidence: docs/evidence/m6d-setup.
 `bash scripts/sanitize.sh` additionally runs the portable modules with ASan/UBSan
 when host GCC/Clang supports them.
 
@@ -81,6 +90,8 @@ after toolchain installation. Tests start/stop their own QEMU processes.
 ## Documentation
 
 - [Acceptance criteria and evidence](docs/acceptance.md)
+- [Dedicated installation environment and safety](docs/setup-environment.md)
+- [Current iteration results](docs/milestone-6d-setup.md)
 - [Native installation results and limits](docs/milestone-6b.md)
 - [Installer-format foundations and disk boot](docs/milestone-6a.md)
 - [Desktop/application sequence results](docs/milestone-5.md)

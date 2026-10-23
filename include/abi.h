@@ -5,8 +5,9 @@ enum { SYS_ABI=0,SYS_WRITE=1,SYS_TICKS=2,SYS_EXIT=3,SYS_YIELD=4,SYS_ALLOC=5,SYS_
 struct chos_dirent { char path[60]; uint32_t size,kind; };
 struct chos_message { uint64_t sender,value; };
 enum { DRAW_CLEAR=0,DRAW_RECT=1,DRAW_TEXT=2,DRAW_ROUND=3,DRAW_UI_TEXT=4 };
-enum { EVENT_KEY=1,EVENT_CLICK=2,EVENT_RESIZE=3,EVENT_CLOSE=4,EVENT_POINTER=5,EVENT_RELEASE=6 };
+enum { EVENT_KEY=1,EVENT_CLICK=2,EVENT_RESIZE=3,EVENT_CLOSE=4,EVENT_POINTER=5,EVENT_RELEASE=6,EVENT_REFRESH=7 };
 enum { KEY_UP=256,KEY_DOWN=257,KEY_LEFT=258,KEY_RIGHT=259,KEY_CTRL=65536,KEY_SHIFT=131072,KEY_ALT=262144 };
+#define KEY_F3 260
 struct chos_window { char title[48]; int32_t width,height; };
 struct chos_draw { uint32_t op; int32_t x,y,w,h; uint32_t color; char text[80]; };
 struct chos_event { uint32_t type,code; int32_t x,y,width,height; };
@@ -19,4 +20,13 @@ enum { VOLUME_LIVE=0,VOLUME_PERSISTENT=1,VOLUME_NO_DEVICE=2,VOLUME_BAD_GPT=3,VOL
 /* chos_info.reserved reports VOLUME_* while preserving the 88-byte ABI. */
 struct chos_setup { uint64_t bytes,token; uint32_t sector,medium,allowed,phase,progress,error; char serial[24]; };
 struct chos_confirm { char erase[48],computer[32]; };
+enum { SETUP_IDLE=0,SETUP_PREPARE=1,SETUP_FORMAT=2,SETUP_COPY=3,SETUP_BOOT=4,SETUP_CONFIGURE=5,SETUP_VERIFY=6,SETUP_COMPLETE=7 };
+enum { SETUP_TARGET_OK=0,SETUP_TARGET_MISSING=1,SETUP_TARGET_MEDIUM=2,SETUP_TARGET_SMALL=3,SETUP_TARGET_READ=4,SETUP_TARGET_IDENTITY=5,SETUP_TARGET_READONLY=6 };
+/* Additive SYS_SETUP inventory operation 3; original operation 0 stays 64 bytes. */
+struct chos_partition { uint64_t first_byte,bytes; char name[36]; uint32_t reserved; };
+struct chos_destination {
+    uint64_t minimum_bytes,esp_bytes,system_bytes,completed_bytes,total_bytes;
+    uint32_t reason,layout,partitions,reserved;
+    struct chos_partition existing[4];
+};
 #endif

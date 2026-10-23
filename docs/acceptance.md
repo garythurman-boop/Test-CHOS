@@ -1,4 +1,8 @@
-# Current acceptance evidence
+# CHOS acceptance evidence
+
+Current sequence: [M6D dedicated Setup](milestone-6d-setup.md),
+[setup architecture](setup-environment.md). Earlier tables below retain their
+checkpoint-specific evidence; each new sequence reruns the earlier core coverage.
 
 These results are distinct. All VM results below are QEMU AArch64 UEFI, not Fusion.
 
@@ -41,3 +45,23 @@ A workspace VM must demonstrate real simultaneous/overlapping native apps, menus
 dialogs, file selection/scrolling, minimize/maximize/restore, bounded input checked
 through a second process, Task Manager and Setup inventory without disk writes.
 See [M6D](milestone-6d.md). Full Fusion and account/authentication acceptance remains open.
+
+## M6D dedicated Setup acceptance
+
+The expanded validator requires 35 QEMU cases and 13 portable host programs,
+both real ELF payloads, repeatable ISO/disk generation and independent disk parsers.
+The six native installation/disk-only boots retain both 512/4096-byte-sector
+coverage and now require direct full-screen ISO Setup, blue disk/confirmation
+screens, actual graphical progress, persisted settings, verified payloads/log and
+completion Restart producing QMP guest-reset. Ordinary desktop tests explicitly
+select L at the Setup welcome page; installed tests have no optical media attached.
+
+Five additional disposable-disk VMs require an actual blkdebug/NVMe write error
+and safe Live exit; an active-writer interruption; read-only inventory and explicit
+retry of that disk; installed boot from a 70 MiB target; and a too-small 64 MiB
+refusal plus honest recovery-status page with unchanged disk bytes. One additional
+640×480 VM exercises native configuration/confirmation and safe Live exit without
+writes. The workspace case arranges Explorer, Notepad and Task Manager together
+and verifies full-screen Setup can return to those existing apps. Current results
+and actual captures are recorded in milestone-6d-setup.md and evidence/m6d-setup.
+Fusion and authentication/account acceptance remain open.

@@ -74,9 +74,12 @@ struct exception_frame *scheduler_terminate(struct exception_frame *f) {
     return scheduler_tick(f);
 }
 struct exception_frame *scheduler_trap(struct exception_frame *f) {
-    if((f->esr&0xffff)!=0x4348 || scheduler_pid()) panic("INVALID THREAD EXIT");
+    if(scheduler_pid()) panic("INVALID KERNEL THREAD SVC");
+    if((f->esr&0xffff)==0x4349)return scheduler_tick(f);
+    if((f->esr&0xffff)!=0x4348)panic("INVALID THREAD EXIT");
     return scheduler_terminate(f);
 }
+void thread_yield(void){__asm__ volatile("svc #0x4349":::"memory","cc");}
 
 struct exception_frame *scheduler_wait(struct exception_frame *f,uint64_t deadline) {
     if(!current || !threads[current].pid) panic("INVALID EVENT WAIT");

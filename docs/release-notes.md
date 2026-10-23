@@ -1,3 +1,19 @@
+# M6D continuation — dedicated native Setup
+
+This development checkpoint preserves the previous M6D widget/configuration ISO
+and original Royale desktop. The ISO now boots directly into full-screen native
+Setup: blue welcome/license/disk/layout/typed erase pages, Royale configuration,
+actual operation/file-copy progress, complete payload/configuration verification,
+installation log and Restart. L/F3 starts Live Desktop; disk-only boot remains the
+persistent desktop. Actual layout capacity replaces the arbitrary 128 MiB gate.
+
+See [iteration report](milestone-6d-setup.md), [installation instructions and safety](setup-environment.md),
+and [current status](status.md). This is not CHOS 0.1. Account authentication,
+complete time-zone/layout/display configuration, repair/rollback, USB/GICv3/EL2,
+networking and actual VMware Fusion validation remain unfinished.
+
+The following sections preserve earlier checkpoint notes.
+
 # M6D — persistent configuration and native widget refinement
 
 Preserves the approved Royale design. Adds a shared original C control library,

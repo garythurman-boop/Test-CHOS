@@ -13,6 +13,7 @@ static struct pmm *physical;
 static struct chos_boot_info *boot;
 static struct surface screen;
 static bool active;
+static bool setup_entry;
 static void rect(int,int,int,int,uint32_t);
 static uint32_t *wallpaper;
 static unsigned wallpaper_theme=99;
@@ -65,8 +66,11 @@ static void icon(int x,int y,unsigned app) {
         round_box(x+1,y+3,30,25,4,0xbfe6f7,0x498bc0);round_box(x+10,y+10,12,12,6,0xffffff,0xd3ecfa);rect(x+15,y+7,2,18,0xffffff);rect(x+7,y+15,18,2,0xffffff);
     }
 }
-struct commands { struct chos_draw *front,*back; uint64_t memory; unsigned count,pending; };
+struct commands { struct chos_draw *front,*back; uint64_t memory; unsigned count,pending,phase; };
 static struct commands drawings[WM_WINDOWS];
+static unsigned displayed_phase;
+unsigned desktop_setup_displayed(void){return displayed_phase;}
+void desktop_setup_notify(uint64_t pid){wm_refresh(&model,pid);scheduler_wake(pid);}
 static uint64_t last_second;
 static struct chos_render metrics;
 static void text(int x,int y,const char *s,uint32_t c) { gfx_text(&screen,x,y,s,c); }
@@ -78,6 +82,7 @@ static void decimal(char *s,uint64_t n) {
 bool desktop_active(void) { return active; }
 int desktop_launch(unsigned app) {
     if(!active || app<1 || app>7) return -22;
+    if(wm_exclusive(&model))return -16;
     extern const unsigned char desktop_elf[],desktop_elf_end[];
     int pid=process_create(desktop_elf,(size_t)(desktop_elf_end-desktop_elf),app,0);
     if(pid>0)process_find((uint64_t)pid)->application=app;
@@ -104,6 +109,9 @@ int64_t desktop_syscall(struct process *p,struct exception_frame *f) {
         int id=wm_create(&model,p->pid,spec.title,spec.width,spec.height);
         if(id<0) { (void)pmm_free(physical,memory,8);return id; }
         struct wm_window *w=wm_owned(&model,p->pid,(uint32_t)id);
+        if(p->application==7 && !wm_fullscreen(&model,p->pid,(uint32_t)id)){
+            wm_remove(&model,p->pid);(void)pmm_free(physical,memory,8);return -16;
+        }
         struct commands *c=&drawings[w-model.windows];
         *c=(struct commands){.front=(void *)(uintptr_t)memory,.back=(void *)(uintptr_t)(memory+4*PAGE_SIZE),.memory=memory};
         return id;
@@ -138,8 +146,9 @@ int64_t desktop_syscall(struct process *p,struct exception_frame *f) {
         (void)wm_event(&model,p->pid,w->id,&e,true); return 0;
     }
     if(op==SYS_PRESENT) {
+        if(p->application==7 && b>SETUP_COMPLETE)return -22;
         struct chos_draw *swap=c->front;c->front=c->back;c->back=swap;
-        c->count=c->pending;c->pending=0;model.dirty=true;return 0;
+        c->count=c->pending;c->pending=0;if(p->application==7)c->phase=(unsigned)b;model.dirty=true;return 0;
     }
     if(op==SYS_DRAW) {
         struct chos_draw command;
@@ -156,6 +165,9 @@ int64_t desktop_syscall(struct process *p,struct exception_frame *f) {
 static void window_draw(unsigned slot) {
     struct wm_window *w=&model.windows[slot];
     if(w->minimized || w->closing) return;
+    int cx=w->fullscreen?0:w->x+4,cy=w->fullscreen?0:w->y+32;
+    int cw=w->fullscreen?w->w:w->w-8,ch=w->fullscreen?w->h:w->h-36;
+    if(w->fullscreen)goto contents;
     bool focus=model.focus==w->id;
     gfx_shadow(&screen,w->x,w->y,w->w,w->h,8);
     round_box(w->x,w->y,w->w,w->h,8,focus?0x5c9bdf:0x85a5c9,ROYALE_BORDER);
@@ -169,26 +181,37 @@ static void window_draw(unsigned slot) {
         round_box(x,y,22,21,4,b==2?0xd77b74:0x92c4f2,b==2?0xa43237:0x2e6eb8);
         round_box(x+1,y+1,20,9,3,(model.shell_press==400+slot*3+(unsigned)b && hover)?0x6b94c5:(hover?0xe4f5ff:(b==2?0xf2b2a2:0xb0d8fa)),b==2?0xd46b60:0x6ba8e3);
         if(b==0)rect(x+6,y+14,10,2,0xffffff);
-        if(b==1){rect(x+6,y+6,10,9,0xffffff);rect(x+7,y+9,8,5,0x437fbd);}
+        if(b==1){
+            if(w->maximized){rect(x+8,y+5,9,9,0xffffff);rect(x+9,y+8,7,5,0x437fbd);rect(x+5,y+8,9,9,0xffffff);rect(x+6,y+11,7,5,0x437fbd);}
+            else {rect(x+6,y+6,10,9,0xffffff);rect(x+7,y+9,8,5,0x437fbd);}
+        }
         if(b==2)for(int k=0;k<9;k++){rect(x+7+k,y+6+k,2,2,0xffffff);rect(x+15-k,y+6+k,2,2,0xffffff);}
     }
-    clip(w->x+4,w->y+32,w->w-8,w->h-36);
-    rect(w->x+4,w->y+32,w->w-8,w->h-36,ROYALE_PAPER);
+contents:
+    clip(cx,cy,cw,ch);
+    rect(cx,cy,cw,ch,ROYALE_PAPER);
     struct commands *c=&drawings[slot];
     for(unsigned i=0;i<c->count;i++) {
         struct chos_draw *d=&c->front[i];
-        if(d->op==DRAW_CLEAR) rect(w->x+4,w->y+32,w->w-8,w->h-36,d->color);
-        else if(d->op==DRAW_RECT) rect(w->x+4+d->x,w->y+32+d->y,d->w,d->h,d->color);
-        else if(d->op==DRAW_ROUND)round_box(w->x+4+d->x,w->y+32+d->y,d->w,d->h,5,d->color,d->color);
-        else if(d->op==DRAW_UI_TEXT)ui((unsigned)d->w,w->x+4+d->x,w->y+32+d->y,d->text,d->color);
-        else text(w->x+4+d->x,w->y+32+d->y,d->text,d->color);
+        if(d->op==DRAW_CLEAR) rect(cx,cy,cw,ch,d->color);
+        else if(d->op==DRAW_RECT) rect(cx+d->x,cy+d->y,d->w,d->h,d->color);
+        else if(d->op==DRAW_ROUND)round_box(cx+d->x,cy+d->y,d->w,d->h,5,d->color,d->color);
+        else if(d->op==DRAW_UI_TEXT)ui((unsigned)d->w,cx+d->x,cy+d->y,d->text,d->color);
+        else text(cx+d->x,cy+d->y,d->text,d->color);
     }
     clip(0,0,screen.width,screen.height);
-    for(int i=0;i<3;i++) rect(w->x+w->w-5-i*4,w->y+w->h-3,2,2,0xffffff);
+    if(!w->fullscreen)for(int i=0;i<3;i++) rect(w->x+w->w-5-i*4,w->y+w->h-3,2,2,0xffffff);
 }
 static void render(void) {
     uint64_t started;__asm__ volatile("mrs %0, cntpct_el0":"=r"(started));
     clip(0,0,screen.width,screen.height);
+    struct wm_window *exclusive=wm_exclusive(&model);
+    if(exclusive){window_draw((unsigned)(exclusive-model.windows));goto output;}
+    if(setup_entry){rect(0,0,screen.width,screen.height,0x102a83);goto output;}
+    if(!wallpaper){
+        unsigned pages=(unsigned)(((uint64_t)screen.width*screen.height*4+4095)/4096);
+        uint64_t art=pmm_alloc(physical,pages);if(!art)panic("WALLPAPER CACHE FAILED");wallpaper=(void *)(uintptr_t)art;
+    }
     if(wallpaper_theme!=model.theme)make_wallpaper();
     for(int y=screen.y;y<screen.y+screen.h;y++)for(int x=screen.x;x<screen.x+screen.w;x++)screen.pixels[(size_t)y*screen.width+x]=wallpaper[(size_t)y*screen.width+x];
     if(!setup_persistent()) {
@@ -265,6 +288,7 @@ static void render(void) {
         ui(FONT_BODY,x+14,y+80,model.confirm==3?"Applications close. No account security.":"RAM files are lost on restart/shutdown.",0x183b64);
         ui(FONT_BODY,x+14,y+114,"Y confirms. N or Escape cancels.",0x183b64);
     }
+output:;
     static const uint8_t arrow[10]={0x80,0xc0,0xe0,0xf0,0xf8,0xfc,0xe0,0xb0,0x18,0x18};
     for(unsigned y=0;y<10;y++) for(unsigned x=0;x<8;x++) if(arrow[y]&(0x80>>x)) rect(model.mouse_x+(int)x,model.mouse_y+(int)y,1,1,0xffffff);
     volatile uint32_t *fb=(void *)(uintptr_t)boot->framebuffer;
@@ -273,6 +297,7 @@ static void render(void) {
         fb[(uint64_t)y*boot->stride+x]=boot->pixel_format==1?rgb:((rgb&255)<<16)|(rgb&0xff00)|((rgb>>16)&255);
     }
     __asm__ volatile("dsb sy":::"memory");model.dirty=false;
+    if(exclusive)displayed_phase=drawings[exclusive-model.windows].phase;
     uint64_t now,freq;__asm__ volatile("mrs %0, cntpct_el0":"=r"(now));__asm__ volatile("mrs %0, cntfrq_el0":"=r"(freq));
     metrics.frames++;metrics.pixels+=(uint64_t)damage_w*damage_h;
     if(damage_w<screen.width || damage_h<screen.height)metrics.partial_frames++;
@@ -284,7 +309,6 @@ void desktop_start(struct pmm *p,struct chos_boot_info *b) {
     unsigned pages=(unsigned)(((uint64_t)b->width*b->height*4+4095)/4096);
     uint64_t memory=pmm_alloc(p,pages);if(!memory) panic("DESKTOP BACKBUFFER FAILED");
     screen=(struct surface){.pixels=(void *)(uintptr_t)memory,.width=(int)b->width,.height=(int)b->height,.stride=(int)b->width};
-    uint64_t art=pmm_alloc(p,pages);if(!art)panic("WALLPAPER CACHE FAILED");wallpaper=(void *)(uintptr_t)art;
     damage_x=damage_y=0;damage_w=screen.width;damage_h=screen.height;
     wm_init(&model,screen.width,screen.height);model.theme=setup_configuration()->theme;
     model.mouse_x=input_get()->x;model.mouse_y=input_get()->y;
@@ -292,7 +316,8 @@ void desktop_start(struct pmm *p,struct chos_boot_info *b) {
     extern bool ram_volume_start(struct pmm *);
     if(!setup_persistent() && !ram_volume_start(p))panic("RAM VOLUME START FAILED");
     active=true;
-    if(desktop_launch(6)<0) panic("DESKTOP CLIENT LOAD FAILED");
+    setup_entry=b->boot_medium==2;
+    if(desktop_launch(setup_entry?7:6)<0) panic("INITIAL CLIENT LOAD FAILED");
     render();
 }
 void desktop_step(void) {
@@ -323,6 +348,10 @@ void desktop_step(void) {
         struct process *p=process_at(i);if(!p)continue;
         if(p->exited) { pointer_only=false;if(!process_reap(p->pid)) panic("DESKTOP REAP FAILED");continue; }
         for(unsigned j=0;j<WM_WINDOWS;j++) if(model.windows[j].owner==p->pid && model.windows[j].count) scheduler_wake(p->pid);
+    }
+    if(setup_take_live()) {
+        setup_entry=false;pointer_only=false;model.dirty=true;
+        if(!model.count)model.launch=6;
     }
     if(model.launch) { pointer_only=false; (void)desktop_launch(model.launch);model.launch=0; }
     uint64_t second=timer_ticks()/100;

@@ -30,3 +30,6 @@ cc "${flags[@]}" tests/config.c kernel/config/format.c kernel/config/store.c fil
 build/sanitized/config
 cc "${flags[@]}" tests/gui.c userspace/libraries/gui/widgets.c -o build/sanitized/gui
 build/sanitized/gui
+
+cc "${flags[@]}" tests/inventory.c installer/inventory.c installer/gpt.c -o build/sanitized/inventory
+build/sanitized/inventory

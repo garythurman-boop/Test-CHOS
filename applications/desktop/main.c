@@ -11,6 +11,7 @@ int user_main(uint64_t role,uint64_t unused) {
     if(api(SYS_DRAW,0,0,0)!=-9 || api(SYS_DRAW,(uint64_t)app_window,0,0)!=-14 || api(SYS_EVENT,(uint64_t)app_window,0,0)!=-14)return 92;
     struct chos_draw invalid_draw={.op=500};
     if(api(SYS_DRAW,(uint64_t)app_window,(uintptr_t)&invalid_draw,0)!=-22)return 93;
+    if(role==7 && api(SYS_PRESENT,(uint64_t)app_window,SETUP_COMPLETE+1,0)!=-22)return 97;
     struct chos_info info;if(api(SYS_INFO,(uintptr_t)&info,0,0)==0)app_persistent=info.persistent!=0;
     if(role==1)explorer_init();if(role==2)notepad_init();if(role==3)terminal_init();
     gui_initialize();
@@ -37,6 +38,7 @@ int user_main(uint64_t role,uint64_t unused) {
             else {
                 if(input.id && !prompting) {
                     if(role==1)explorer_widget(input.id,input.value);
+                    if(role==7)setup_widget(input.id);
                 }
                 continue;
             }

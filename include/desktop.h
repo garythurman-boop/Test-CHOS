@@ -10,7 +10,7 @@ struct chos_boot_info;
 #define WM_COMMANDS 128
 struct wm_window {
     uint64_t owner; uint32_t id; char title[48];
-    int x,y,w,h,rx,ry,rw,rh; bool minimized,maximized,closing;
+    int x,y,w,h,rx,ry,rw,rh; bool minimized,maximized,closing,fullscreen;
     struct chos_event events[WM_EVENTS]; unsigned head,count;
 };
 struct wm {
@@ -21,6 +21,9 @@ struct wm {
 };
 void wm_init(struct wm *,int,int);
 int wm_create(struct wm *,uint64_t,const char *,int,int);
+bool wm_fullscreen(struct wm *,uint64_t,uint32_t);
+struct wm_window *wm_exclusive(struct wm *);
+void wm_refresh(struct wm *,uint64_t);
 struct wm_window *wm_owned(struct wm *,uint64_t,uint32_t);
 void wm_remove(struct wm *,uint64_t);
 void wm_mouse(struct wm *,int,int,int);
@@ -40,4 +43,6 @@ int64_t desktop_syscall(struct process *,struct exception_frame *);
 void desktop_process_exit(uint64_t);
 int desktop_launch(unsigned);
 bool desktop_active(void);
+unsigned desktop_setup_displayed(void);
+void desktop_setup_notify(uint64_t);
 #endif
