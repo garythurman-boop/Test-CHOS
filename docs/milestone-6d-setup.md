@@ -116,6 +116,10 @@ the painted phase and queueing refresh before wake; the full sequence was rerun
 after this correction. Runtime
 failures are not hidden or represented as successful evidence.
 
+A clean `git archive` of source commit `b5052cf` was built in a separate directory,
+including all 13 host programs and both actual ELF validators. A final clean
+build also verifies the IRQ-protected notification/state update correction. Its ISO matches the
+final source image byte for byte. See [source-package build](evidence/m6d-setup/source-package-build.log).
 Final test results, hash/size and measured memory/timing are recorded below after
 completion of the current sequence.
 

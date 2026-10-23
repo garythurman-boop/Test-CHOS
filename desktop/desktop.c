@@ -70,7 +70,11 @@ struct commands { struct chos_draw *front,*back; uint64_t memory; unsigned count
 static struct commands drawings[WM_WINDOWS];
 static unsigned displayed_phase;
 unsigned desktop_setup_displayed(void){return displayed_phase;}
-void desktop_setup_notify(uint64_t pid){wm_refresh(&model,pid);scheduler_wake(pid);}
+void desktop_setup_notify(uint64_t pid){
+    uint64_t mask;__asm__ volatile("mrs %0, daif; msr daifset, #2":"=r"(mask)::"memory");
+    wm_refresh(&model,pid);scheduler_wake(pid);
+    __asm__ volatile("msr daif, %0"::"r"(mask):"memory");
+}
 static uint64_t last_second;
 static struct chos_render metrics;
 static void text(int x,int y,const char *s,uint32_t c) { gfx_text(&screen,x,y,s,c); }

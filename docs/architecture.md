@@ -70,7 +70,7 @@ Group-1 acknowledgement in the unified view. The physical generic timer is rearm
 at nominal 100 Hz based on CNTFRQ_EL0. Rearming from the current counter allows
 latency drift; no precise wall-clock or idle-CPU claim is made.
 
-The scheduler supports up to eight threads including bootstrap and EL0 tasks. Each added
+The scheduler supports up to twelve threads including bootstrap and EL0 tasks. Each added
 thread gets two usable stack pages and one guard. IRQ frames carry full integer
 contexts and exception return restores the selected thread. Highest numeric
 priority wins; equal priorities rotate. Strict priority may starve lower work.

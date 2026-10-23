@@ -67,7 +67,9 @@ compositor has displayed that stage's submitted frame. Setup submits the phase
 it actually painted; the compositor does not infer it from newer worker state. There is no minimum stage
 duration. A two-second upper bound and owner-liveness check prevent a lost UI from
 stalling disk work indefinitely. This is presentation synchronization, not fake
-progress. The private kernel yield SVC is distinct from EL0's public SVC #0.
+progress. Progress snapshots and WM notification queue mutations use IRQ exclusion, matching
+the single-CPU kernel synchronization contract. The private kernel yield SVC is
+distinct from EL0's public SVC #0.
 
 ## Storage layout and safety
 

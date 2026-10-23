@@ -84,9 +84,11 @@ void setup_initialize(struct block_device *device,struct chos_boot_info *b,struc
     else state.allowed=1;
 }
 static void report(void *unused,unsigned phase,uint64_t done,uint64_t total){
+    uint64_t mask;__asm__ volatile("mrs %0, daif; msr daifset, #2":"=r"(mask)::"memory");
     bool changed=phase!=state.phase;
     (void)unused;destination.completed_bytes=done;destination.total_bytes=total;
     state.progress=(phase-1)*100/6+(total?(unsigned)(done*100/total/6):0);state.phase=phase;
+    __asm__ volatile("msr daif, %0"::"r"(mask):"memory");
     if(changed){
         /* Synchronize a real stage change with its displayed native frame.
          * No cosmetic timer or minimum stage duration. A lost client cannot
