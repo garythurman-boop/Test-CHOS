@@ -77,3 +77,16 @@ build/desktop.elf: $(AOBJECTS) build/app/runtime.o build/user-entry.o userspace/
 test-desktop: | build
 	$(CC) -std=c11 -Wall -Wextra -Werror -Iinclude tests/desktop.c desktop/window-manager/model.c desktop/graphics/render.c desktop/graphics/font.c -o build/test-desktop
 	./build/test-desktop
+
+build/mkdisk: scripts/mkdisk.c installer/gpt.c installer/fat32.c include/install.h include/filesystem.h | build
+	$(CC) -std=c11 -Wall -Wextra -Werror -Iinclude scripts/mkdisk.c installer/gpt.c installer/fat32.c -o $@
+.PHONY: test-installer
+test-installer: build/mkdisk build/BOOTAA64.EFI build/KERNEL.BIN
+	mkdir -p build/installer
+	$(CC) $(KFLAGS) -c installer/gpt.c -o build/installer/gpt.o
+	$(CC) $(KFLAGS) -c installer/fat32.c -o build/installer/fat32.o
+	$(CC) -std=c11 -Wall -Wextra -Werror -Iinclude tests/installer.c installer/gpt.c -o build/test-installer
+	$(CC) -std=c11 -Wall -Wextra -Werror -Iinclude tests/fat32.c installer/gpt.c installer/fat32.c -o build/test-fat32
+	./build/test-fat32
+	python3 tests/installer.py
+	python3 tests/fat32.py

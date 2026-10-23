@@ -128,3 +128,18 @@ private mappings/state. Original user libraries wrap file/window/info APIs. The
 normal live session explicitly formats only newly allocated RAM as CHFS; no real
 block device is passed into that path. Persistent NVMe acceptance remains opt-in
 and separate. Whole-file REPLACE avoids truncate-before-save data loss.
+
+## Installation-format foundations
+
+Original GPT and FAT32 ESP construction modules are portable/freestanding C. They
+operate on an explicit 4 KiB block-device abstraction, with separately declared
+512/4096-byte logical sector geometry. Encoders verify exact metadata/payload
+read-back and propagate every write/flush error. GPT backup metadata is written
+first; complete installations are not transactionally atomic.
+
+These modules are compiled for AArch64 but are not yet linked into/called by the
+live kernel. The host mkdisk tool creates only new regular fixture files. Real
+UEFI disk boot verifies firmware consumption independently of the host parsers.
+Guest installer authority, boot-medium exclusion, disk identity binding and system
+partition mounting remain separate requirements; library confirmation alone does
+not fulfill them. See milestone-6a.md for the native integration sequence.

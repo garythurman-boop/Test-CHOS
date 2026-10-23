@@ -77,3 +77,13 @@ boot opt-in; do not treat it as an installer. QEMU's NVMe/Virtio device IDs and 
 addresses are recorded in docs/evidence/m3/*.pci.log and are not a Fusion inventory.
 Fusion may expose GICv3 or USB devices that are currently unsupported, so a clear
 unsupported-platform error is a valid finding, not evidence the ISO installed.
+
+## GPT/ESP fallback evidence (QEMU only)
+
+Milestone 6A's original GPT/FAT32 encoders produce a standards-based EFI disk
+carrying BOOTAA64.EFI and the original kernel. QEMU UEFI boots the desktop from
+both 512-byte and 4 KiB logical-sector NVMe fixtures, without optical media.
+This is evidence for the disk layout/firmware path, not Fusion support or a guest
+installation. Fusion disk-container conversion/import and its ARM64 virtual
+hardware still require an actual Fusion test. The supplied raw test fixture is
+not a validated Fusion VMDK and must not be described as one.

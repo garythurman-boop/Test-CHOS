@@ -11,7 +11,7 @@ import time
 from boot import BUILD, read_ppm, save_png
 
 class Guest:
-    def __init__(self,label='desktop',ram=512):
+    def __init__(self,label='desktop',ram=512,disk=None,sector_bytes=512):
         self.label=label
         self.lock=(BUILD/'boot-test.lock').open('w')
         fcntl.flock(self.lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
@@ -20,10 +20,16 @@ class Guest:
         self.iso=BUILD/'CHOS-ARM64.iso'
         self.command=['qemu-system-aarch64','-machine','virt,gic-version=2','-cpu','cortex-a72','-accel','tcg','-m',str(ram),'-smp','1',
             '-bios',os.environ.get('CHOS_UEFI_FIRMWARE','/usr/share/qemu-efi-aarch64/QEMU_EFI.fd'),
-            '-device','ramfb','-device','virtio-keyboard-pci','-device','virtio-mouse-pci','-device','virtio-scsi-pci',
-            '-drive',f'if=none,id=cd,media=cdrom,readonly=on,file={self.iso}',
-            '-device','scsi-cd,drive=cd','-boot','order=d','-display','none','-serial',f'file:{BUILD}/{label}.serial.log',
+            '-device','ramfb','-device','virtio-keyboard-pci','-device','virtio-mouse-pci',
+            '-display','none','-serial',f'file:{BUILD}/{label}.serial.log',
             '-qmp',f'unix:{self.sockpath},server=on,wait=off','-no-reboot','-net','none']
+        if disk:
+            self.command += ['-drive',f'if=none,id=nvme0,format=raw,file={disk}',
+                '-device',f'nvme,drive=nvme0,serial=CHOS-GPT-BOOT,logical_block_size={sector_bytes},physical_block_size={sector_bytes}',
+                '-boot','order=c']
+        else:
+            self.command += ['-device','virtio-scsi-pci','-drive',f'if=none,id=cd,media=cdrom,readonly=on,file={self.iso}',
+                '-device','scsi-cd,drive=cd','-boot','order=d']
         self.log=(BUILD/f'{label}.qemu.log').open('w')
         self.proc=subprocess.Popen(self.command,stdout=self.log,stderr=subprocess.STDOUT)
         self.sock=socket.socket(socket.AF_UNIX,socket.SOCK_STREAM);self.sock.settimeout(10)

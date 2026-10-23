@@ -29,4 +29,6 @@ sha256sum build/CHOS-STORAGE-TEST.iso > build/storage-hash-2
 cmp build/storage-hash-1 build/storage-hash-2
 python3 tests/storage.py
 make iso
-printf 'Twelve QEMU cases, six host programs (both ELF payloads checked), both ISO repeatability checks and independent disk verification passed.\n'
+make test-installer
+python3 tests/diskboot.py
+printf 'Fourteen QEMU cases, eight host programs (both ELF payloads checked), both ISO repeatability checks and independent disk verification passed.\n'

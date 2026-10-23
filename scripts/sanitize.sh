@@ -13,3 +13,9 @@ cc "${flags[@]}" tests/desktop.c desktop/window-manager/model.c desktop/graphics
 for test in memory acpi filesystem input desktop; do "build/sanitized/$test"; done
 build/sanitized/elf build/init.elf
 build/sanitized/elf build/desktop.elf
+
+cc "${flags[@]}" tests/installer.c installer/gpt.c -o build/sanitized/installer
+cc "${flags[@]}" tests/fat32.c installer/gpt.c installer/fat32.c -o build/sanitized/fat32
+build/sanitized/fat32
+gpt_test_dir=$(mktemp -d "$PWD/build/gpt-sanitized-XXXXXX")
+build/sanitized/installer "$gpt_test_dir/disk"

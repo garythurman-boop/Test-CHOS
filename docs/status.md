@@ -7,11 +7,11 @@
 | 3: display/input/NVMe/CHFS persistent operations | QEMU GOP + Virtio PCI + NVMe tested; three cold storage boots |
 | 4: CHOS Desktop/window manager/taskbar/Start | Working core; dedicated Search/Run/Help and image wallpaper remain |
 | 5: six native applications | Functional bounded live-session versions; see desktop.md |
-| 6: graphical installer/GPT/ESP/installed boot | Not implemented in the current ISO |
+| 6: graphical installer/GPT/ESP/installed boot | GPT/FAT32 encoders and builder-created disk boot tested; guest installer and installed system volume unfinished |
 | 7: VMware Fusion validation | Not run: no Apple Silicon/Fusion host available |
 | 8: CHOS 0.1 | Not ready |
 
-Current source/ISO and evidence: [milestone 5](milestone-5.md). Ordinary images
+Current ISO: [milestone 5](milestone-5.md). New installation foundations: [milestone 6A](milestone-6a.md). Ordinary images
 start a genuine original desktop and native EL0 apps after kernel tests. Their
 CHFS volume is RAM backed, explicitly volatile, and does not write attached disks.
 The separately gated storage-test ISO verifies persistent NVMe/CHFS data but is
@@ -45,4 +45,5 @@ not an installer or desktop persistence environment.
   persistence. Settings only change the actual session color theme/display report.
 - Task Manager uses real process IDs, memory counters and scheduled timer samples,
   not CPU percentage. Allocator figures exclude non-conventional reservations.
-- No installed hard-disk boot, working installer, network stack or Fusion evidence.
+- UEFI disk boot is verified only from build-created GPT/ESP fixtures. No guest
+  installation/installed system volume, graphical installer, network or Fusion evidence.

@@ -1,3 +1,18 @@
+# CHOS installation-format foundations (milestone 6A)
+
+Original GPT/FAT32 ESP encoders and an exclusive-new-file build utility now create
+repeatable boot disk fixtures. Independent parsers verify metadata and exact EFI/
+kernel payloads. Actual QEMU UEFI boots the native desktop from 512/4096-byte NVMe
+fixtures with no ISO; underlying disks stay unchanged. Full sequence: 14 QEMU
+cases, eight portable host programs, both ELF inputs and sanitizers pass.
+
+This is not a guest installer or installed system-volume/persistent-desktop result.
+The current normal ISO remains the milestone-5 native application image. Graphical
+setup, system partition integration, configuration/accounts and Fusion remain open.
+See milestone-6a.md for evidence, safety limits and next engineering steps.
+
+---
+
 # CHOS desktop/application development sequence
 
 Adds an original software window manager/compositor, owned native graphics/events,
