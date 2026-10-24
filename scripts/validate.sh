@@ -58,11 +58,12 @@ python3 tests/hardening.py
 python3 tests/growth.py
 python3 tests/mmu_boot.py
 make input-iso
-sha256sum build/CHOS-ARM64-M7G-INPUT.iso > build/input-hash-1
+sha256sum build/CHOS-ARM64-M7H-INPUT.iso > build/input-hash-1
 make input-iso
-sha256sum build/CHOS-ARM64-M7G-INPUT.iso > build/input-hash-2
+sha256sum build/CHOS-ARM64-M7H-INPUT.iso > build/input-hash-2
 cmp build/input-hash-1 build/input-hash-2
 python3 tests/fusion_devices.py
 python3 tests/install.py --sector 512 --gic-version 3 --bridged
+python3 tests/usb_compat.py
 python3 tests/input_panel.py
-printf 'Seventy-six QEMU cases, twenty host programs (both ELF payloads checked), all three distributable ISO repeatability checks and independent disk verification passed.\n'
+printf 'Seventy-eight QEMU cases, twenty host programs (both ELF payloads checked), all three distributable ISO repeatability checks and independent disk verification passed.\n'

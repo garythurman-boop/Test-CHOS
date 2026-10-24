@@ -3,8 +3,14 @@
 #include <stdio.h>
 #include <string.h>
 static _Alignas(4096) struct usb_trb page[256];
+void test_usb_descriptors(void);
 int main(void){
+    test_usb_descriptors();
     struct xhci_layout l;
+    /* Actual M7G Fusion register values transcribed from the supplied page 5. */
+    assert(!xhci_layout_validate(0x120020,0x08001f7f,0x7f,0x38f081,0x820,0xa20,65536,&l));
+    assert(l.slots==127 && l.ports==8 && l.doorbell+(l.slots+1)*4==l.runtime);
+    assert(xhci_extended_span(&l,0xe0,4));
     /* Compact, disjoint blocks are legal; old M7F rejects both offsets. This
      * is a synthetic layout (one interrupter), not a VMware register capture. */
     assert(!xhci_layout_validate(0x1000020,0x08000120,0,1,0x800,0x600,65536,&l));

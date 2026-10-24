@@ -14,7 +14,7 @@ for name in ['scripts/mkiso.py','build/BOOTAA64.EFI','build/KERNEL.BIN','LICENSE
 env={**os.environ,'CHOS_INPUT_TEST':'1','CHOS_DISPLAY_MODE':'640x480','SOURCE_DATE_EPOCH':os.environ.get('SOURCE_DATE_EPOCH','1767225600')}
 with (BUILD/'input-panel-build.log').open('w') as log:
     subprocess.run(['python3','scripts/mkiso.py'],cwd=work,env=env,stdout=log,stderr=subprocess.STDOUT,check=True)
-iso=work/'build/CHOS-ARM64-M7G-INPUT.iso'
+iso=work/'build/CHOS-ARM64-M7H-INPUT.iso'
 g=Guest('input-panel-640',ram=2048,live=False,gic_version=3,input_backend='usb',iso=iso)
 try:
     serial=BUILD/(g.label+'.serial.log');deadline=time.monotonic()+120

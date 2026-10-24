@@ -122,6 +122,7 @@ void diagnostic_input_panel(void){
     console_text(16,y+100,"LAST KEY CODE / VALUE",0x9ed7ff);console_number(304,y+100,key_code);console_number(448,y+100,key_value);
     console_text(16,y+118,"POINTER X Y BUTTONS",0x9ed7ff);console_number(304,y+118,(unsigned)i->x);console_number(400,y+118,(unsigned)i->y);console_number(496,y+118,mouse_buttons);
     console_text(16,y+136,"LIVE EVENTS",0x9ed7ff);console_number(184,y+136,test_events);
+    console_text(280,y+136,"ENUM",0x9ed7ff);console_number(352,y+136,s->enum_stage);console_number(400,y+136,s->enum_reason);console_number(472,y+136,s->enum_port);
     console_rect(0,boot->height-24,boot->width,24,0x244da8);
     console_text(16,boot->height-20,"NO KEY CONTENT LOGGED / NO DISK WRITES",0xffffff);
 }

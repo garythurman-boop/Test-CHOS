@@ -17,7 +17,7 @@ build/pci-resource.obj: drivers/pci/resource.c include/pci.h include/boot.h | bu
 	$(CC) $(CFLAGS) --target=aarch64-pc-windows-msvc -c $< -o $@
 build/BOOTAA64.EFI: build/boot.obj build/image.obj build/pci-resource.obj
 	lld-link /subsystem:efi_application /entry:efi_main /nodefaultlib /machine:arm64 /timestamp:0 /out:$@ $^
-KSOURCES := drivers/usb/layout.c drivers/pci/discover.c drivers/pci/resource.c drivers/storage/nvme_format.c kernel/memory/report.c boot/image.c kernel/image_test.c drivers/usb/ring.c drivers/usb/hid.c drivers/usb/xhci.c kernel/diagnostics/buffer.c kernel/diagnostics/native.c kernel/arch/arm64/hardware.c kernel/config/format.c kernel/config/store.c installer/inventory.c installer/policy.c installer/service.c installer/gpt.c installer/fat32.c filesystem/ram.c kernel/arch/arm64/power.c desktop/desktop.c desktop/window-manager/model.c desktop/graphics/render.c desktop/graphics/primitives.c desktop/graphics/fontcache.c desktop/graphics/font.c drivers/input/virtio.c drivers/input/events.c filesystem/vfs.c filesystem/chfs.c drivers/storage/nvme.c kernel/storage_test.c kernel/runtime.c kernel/main.c kernel/console.c kernel/process/elf.c kernel/process/process.c kernel/syscall/syscall.c kernel/arch/arm64/acpi.c kernel/memory/physical.c kernel/memory/heap.c kernel/memory/virtual.c kernel/interrupts/exception.c kernel/scheduler/scheduler.c drivers/interrupts/gicv3.c drivers/interrupts/gicv2_timer.c
+KSOURCES := drivers/usb/layout.c drivers/pci/discover.c drivers/pci/resource.c drivers/storage/nvme_format.c kernel/memory/report.c boot/image.c kernel/image_test.c drivers/usb/ring.c drivers/usb/descriptors.c drivers/usb/hid.c drivers/usb/xhci.c kernel/diagnostics/buffer.c kernel/diagnostics/native.c kernel/arch/arm64/hardware.c kernel/config/format.c kernel/config/store.c installer/inventory.c installer/policy.c installer/service.c installer/gpt.c installer/fat32.c filesystem/ram.c kernel/arch/arm64/power.c desktop/desktop.c desktop/window-manager/model.c desktop/graphics/render.c desktop/graphics/primitives.c desktop/graphics/fontcache.c desktop/graphics/font.c drivers/input/virtio.c drivers/input/events.c filesystem/vfs.c filesystem/chfs.c drivers/storage/nvme.c kernel/storage_test.c kernel/runtime.c kernel/main.c kernel/console.c kernel/process/elf.c kernel/process/process.c kernel/syscall/syscall.c kernel/arch/arm64/acpi.c kernel/memory/physical.c kernel/memory/heap.c kernel/memory/virtual.c kernel/interrupts/exception.c kernel/scheduler/scheduler.c drivers/interrupts/gicv3.c drivers/interrupts/gicv2_timer.c
 KASM := kernel/arch/arm64/growth.S desktop/graphics/assets.S kernel/arch/arm64/entry.S kernel/arch/arm64/vectors.S kernel/arch/arm64/mmu.S kernel/arch/arm64/test_worker.S kernel/process/image.S
 KOBJECTS := $(patsubst %.c,build/%.o,$(KSOURCES)) $(patsubst %.S,build/%.o,$(KASM))
 build/%.o: %.c $(wildcard include/*.h) Makefile
@@ -139,7 +139,7 @@ test-diagnostic: | build
 
 .PHONY: test-usb
 test-usb: | build
-	$(CC) -std=c11 -Wall -Wextra -Werror -Iinclude tests/usb.c drivers/usb/layout.c drivers/usb/hid.c drivers/usb/ring.c -o build/test-usb
+	$(CC) -std=c11 -Wall -Wextra -Werror -Iinclude tests/usb.c tests/usb_descriptors.c drivers/usb/layout.c drivers/usb/descriptors.c drivers/usb/hid.c drivers/usb/ring.c -o build/test-usb
 	./build/test-usb
 
 KERNEL_TEST_RO ?= 0
