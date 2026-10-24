@@ -66,6 +66,25 @@ int main(void) {
     wm_refresh(&clients,50);assert(wm_event(&clients,50,(unsigned)setup,&event,true) && event.type==EVENT_REFRESH);
     assert(!wm_event(&clients,40,(unsigned)c,&event,true));
     wm_remove(&clients,50);assert(!wm_exclusive(&clients) && clients.focus==(unsigned)c);
+    struct wm icons;wm_init(&icons,1024,768);icons.now_ms=100;
+    click(&icons,40,80);assert(icons.desktop_selection==1 && !icons.launch);
+    icons.now_ms=700;click(&icons,40,80);assert(!icons.launch);
+    icons.now_ms=1000;click(&icons,40,80);assert(icons.launch==1);icons.launch=0;
+    icons.now_ms=1100;click(&icons,40,80);assert(!icons.launch); /* no triple-click duplicate */
+    wm_key(&icons,28,1);assert(icons.launch==1);icons.launch=0;
+    wm_mouse(&icons,40,80,1);wm_mouse(&icons,240,180,-1);wm_mouse(&icons,240,180,0);
+    assert(icons.icon_x[0]==205 && icons.icon_y[0]==156 && !icons.launch && icons.preferences_dirty);
+    uint8_t preferences[96];assert(wm_preferences_encode(&icons,preferences));
+    struct wm restored;wm_init(&restored,800,600);assert(wm_preferences_decode(&restored,preferences,96));
+    assert(restored.icon_x[0]==205 && restored.icon_y[0]==156);
+    preferences[30]^=1;assert(!wm_preferences_decode(&restored,preferences,96));
+    click(&icons,900,600);assert(!icons.desktop_selection);
+    wm_context(&icons,1000,700);assert(icons.context==1 && icons.context_x==800 && icons.context_y+224<=724);
+    icons.context_item=7;wm_key(&icons,28,1);assert(icons.context==1); /* disabled New Folder */
+    icons.context_item=1;wm_key(&icons,28,1);assert(icons.auto_arrange && !icons.context);
+    wm_context(&icons,40,80);assert(icons.context==2 && icons.desktop_selection==1);
+    icons.context_item=1;wm_key(&icons,28,1);assert(icons.context==3);
+    wm_key(&icons,1,1);assert(!icons.context);
     struct {uint32_t before,pixels[100],after;} buffer={.before=0x1234,.after=0x5678};
     struct surface surface={.pixels=buffer.pixels,.width=10,.height=10,.stride=10};
     gfx_clip(&surface,-5,-5,20,20);gfx_rect(&surface,INT_MIN,INT_MIN,INT_MAX,INT_MAX,1);

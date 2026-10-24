@@ -39,3 +39,27 @@ typed ERASE confirmation. Disk-only reboot and saved-file integrity are further
 independent gates. M7I Fusion input/installation/persistence are pending until
 those observations arrive. [Implementation/limits](milestone-7i.md),
 [codes](driver-diagnostics.md), [compatibility matrix](fusion-compatibility-matrix.md).
+
+## M8 installation retest
+
+The user has now confirmed M7I keyboard, mouse/trackpad, Setup and Live Desktop
+on Fusion/M1. The M8 development ISO addresses the installation-worker recheck
+failure and adds two-phase setup; persistent installation still requires a real
+Fusion retest. Preserve the M7I ISO as the known-good backup.
+
+Use a new disposable NVMe virtual disk. In blue Setup review controller 0 /
+namespace 1, serial, capacity, sector size, existing partitions and proposed GPT /
+ESP / CHOS layout. Type exactly ERASE. If a precise recheck error appears, stop
+and capture the entire error screen; do not change the disk identity or disable
+the guard. The installer must display verified first-stage completion.
+
+Power off after completion if necessary, disconnect the ISO, then start the VM
+from the same virtual disk. Royale configuration should appear automatically.
+Finish valid settings, verify Welcome, then reboot again: Setup must not repeat.
+Save a Notepad document and check its contents after another cold boot.
+
+Test one-click selection, double-click opening, shortcut dragging and saved
+positions, context menus and the visible cursor. Display Properties only exposes
+firmware-enumerated modes. Apply schedules a trial at restart. After a visible
+trial boot, Keep Current Mode confirms it; otherwise the following cold boot
+falls back. Never interpret QEMU screenshots as Fusion installation evidence.

@@ -8,10 +8,10 @@
 | 4: CHOS Desktop/window manager/taskbar/Start | Working core; Royale widgets and multi-window usage tested; dedicated Search/Help and wallpaper file loading remain |
 | 5: six native applications | Functional bounded native apps with installed persistence and shared widgets; see desktop.md |
 | 6: graphical installer/GPT/ESP/installed boot | Dedicated full-screen blue/Royale native setup, disk boot and persistent system volume; saved computer/theme/fixed clock offset implemented; account/password/layout and graphical mode configuration unfinished |
-| 7: VMware Fusion validation | M7H Fusion screenshots identify report-only HID and two USB hubs. M7I adds hub topology, report HID, simultaneous endpoints and absolute input; target keyboard/trackpad and installation remain pending |
-| 8: CHOS 0.1 | Not ready |
+| 7: VMware Fusion validation | User confirms M7I normal ISO, Setup, keyboard, mouse/trackpad and Live Desktop on Fusion/M1. Persistent Fusion installation fails at the identity/writable recheck; M8 correction needs target retest |
+| 8: two-phase installation / Royale continuation | M8 development candidate; native two-phase disk boot tested, integration in progress. CHOS 0.1 release acceptance remains open |
 
-Current ISO/results: [M7I unified input candidate](milestone-7i.md).
+Current work: [Milestone 8](milestone-8.md). Known-good input backup: [M7I](milestone-7i.md).
 Preserved [M7H descriptor/HID diagnostics](milestone-7h.md).
 Preserved [M7G xHCI layout/refusal diagnostics](milestone-7g.md).
 Preserved [M7F discovery/input/read-only storage](milestone-7f.md).
@@ -22,7 +22,7 @@ Preserved [M7A/7B boot and interrupts](milestone-7a-b.md).
 Preserved [M6D dedicated Setup iteration](milestone-6d-setup.md).
 [Setup flow and safety](setup-environment.md). Preserved [M6D widgets/settings checkpoint](milestone-6d.md). [Saved configuration](configuration.md), [native toolkit](gui-toolkit.md). Previous visual checkpoint: [milestone 6C](milestone-6c.md). [Royale visual architecture](royale.md). Previous installer core: [milestone 6B](milestone-6b.md). Earlier foundations: [milestone 6A](milestone-6a.md). Ordinary images
 boot dedicated Setup after kernel tests. L/F3 starts Live Desktop; installed disks
-start the regular desktop directly. Their live
+resume pending graphical configuration or start the regular desktop. Their live
 CHFS volume is RAM backed. Native Setup requires explicit destructive confirmation.
 Installed sessions mount the verified CHFS system partition and persist files.
 The separately gated storage-test ISO verifies persistent NVMe/CHFS data but is

@@ -35,6 +35,8 @@ int user_main(uint64_t role,uint64_t unused) {
         if(result==-11){if(draining){draining=false;drained=0;continue;}if(role==5 || role==7)dirty=true;continue;}
         if(result<0)return 3;
         draining=true;drained++;
+        if(role==1 && event.type==EVENT_CONTEXT){explorer_context(event.x,event.y);dirty=true;continue;}
+        if(role==1)explorer_pointer(&event);
         struct ui_result input=ui_event(&app_gui,&event);
         if(input.consumed) {
             dirty|=input.repaint;

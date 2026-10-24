@@ -31,7 +31,8 @@ bool wm_fullscreen(struct wm *m,uint64_t owner,uint32_t id) {
     wm_focus(m,id);post(w,(struct chos_event){.type=EVENT_RESIZE,.width=w->w,.height=w->h});return true;
 }
 void wm_init(struct wm *m,int w,int h) {
-    *m=(struct wm){.width=w,.height=h,.next_id=1,.drag=-1,.client_capture=-1,.client_hover=-1,.dirty=true};
+    *m=(struct wm){.width=w,.height=h,.next_id=1,.drag=-1,.client_capture=-1,.client_hover=-1,.icon_drag=-1,.double_click_ms=500,.cursor_size=28,.dirty=true};
+    wm_arrange(m);m->preferences_dirty=false;
 }
 struct wm_window *wm_owned(struct wm *m,uint64_t owner,uint32_t id) {
     struct wm_window *w=by_id(m,id); return w && w->owner==owner?w:0;
@@ -136,7 +137,7 @@ unsigned wm_shell_hit(const struct wm *m,int x,int y) {
         if(y<w->y+30 && x>=w->x+w->w-80){unsigned b=x>=w->x+w->w-28?2:(x>=w->x+w->w-54?1:0);return 400+slot*3+b;}
         return 0;
     }
-    if(x<112 && y>=60 && y<60+7*66)return 500+(unsigned)(y-60)/66;
+    for(unsigned i=0;i<7;i++)if(inside(x,y,m->icon_x[i],m->icon_y[i],100,58))return 500+i;
     return 0;
 }
 static void shell_activate(struct wm *m,unsigned id) {
@@ -151,16 +152,33 @@ static void shell_activate(struct wm *m,unsigned id) {
         if(b==1)maximize(m,w);
         if(!b){w->minimized=true;next_focus(m);}return;
     }
-    if(id>=500 && id<507){m->desktop_selection=id-499;m->launch=m->desktop_selection;}
+    if(id>=500 && id<507){
+        unsigned selected=id-499;
+        int dx=m->mouse_x-m->last_click_x,dy=m->mouse_y-m->last_click_y;
+        if(m->last_click_icon==selected && m->now_ms-m->last_click_ms<=m->double_click_ms && dx>=-4 && dx<=4 && dy>=-4 && dy<=4){m->launch=selected;m->last_click_icon=0;}
+        else {m->last_click_icon=selected;m->last_click_ms=m->now_ms;m->last_click_x=m->mouse_x;m->last_click_y=m->mouse_y;}
+    }
 }
 void wm_mouse(struct wm *m,int x,int y,int button) {
     m->mouse_x=x; m->mouse_y=y; m->dirty=true;
     if(button>=0)m->button_down=button!=0;
+    if(m->context){
+        bool in=inside(x,y,m->context_x,m->context_y,220,(int)wm_context_count(m)*28);
+        if(button==1 && !in){m->context=0;return;}
+        if(in)m->context_item=(unsigned)(y-m->context_y)/28;
+        if(button==1 && in)m->shell_press=600+m->context_item;
+        if(button==0){unsigned pressed=m->shell_press;m->shell_press=0;if(in && pressed==600+m->context_item)wm_key(m,28,1);}
+        return;
+    }
     struct wm_window *exclusive=wm_exclusive(m);
     if(exclusive){
         post(exclusive,(struct chos_event){.type=button<0?EVENT_POINTER:(button?EVENT_CLICK:EVENT_RELEASE),.x=x,.y=y});return;
     }
     if(button==0) {
+        if(m->icon_drag>=0){
+            if(m->icon_moving){m->preferences_dirty=true;m->shell_press=0;m->last_click_icon=0;}
+            m->icon_drag=-1;m->icon_moving=false;
+        }
         unsigned pressed=m->shell_press;m->shell_press=0;
         if(pressed && pressed==wm_shell_hit(m,x,y))shell_activate(m,pressed);
         if(m->client_capture>=0) {
@@ -172,6 +190,19 @@ void wm_mouse(struct wm *m,int x,int y,int button) {
     }
     if(m->confirm)return;
     if(button<0) {
+        if(m->icon_drag>=0){
+            int dx=x-m->press_x,dy=y-m->press_y;
+            if(dx>4 || dx< -4 || dy>4 || dy< -4)m->icon_moving=true;
+            if(m->icon_moving && !m->auto_arrange){
+                int nx=x-m->dx,ny=y-m->dy;
+                if(nx<0)nx=0;
+                if(ny<0)ny=0;
+                if(nx>m->width-100)nx=m->width-100;
+                if(ny>m->height-102)ny=m->height-102;
+                m->icon_x[m->icon_drag]=nx;m->icon_y[m->icon_drag]=ny;
+            }
+            return;
+        }
         if(m->menu) {
             unsigned count=m->applications?8:12;
             for(unsigned item=0;item<count;item++) {int a,b,w,h;if(wm_menu_item(m,item,&a,&b,&w,&h) && inside(x,y,a,b,w,h))m->selection=item;}
@@ -209,7 +240,12 @@ void wm_mouse(struct wm *m,int x,int y,int button) {
         }
         return;
     }
-    m->shell_press=wm_shell_hit(m,x,y);if(m->shell_press)return;
+    m->shell_press=wm_shell_hit(m,x,y);
+    if(m->shell_press>=500 && m->shell_press<507){
+        unsigned i=m->shell_press-500;m->desktop_selection=i+1;m->focus=0;
+        m->icon_drag=(int)i;m->press_x=x;m->press_y=y;m->dx=x-m->icon_x[i];m->dy=y-m->icon_y[i];return;
+    }
+    if(m->shell_press)return;
     if(y>=m->height-44)return;
     if(m->menu){m->menu=false;return;}
     for(unsigned n=m->count;n;n--) {
@@ -223,7 +259,7 @@ void wm_mouse(struct wm *m,int x,int y,int button) {
         } else {m->client_capture=(int)slot;post(w,(struct chos_event){.type=EVENT_CLICK,.x=x-w->x-4,.y=y-w->y-32});}
         return;
     }
-    m->desktop_selection=0;
+    m->desktop_selection=0;m->last_click_icon=0;m->focus=0;
 }
 void wm_key(struct wm *m,unsigned code,int value) {
     if(code==56 || code==100) { m->alt=value!=0; return; }
@@ -232,6 +268,26 @@ void wm_key(struct wm *m,unsigned code,int value) {
     if(!value) return;
     struct wm_window *exclusive=wm_exclusive(m);
     if(exclusive)goto client_key;
+    if(m->context){
+        if(code==1){m->context=0;m->dirty=true;return;}
+        unsigned count=wm_context_count(m);
+        if(code==103)m->context_item=(m->context_item+count-1)%count;
+        if(code==108)m->context_item=(m->context_item+1)%count;
+        if(code==28 && wm_context_enabled(m,m->context_item)){
+            unsigned item=m->context_item,context=m->context;m->context=0;
+            if(context==2){if(!item)m->launch=m->desktop_selection;else if(item==1)m->context=3;}
+            else if(context==1){
+                if(item==0)wm_arrange(m);
+                if(item==1){m->auto_arrange=!m->auto_arrange;if(m->auto_arrange)wm_arrange(m);m->preferences_dirty=true;}
+                if(item==3 || item==4)m->launch=4;
+                if(item==3)m->display_requested=true;
+                if(item==5){m->double_click_ms=m->double_click_ms==750?250:m->double_click_ms+250;m->preferences_dirty=true;}
+                if(item==6){m->cursor_size=m->cursor_size==28?36:28;m->preferences_dirty=true;}
+            }
+        }
+        m->dirty=true;return;
+    }
+    if(!m->focus && m->desktop_selection && code==28){m->launch=m->desktop_selection;m->dirty=true;return;}
     if(m->confirm) {
         if(code==21){if(m->confirm==3)m->logout=true;else m->power=m->confirm;m->confirm=0;m->dirty=true;}
         if(code==49 || code==1){m->confirm=0;m->dirty=true;}
@@ -279,4 +335,50 @@ bool wm_event(struct wm *m,uint64_t owner,uint32_t id,struct chos_event *e,bool 
     *e=w->events[w->head];
     if(consume) { w->head=(w->head+1)%WM_EVENTS;w->count--; }
     return true;
+}
+
+void wm_arrange(struct wm *m){
+    unsigned rows=(unsigned)(m->height-110)/66;if(!rows)rows=1;
+    for(unsigned i=0;i<7;i++){m->icon_x[i]=5+(int)(i/rows)*112;m->icon_y[i]=56+(int)(i%rows)*66;}
+    m->preferences_dirty=true;m->dirty=true;
+}
+unsigned wm_context_count(const struct wm *m){return m->context==1?8:m->context==2?5:5;}
+bool wm_context_enabled(const struct wm *m,unsigned item){return m->context==1?item!=7:m->context==2?(item<2 || item==4):true;}
+void wm_context(struct wm *m,int x,int y){
+    if(wm_exclusive(m) || m->confirm)return;
+    unsigned hit=wm_shell_hit(m,x,y);
+    if(hit && (hit<500 || hit>=507))return;
+    for(unsigned n=0;n<m->count;n++){struct wm_window *w=&m->windows[m->order[n]];if(!w->minimized && !w->closing && inside(x,y,w->x,w->y,w->w,w->h)){
+        if(inside(x,y,w->x+4,w->y+32,w->w-8,w->h-36)){wm_focus(m,w->id);post(w,(struct chos_event){.type=EVENT_CONTEXT,.x=x-w->x-4,.y=y-w->y-32});}
+        return;
+    }}
+    m->context=hit>=500?2:1;if(hit>=500)m->desktop_selection=hit-499;
+    m->menu=false;m->context_item=0;m->shell_press=0;m->icon_drag=-1;m->last_click_icon=0;
+    int height=(int)wm_context_count(m)*28;
+    m->context_x=x>m->width-224?m->width-224:x;
+    m->context_y=y>m->height-48-height?m->height-48-height:y;
+    m->dirty=true;
+}
+static void pref_put(uint8_t *p,uint32_t v){for(unsigned i=0;i<4;i++)p[i]=(uint8_t)(v>>(i*8));}
+static uint32_t pref_get(const uint8_t *p){return (uint32_t)p[0]|(uint32_t)p[1]<<8|(uint32_t)p[2]<<16|(uint32_t)p[3]<<24;}
+static uint32_t pref_crc(const uint8_t *p){uint32_t c=~0u;for(unsigned i=0;i<92;i++){c^=p[i];for(unsigned b=0;b<8;b++)c=(c>>1)^((0u-(c&1))&0xedb88320u);}return ~c;}
+bool wm_preferences_encode(const struct wm *m,uint8_t out[96]){
+    for(unsigned i=0;i<96;i++)out[i]=0;
+    pref_put(out,0x38445343);pref_put(out+4,1);pref_put(out+8,m->double_click_ms);pref_put(out+12,m->cursor_size);pref_put(out+16,m->auto_arrange);
+    for(unsigned i=0;i<7;i++){pref_put(out+24+i*8,(unsigned)m->icon_x[i]);pref_put(out+28+i*8,(unsigned)m->icon_y[i]);}
+    pref_put(out+92,pref_crc(out));return true;
+}
+bool wm_preferences_decode(struct wm *m,const uint8_t *p,size_t n){
+    if(!p || n!=96 || pref_get(p)!=0x38445343 || pref_get(p+4)!=1 || pref_get(p+92)!=pref_crc(p) || pref_get(p+16)>1)return false;
+    unsigned delay=pref_get(p+8),cursor=pref_get(p+12);
+    if((delay!=250 && delay!=500 && delay!=750) || (cursor!=28 && cursor!=36))return false;
+    for(unsigned i=0;i<7;i++)if(pref_get(p+24+i*8)>1920 || pref_get(p+28+i*8)>1200)return false;
+    m->double_click_ms=delay;m->cursor_size=cursor;m->auto_arrange=pref_get(p+16)!=0;
+    for(unsigned i=0;i<7;i++){
+        m->icon_x[i]=(int)pref_get(p+24+i*8);m->icon_y[i]=(int)pref_get(p+28+i*8);
+        if(m->icon_x[i]>m->width-100)m->icon_x[i]=m->width-100;
+        if(m->icon_y[i]>m->height-102)m->icon_y[i]=m->height-102;
+    }
+    if(m->auto_arrange)wm_arrange(m);
+    m->preferences_dirty=false;return true;
 }

@@ -18,8 +18,6 @@ try:
         assert g.dimensions()==(640,480)
         g.snapshot('setup-blue-640')
         for _ in range(4):g.key('ret')
-        g.wait(lambda p:matches(p,202,100,'Personalize CHOS',0xf2f6ff,2),'full configuration at minimum mode')
-        g.snapshot('setup-config-640');g.key('ret')
         g.wait(lambda p:matches(p,32,92,'Confirm destruction',0xf2f6ff),'minimum-mode confirmation')
         g.snapshot('setup-confirm-640');g.key('f3')
         g.wait(lambda p:p(60,250)==0x326bb0,'explicit live selection at minimum mode')

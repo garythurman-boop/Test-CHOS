@@ -82,3 +82,37 @@ void gfx_blit(struct surface *s,int x,int y,const uint32_t *src,int w,int h,int 
         uint32_t *p=&s->pixels[(size_t)j*s->stride+i];*p=gfx_blend(*p,c,c>>24);
     }
 }
+
+/* Original arrow geometry, four coverage samples per pixel. Its top-left tip
+ * is the hotspot. Transparent samples preserve the composed desktop beneath. */
+static bool cursor_inside(int x,int y){
+    static const int px[7]={4,4,28,48,64,44,80},py[7]={4,96,72,112,104,64,64};
+    bool in=false;
+    for(unsigned i=0,j=6;i<7;j=i++)if((py[i]>y)!=(py[j]>y)){
+        int dy=py[j]-py[i],lhs=(x-px[i])*dy,rhs=(px[j]-px[i])*(y-py[i]);
+        if(dy>0?lhs<rhs:lhs>rhs)in=!in;
+    }
+    return in;
+}
+void gfx_cursor(struct surface *s,int x,int y,unsigned size){
+    if(x< -40 || y< -40 || x>s->width || y>s->height)return;
+    if(size!=28 && size!=36)size=28;
+    int extent=(int)size+4;
+    for(int j=0;j<extent;j++)for(int i=0;i<extent;i++){
+        int dx=x+i,dy=y+j;
+        if(dx<s->x || dy<s->y || dx>=s->x+s->w || dy>=s->y+s->h)continue;
+        unsigned fill=0,edge=0,shadow=0;
+        for(int b=0;b<2;b++)for(int a=0;a<2;a++){
+            int u=(i*4+a*2+1)*28/(int)size,v=(j*4+b*2+1)*28/(int)size;
+            if(cursor_inside(u-8,v-8))shadow++;
+            if(cursor_inside(u,v)){
+                if(cursor_inside(u-4,v) && cursor_inside(u+4,v) && cursor_inside(u,v-4) && cursor_inside(u,v+4))fill++;
+                else edge++;
+            }
+        }
+        uint32_t *pixel=&s->pixels[(size_t)dy*s->stride+dx];
+        if(shadow)*pixel=gfx_blend(*pixel,0x020a16,shadow*20);
+        if(edge)*pixel=gfx_blend(*pixel,0x102035,edge*255/4);
+        if(fill)*pixel=gfx_blend(*pixel,0xf9fcff,fill*255/4);
+    }
+}

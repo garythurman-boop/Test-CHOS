@@ -3,7 +3,8 @@
  * BOOTAA64.EFI and CHOS/KERNEL.BIN. This is not a runtime FAT filesystem driver. */
 #include "install.h"
 #include "abi.h"
-struct layout {uint64_t base,bytes,data;uint32_t sector,sectors,fat,clusters,loader_first,loader_count,kernel_first,kernel_count;};
+#include "display_mode.h"
+struct layout {uint64_t base,bytes,data;uint32_t sector,sectors,fat,clusters,loader_first,loader_count,kernel_first,kernel_count,display_first,display_count;};
 static void zero(uint8_t *p,size_t n){for(size_t i=0;i<n;i++)p[i]=0;}
 static void copy(uint8_t *p,const uint8_t *q,size_t n){for(size_t i=0;i<n;i++)p[i]=q[i];}
 static bool same(const uint8_t *p,const uint8_t *q,size_t n){for(size_t i=0;i<n;i++)if(p[i]!=q[i])return false;return true;}
@@ -19,8 +20,9 @@ static bool layout(struct block_device d,const struct install_plan *p,const stru
     uint32_t clusters=total-32-2*fat;
     if(clusters<65525 || (uint64_t)fat*b/4<clusters+2)return false;
     uint32_t loader_count=(uint32_t)((files->loader_size+b-1)/b),kernel_count=(uint32_t)((files->kernel_size+b-1)/b);
-    if(4+loader_count+kernel_count>clusters)return false;
-    *l=(struct layout){.base=p->esp_first*b,.bytes=(uint64_t)total*b,.data=(uint64_t)(32+2*fat)*b,.sector=b,.sectors=total,.fat=fat,.clusters=clusters,.loader_first=6,.loader_count=loader_count,.kernel_first=6+loader_count,.kernel_count=kernel_count};
+    uint32_t display_first=((4+loader_count+kernel_count+scale-1)/scale)*scale+2;
+    if(display_first+scale>clusters+2)return false;
+    *l=(struct layout){.base=p->esp_first*b,.bytes=(uint64_t)total*b,.data=(uint64_t)(32+2*fat)*b,.sector=b,.sectors=total,.fat=fat,.clusters=clusters,.loader_first=6,.loader_count=loader_count,.kernel_first=6+loader_count,.kernel_count=kernel_count,.display_first=display_first,.display_count=scale};
     return true;
 }
 static bool write_span(struct block_device d,const struct layout *l,uint64_t offset,const uint8_t *data,size_t n,uint8_t *scratch) {
@@ -63,6 +65,7 @@ static void fat_block(uint8_t *s,unsigned block,const struct layout *l) {
         else if(cluster==1 || (cluster>=2 && cluster<6))value=0x0fffffff;
         else if(cluster>=l->loader_first && cluster<l->loader_first+l->loader_count)value=cluster+1==l->loader_first+l->loader_count?0x0fffffff:cluster+1;
         else if(cluster>=l->kernel_first && cluster<l->kernel_first+l->kernel_count)value=cluster+1==l->kernel_first+l->kernel_count?0x0fffffff:cluster+1;
+        else if(cluster>=l->display_first && cluster<l->display_first+l->display_count)value=cluster+1==l->display_first+l->display_count?0x0fffffff:cluster+1;
         w32(s+i*4,value);
     }
 }
@@ -77,7 +80,25 @@ static void directory(uint8_t *s,unsigned cluster,const struct layout *l,const s
     dirent(s,".          ",cluster,0,true);dirent(s+32,"..         ",cluster==4?3:0,0,true);
     if(cluster==3)dirent(s+64,"BOOT       ",4,0,true);
     if(cluster==4)dirent(s+64,"BOOTAA64EFI",l->loader_first,(uint32_t)files->loader_size,false);
-    if(cluster==5)dirent(s+64,"KERNEL  BIN",l->kernel_first,(uint32_t)files->kernel_size,false);
+    if(cluster==5){dirent(s+64,"KERNEL  BIN",l->kernel_first,(uint32_t)files->kernel_size,false);dirent(s+96,"DISPLAY BIN",l->display_first,32,false);}
+}
+/* UEFI updates directory timestamps and may set the archive bit on a parent
+ * directory when consuming a trial. Validate names, types, sizes and chains;
+ * timestamps are metadata, not immutable payload identity. */
+static bool verify_directory(struct block_device d,const struct layout *l,unsigned cluster,const struct install_payload *files,struct gpt_workspace *w){
+    directory(w->primary,cluster,l,files);
+    uint64_t address=l->base+l->data+(uint64_t)(cluster-2)*l->sector;
+    if(!d.read(d.context,address/4096,w->scratch))return false;
+    uint8_t *actual=w->scratch+address%4096;
+    static const uint8_t timestamp[]={13,14,15,16,17,18,19,22,23,24,25};
+    for(unsigned at=0;at<l->sector;at+=32){
+        const uint8_t *expected=w->primary+at;
+        if(!expected[0])continue;
+        if(actual[at+11]!=expected[11] && !(expected[11]==0x10 && actual[at+11]==0x30))return false;
+        actual[at+11]=expected[11];
+        for(unsigned i=0;i<sizeof(timestamp);i++)actual[at+timestamp[i]]=expected[timestamp[i]];
+    }
+    return same(actual,w->primary,l->sector);
 }
 static bool payload_write(struct block_device d,const struct layout *l,unsigned cluster,const uint8_t *file,size_t size,uint8_t *buffer,uint8_t *scratch,install_report report,void *context,unsigned phase) {
     uint64_t offset=l->data+(uint64_t)(cluster-2)*l->sector;
@@ -99,7 +120,10 @@ bool install_fat32_verify(struct block_device d,const struct install_plan *p,con
         fat_block(w->primary,block,&l);
         if(!verify_span(d,&l,(uint64_t)(32+fat*l.fat)*l.sector+(uint64_t)block*4096,w->primary,4096,w->scratch))return false;
     }
-    for(unsigned i=2;i<6;i++){directory(w->primary,i,&l,files);if(!verify_span(d,&l,l.data+(uint64_t)(i-2)*l.sector,w->primary,l.sector,w->scratch))return false;}
+    for(unsigned i=2;i<6;i++)if(!verify_directory(d,&l,i,files,w))return false;
+    uint64_t display_address=l.base+l.data+(uint64_t)(l.display_first-2)*l.sector;
+    struct display_preference preference;
+    if(!d.read(d.context,display_address/4096,w->scratch) || !display_decode(&preference,w->scratch,32))return false;
     return verify_span(d,&l,l.data+(uint64_t)(l.loader_first-2)*l.sector,files->loader,files->loader_size,w->scratch) && verify_span(d,&l,l.data+(uint64_t)(l.kernel_first-2)*l.sector,files->kernel,files->kernel_size,w->scratch);
 }
 bool install_fat32_observed(struct block_device d,const struct install_plan *p,const struct install_payload *files,bool confirmed,struct gpt_workspace *w,install_report report,void *context) {
@@ -119,8 +143,20 @@ bool install_fat32_observed(struct block_device d,const struct install_plan *p,c
     if(!d.flush(d.context))return false;
     if(!payload_write(d,&l,l.kernel_first,files->kernel,files->kernel_size,w->primary,w->scratch,report,context,SETUP_COPY) || !d.flush(d.context))return false;
     if(!payload_write(d,&l,l.loader_first,files->loader,files->loader_size,w->primary,w->scratch,report,context,SETUP_BOOT) || !d.flush(d.context))return false;
+    struct display_preference preference={1024,768,0};zero(w->primary,4096);display_encode(&preference,w->primary);
+    if(!write_span(d,&l,l.data+(uint64_t)(l.display_first-2)*l.sector,w->primary,4096,w->scratch) || !d.flush(d.context))return false;
     return install_fat32_verify(d,p,files,w);
 }
 bool install_fat32_write(struct block_device d,const struct install_plan *p,const struct install_payload *files,bool confirmed,struct gpt_workspace *w) {
     return install_fat32_observed(d,p,files,confirmed,w,0,0);
+}
+
+/* Only our verified fixed-layout ESP has this dedicated, aligned 4 KiB slot.
+ * No FAT allocation or directory metadata is changed at runtime. */
+bool install_display_save(struct block_device d,const struct install_plan *p,const struct install_payload *files,const struct display_preference *preference,struct gpt_workspace *w){
+    struct layout l;
+    if(!d.write || !d.flush || !layout(d,p,files,&l) || !install_gpt_verify(d,p->sector_bytes,p,w) || !install_fat32_verify(d,p,files,w))return false;
+    zero(w->primary,4096);if(!display_encode(preference,w->primary))return false;
+    uint64_t offset=l.data+(uint64_t)(l.display_first-2)*l.sector;
+    return write_span(d,&l,offset,w->primary,4096,w->scratch) && d.flush(d.context) && verify_span(d,&l,offset,w->primary,4096,w->scratch);
 }

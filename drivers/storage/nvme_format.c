@@ -31,7 +31,7 @@ unsigned nvme_identity_compare(const struct nvme_identity *a,const struct nvme_i
     return NVME_CHECK_OK;
 }
 const char *nvme_check_message(unsigned code) {
-    static const char *const text[]={"Identity and writable state verified.",
+    static const char text[12][64]={"Identity and writable state verified.",
         "NVMe controller is no longer ready.","NVMe controller Identify failed.",
         "NVMe serial is empty or malformed.","NVMe serial identity changed.",
         "NVMe namespace Identify failed.","NVMe namespace format is invalid.",

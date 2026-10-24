@@ -4,6 +4,7 @@ cd "$(dirname "$0")/.."
 mkdir -p build
 make test-memory test-elf test-filesystem test-input test-desktop test-setup test-graphics test-config test-gui test-inventory test-gic test-usb test-diagnostic test-image test-mmu test-pci test-nvme
 make iso
+python3 tests/kernel_relocations.py --negative-self-test
 sha256sum build/CHOS-ARM64.iso > build/hash-1
 make iso
 sha256sum build/CHOS-ARM64.iso > build/hash-2
@@ -67,4 +68,8 @@ python3 tests/install.py --sector 512 --gic-version 3 --bridged
 python3 tests/usb_compat.py
 python3 tests/usb_m7i.py
 python3 tests/input_panel.py
-printf 'Eighty-three QEMU cases, twenty host programs (both ELF payloads checked), all three distributable ISO repeatability checks and independent disk verification passed.\n'
+python3 tests/desktop_m8.py
+python3 tests/explorer_context.py
+python3 tests/display_m8.py
+python3 tests/setup_recovery_m8.py
+printf 'Full QEMU suite, twenty host programs, image repeatability and independent disk verification passed.\n'

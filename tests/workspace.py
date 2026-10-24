@@ -32,7 +32,7 @@ try:
     # Hover, press, cancel outside: the Open button must not activate.
     g.move(90,91);g.snapshot('workspace-button-hover');g.button(True);g.snapshot('workspace-button-pressed');g.move(850,600);g.button(False)
     assert g.capture()(64,400)!=0xb9d5ee,'Cancelled button opened a dialog'
-    g.click(365,92);g.wait(lambda p:matches(p,356,117,'Open...',0x204b72,0),'native File menu');g.snapshot('workspace-file-menu')
+    g.click(365,92);g.move(850,600);g.wait(lambda p:matches(p,356,117,'Open...',0x204b72,0),'native File menu');g.snapshot('workspace-file-menu')
     g.key('down');g.key('ret') # Open -> Save, using the shared menu's focus model
     g.wait(lambda p:p(64,400)==0xb9d5ee,'native Save As dialog');g.snapshot('workspace-save-dialog')
     g.key('u',('ctrl',));type_text(g,'/documents/toolkit.txt');g.click(620,464)

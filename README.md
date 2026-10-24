@@ -5,7 +5,8 @@ loader boots its own kernel, with no Linux/BSD kernel or GRUB in the guest. Debi
 is used only as a build/test host. No Microsoft code, artwork or fonts are used.
 
 The current optical image boots dedicated full-screen CHOS Setup. L/F3 selects
-the original Live Desktop; installed disks open the desktop directly. Six native
+the original Live Desktop; installed disks resume pending graphical configuration
+or open the desktop directly. Six native
 EL0 applications remain available: Explorer, Notepad, Terminal, Control Panel, Task Manager and About.
 Protected memory, preemptive scheduling, ELF/syscalls/IPC, NVMe/CHFS, Virtio
 input and a bounded original xHCI boot-HID input path are implemented and tested
@@ -18,21 +19,23 @@ widget library. Explorer, Notepad, Control Panel and Setup share real controls,
 keyboard focus, menus and dialogs. Installed computer/theme/clock settings persist;
 invalid configuration is rejected before writing. Normal installed sessions have
 no permanent session overlay. See [dedicated Setup results and actual screenshots](docs/milestone-6d-setup.md).
-Blue keyboard-driven disk selection and typed confirmation lead to native Royale
-configuration/progress/completion. Progress follows real operations and copied
-bytes. Original GPT/FAT32/CHFS writers verify the files and installed boot path.
+Blue keyboard-driven disk selection, layout review and exact ERASE confirmation
+lead to actual blue-screen partitioning, copying, verification and flush. A real
+restart with the ISO removed boots installed Royale configuration, Welcome, then
+the persistent desktop. Original GPT/FAT32/CHFS writers verify the payload.
 
-**M7I is the combined Fusion input candidate.** It adds USB2 hub/child discovery,
-simultaneous HID interfaces, report descriptor parsing, keyboard modifiers/releases
-and relative/absolute pointing. The normal **CHOS-ARM64.iso** boots Setup when input
-initializes and automatically opens read-only diagnostics if input is unavailable.
-One workflow, `bash scripts/checkpoint.sh`, validates and reproduces the three images
-into `build/release/`. **Actual M7I keyboard/trackpad operation on Fusion remains
-pending target testing.** The M7H captures established non-boot HID interfaces and
-USB hubs; they did not contain report descriptors or downstream device inventories.
-See [M7I architecture/results](docs/milestone-7i.md) and [Fusion test instructions](docs/fusion-first-boot.md).
-USB3, general touch/vendor HID, USB interrupts, authentication/ACLs, full regional
-setup, networking, SMP and CHOS 0.1 remain unfinished.
+**Milestone 8 continues the working M7I Fusion input baseline.** The user confirms
+normal ISO boot, Setup, keyboard, mouse/trackpad and Live Desktop on an M1 MacBook
+Air. M8 corrects inconsistent NVMe serial padding and exposes precise guarded
+installation errors; the actual Fusion installation failure needs a target retest.
+It adds a larger original cursor, desktop selection/double-click/dragging, saved
+icon positions, native context menus and firmware-enumerated reboot resolution
+trials. It preserves the original USB2 hub/report-HID/absolute-pointer paths and
+automatic read-only input fallback. `bash scripts/checkpoint.sh` validates,
+sanitizes, reproduces and packages images into `build/release/`.
+See [M8 scope and validation](docs/milestone-8.md), [Fusion instructions](docs/fusion-first-boot.md)
+and [roadmap](docs/roadmap.md). Authentication/ACLs, full regional setup, runtime
+mode switching, networking, SMP and CHOS 0.1 remain unfinished.
 
 M7D replaces the fixed 512 KiB bootstrap ceiling with a validated versioned kernel
 image and a separately allocated 64 KiB guarded stack. Controlled large-file/BSS

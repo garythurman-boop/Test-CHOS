@@ -8,6 +8,10 @@
 struct process;
 void setup_initialize(struct block_device *,struct chos_boot_info *,struct pmm *);
 bool setup_persistent(void);
+bool setup_pending(void);
+int64_t setup_display(struct process *,uint64_t,uint64_t);
+bool setup_desktop_load(uint8_t [96]);
+bool setup_desktop_save(const uint8_t [96]);
 unsigned setup_volume_state(void);
 const char *setup_computer(void);
 const struct chos_config *setup_configuration(void);

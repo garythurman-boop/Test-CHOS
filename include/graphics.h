@@ -12,5 +12,6 @@ uint32_t gfx_blend(uint32_t,uint32_t,unsigned);
 void gfx_round(struct surface *,int,int,int,int,int,uint32_t,uint32_t,unsigned);
 void gfx_gradient(struct surface *,int,int,int,int,uint32_t,uint32_t);
 void gfx_shadow(struct surface *,int,int,int,int,int);
+void gfx_cursor(struct surface *,int,int,unsigned);
 void gfx_blit(struct surface *,int,int,const uint32_t *,int,int,int);
 #endif

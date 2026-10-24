@@ -6,6 +6,8 @@
 #include "desktop.h"
 #include "timer.h"
 #include "nvme_format.h"
+#include "display_mode.h"
+#include "diagnostic.h"
 static struct block_device disk;
 static struct chos_boot_info *boot;
 static struct pmm *physical;
@@ -15,7 +17,12 @@ static struct chfs system_volume;
 static struct chos_setup state;
 static uint64_t owner;
 static int worker=-1;
-static bool persistent;
+static bool persistent,graphical_pending;
+#define STAGE_PATH "/system/setup-stage"
+static const char stage_pending[]="CHOS SETUP PENDING 2\n";
+static const char stage_ready[]="CHOS SETUP READY 1\n";
+bool setup_pending(void){return graphical_pending;}
+
 static unsigned volume_state;
 static struct chos_config configuration,pending_config;
 static struct chos_confirm confirmed;
@@ -40,6 +47,10 @@ const struct chos_config *setup_configuration(void){return &configuration;}
 void setup_initialize(struct block_device *device,struct chos_boot_info *b,struct pmm *p){
     config_defaults(&configuration);config_defaults(&pending_config);
     boot=b;physical=p;state.medium=b->boot_medium;
+    for(unsigned i=0;i<b->display.count;i++){
+        diagnostic_value("GOP mode width: ",b->display.modes[i].width,false);
+        diagnostic_value("GOP mode height: ",b->display.modes[i].height,false);
+    }
     if(b->boot_medium==1)volume_state=VOLUME_NO_DEVICE;
     if(!device)return;
     disk=*device;state.bytes=disk.blocks*4096;state.sector=nvme_sector_size();copy(state.serial,nvme_serial(),sizeof(state.serial));
@@ -66,6 +77,16 @@ void setup_initialize(struct block_device *device,struct chos_boot_info *b,struc
                 if(!chfs_read(&system_volume,"/system/computer",0,name,31,&size) || !size || size>31)return;
                 copy(configuration.computer,name,sizeof(configuration.computer));
                 if(!config_valid(&configuration))return;
+            }
+            const struct chfs_entry *stage=chfs_stat(&system_volume,STAGE_PATH);
+            if(stage){
+                char record[32];size_t got=0;
+                if(!chfs_read(&system_volume,STAGE_PATH,0,record,sizeof(record),&got))return;
+                bool pending=got==sizeof(stage_pending)-1,ready=got==sizeof(stage_ready)-1;
+                for(size_t i=0;pending && i<got;i++)if(record[i]!=stage_pending[i])pending=false;
+                for(size_t i=0;ready && i<got;i++)if(record[i]!=stage_ready[i])ready=false;
+                if(!pending && !ready)return;
+                graphical_pending=pending;
             }
             vfs_mount(&system_volume);persistent=true;volume_state=VOLUME_PERSISTENT;
         }
@@ -130,12 +151,32 @@ static void install(void *unused){
     if(!chfs_mkdir(&system_volume,"/system") || !chfs_mkdir(&system_volume,"/documents") || !chfs_write(&system_volume,CHOS_CONFIG_PATH,config_wire,sizeof(config_wire)) || !chfs_write(&system_volume,"/system/computer",confirmed.computer,length) || !chfs_write(&system_volume,"/documents/welcome.txt",welcome,sizeof(welcome)-1) || !chfs_write(&system_volume,"/system/license",license_text,(size_t)(license_text_end-license_text)) || !chfs_write(&system_volume,"/system/font-ofl",font_license,(size_t)(font_license_end-font_license))){state.error=4;return;}
     report(0,SETUP_VERIFY,0,0);
     if(!chfs_mount(&system_volume,system_device) || !install_gpt_verify(disk,state.sector,&plan,&workspace) || !install_fat32_verify(disk,&plan,&files,&workspace) || !verify_file(CHOS_CONFIG_PATH,config_wire,sizeof(config_wire)) || !verify_file("/system/computer",confirmed.computer,length) || !verify_file("/documents/welcome.txt",welcome,sizeof(welcome)-1) || !verify_file("/system/license",license_text,(size_t)(license_text_end-license_text)) || !verify_file("/system/font-ofl",font_license,(size_t)(font_license_end-font_license))){state.error=5;return;}
-    static const char log[]="CHOS Setup log v1\nGPT primary/backup and partition arrays: verified\nFAT32 metadata and EFI/BOOT/BOOTAA64.EFI: verified\nCHOS/KERNEL.BIN: exact payload verified\nCHFS configuration, computer, welcome and licenses: verified\nBoot uses the ARM64 UEFI fallback path; no NVRAM entry required.\nAccounts/authentication, keyboard layout and runtime display setup: unfinished\n";
+    static const char log[]="CHOS Setup log v1\nGPT primary/backup and partition arrays: verified\nFAT32 metadata and EFI/BOOT/BOOTAA64.EFI: verified\nCHOS/KERNEL.BIN: exact payload verified\nCHFS configuration, computer, welcome and licenses: verified\nBoot uses the ARM64 UEFI fallback path; no NVRAM entry required.\nUS keymap/fixed clock offset supported. Boot display trials available.\nAccounts/authentication, DST and runtime mode switching: unfinished\n";
     if(!chfs_write(&system_volume,"/system/install-log",log,sizeof(log)-1) || !verify_file("/system/install-log",log,sizeof(log)-1)){state.error=6;return;}
+    /* Commit the continuation marker only after payload verification. Missing /
+     * corrupt configuration never authorizes another destructive boot stage. */
+    if(!chfs_write(&system_volume,STAGE_PATH,stage_pending,sizeof(stage_pending)-1) ||
+       !verify_file(STAGE_PATH,stage_pending,sizeof(stage_pending)-1) || !disk.flush(disk.context)) {state.error=6;return;}
     destination.completed_bytes=destination.total_bytes=0;state.progress=100;state.phase=SETUP_COMPLETE;
 }
 int64_t setup_syscall(struct process *p,uint64_t op,uint64_t argument,uint64_t token){
     if(p->application!=7)return -13;
+    if(op==4)return graphical_pending?1:0;
+    if(op==5){
+        if(!persistent || !graphical_pending || boot->boot_medium!=1 || state.phase)return -13;
+        struct chos_config input;
+        if(!user_copy(p,argument,&input,sizeof(input),false))return -14;
+        if(!config_valid(&input))return -22;
+        if(!nvme_recheck() || !nvme_writable())return -30;
+        unsigned char wire[CHOS_CONFIG_BYTES];
+        unsigned length=0;while(input.computer[length])length++;
+        if(!chfs_write(&system_volume,"/system/computer",input.computer,length) || !verify_file("/system/computer",input.computer,length))return -5;
+        if(!config_encode(&input,wire) || !config_save(&system_volume,&input,&configuration) ||
+           !verify_file(CHOS_CONFIG_PATH,wire,sizeof(wire)) ||
+           !chfs_write(&system_volume,STAGE_PATH,stage_ready,sizeof(stage_ready)-1) ||
+           !verify_file(STAGE_PATH,stage_ready,sizeof(stage_ready)-1) || !disk.flush(disk.context))return -5;
+        graphical_pending=false;return 0;
+    }
     if(op==2){
         if(worker>=0 || (state.phase && !state.error && state.phase!=SETUP_COMPLETE))return -16;
         live_request=p->pid;return 0;
@@ -166,7 +207,7 @@ int64_t setup_configure(struct process *p,uint64_t op,uint64_t argument,uint64_t
     if(!user_copy(p,argument,&input,sizeof(input),false))return -14;
     if(!config_valid(&input))return -22;
     if(op==2) {
-        if(p->application!=7 || state.phase || !state.allowed)return -13;
+        if(p->application!=7 || state.phase || (!state.allowed && !(persistent && graphical_pending && boot->boot_medium==1)))return -13;
         pending_config=input;return 0;
     }
     if(state.phase && state.phase!=SETUP_COMPLETE)return -16;
@@ -182,4 +223,33 @@ bool setup_take_live(void){
     if(!live_request)return false;
     struct process *p=process_find(live_request);if(p && !p->exited)return false;
     live_request=0;return true;
+}
+
+bool setup_desktop_load(uint8_t data[96]){
+    size_t got=0;const struct chfs_entry *entry=chfs_stat(&system_volume,"/system/desktop");
+    return persistent && entry && entry->size==96 && chfs_read(&system_volume,"/system/desktop",0,data,96,&got) && got==96;
+}
+bool setup_desktop_save(const uint8_t data[96]){
+    return persistent && nvme_writable() && chfs_write(&system_volume,"/system/desktop",data,96) && verify_file("/system/desktop",data,96);
+}
+
+int64_t setup_display(struct process *p,uint64_t op,uint64_t argument){
+    if(op==0)return user_copy(p,argument,&boot->display,sizeof(boot->display),true)?0:-14;
+    if(p->application!=4 && p->application!=7)return -13;
+    if((op!=1 && op!=2) || !persistent || boot->boot_medium!=1 || state.phase)return -30;
+    struct display_preference preference={boot->width,boot->height,0};
+    if(op==1){
+        struct chos_display_mode requested;
+        if(!user_copy(p,argument,&requested,sizeof(requested),false))return -14;
+        bool found=false;
+        for(unsigned i=0;i<boot->display.count;i++)if(requested.width==boot->display.modes[i].width && requested.height==boot->display.modes[i].height)found=true;
+        if(!found)return -22;
+        preference=(struct display_preference){requested.width,requested.height,1};
+    } else if(!boot->display.trial)return -22;
+    if(!nvme_recheck() || !nvme_writable())return -30;
+    extern const uint8_t boot_efi[],boot_efi_end[];
+    struct install_payload files={boot_efi,(const uint8_t *)(uintptr_t)boot->kernel_source,(size_t)(boot_efi_end-boot_efi),(size_t)boot->kernel_size};
+    if(!install_display_save(disk,&plan,&files,&preference,&workspace))return -5;
+    if(op==2)boot->display.trial=0;
+    return 0;
 }

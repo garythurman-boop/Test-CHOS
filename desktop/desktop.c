@@ -13,7 +13,7 @@ static struct pmm *physical;
 static struct chos_boot_info *boot;
 static struct surface screen;
 static bool active;
-static bool setup_entry;
+static bool setup_entry,preferences_failed;
 static void rect(int,int,int,int,uint32_t);
 static uint32_t *wallpaper;
 static unsigned wallpaper_theme=99;
@@ -127,6 +127,7 @@ int64_t desktop_syscall(struct process *p,struct exception_frame *f) {
         const char *name=setup_computer();for(unsigned i=0;i<31 && name[i];i++)info.computer[i]=name[i];
         return user_copy(p,a,&info,sizeof(info),true)?0:-14;
     }
+    if(op==SYS_DISPLAY){if(a==3){if(p->application!=4)return -13;bool requested=model.display_requested;model.display_requested=false;return requested?1:0;}return setup_display(p,a,b);}
     if(op==SYS_CONFIG){int64_t r=setup_configure(p,a,b,f->x[2]);if(!r && a==1){model.theme=setup_configuration()->theme;model.dirty=true;}return r;}
     if(op==SYS_RENDER)return user_copy(p,a,&metrics,sizeof(metrics),true)?0:-14;
     if(op==SYS_POWER)return a>2?-22:platform_power(boot,(unsigned)a);
@@ -224,10 +225,10 @@ static void render(void) {
     }
     static const char names[7][16]={"Explorer","Notepad","Terminal","Control Panel","Task Manager","About CHOS","CHOS Setup"};
     for(unsigned i=0;i<7;i++) {
-        int y=60+(int)i*66;
-        if(model.desktop_selection==i+1)gfx_round(&screen,5,y-4,100,58,6,0x91c8f0,0x3375b8,110);
-        icon(34,y,i+1);
-        int x=50-gfx_ui_width(FONT_SMALL,names[i])/2;
+        int y=model.icon_y[i]+4;
+        if(model.desktop_selection==i+1)gfx_round(&screen,model.icon_x[i],y-4,100,58,6,0x91c8f0,0x3375b8,170);
+        icon(model.icon_x[i]+29,y,i+1);
+        int x=model.icon_x[i]+45-gfx_ui_width(FONT_SMALL,names[i])/2;
         ui(FONT_SMALL,x+1,y+37,names[i],0x153759);ui(FONT_SMALL,x,y+36,names[i],0xf3fbff);
     }
     if(setup_volume_state()>VOLUME_PERSISTENT) {
@@ -292,9 +293,27 @@ static void render(void) {
         ui(FONT_BODY,x+14,y+80,model.confirm==3?"Applications close. No account security.":"RAM files are lost on restart/shutdown.",0x183b64);
         ui(FONT_BODY,x+14,y+114,"Y confirms. N or Escape cancels.",0x183b64);
     }
+    if(model.context){
+        int x=model.context_x,y=model.context_y,h=(int)wm_context_count(&model)*28;
+        gfx_shadow(&screen,x,y,220,h,5);round_box(x,y,220,h,5,0xf7fbff,0xdeebf8);
+        static const char desktop_items[8][32]={"Arrange icons","Auto arrange","Refresh","Display properties","Personalize","Double-click speed","Cursor size","New folder (unavailable)"};
+        static const char icon_items[5][32]={"Open","Properties","Rename (unavailable)","Delete (unavailable)","Cancel"};
+        if(model.context==3){
+            ui(FONT_BOLD,x+12,y+10,names[model.desktop_selection-1],ROYALE_INK);
+            ui(FONT_SMALL,x+12,y+42,"Native ARM64 application",ROYALE_INK);
+            ui(FONT_SMALL,x+12,y+68,"Embedded system shortcut",ROYALE_INK);
+            ui(FONT_SMALL,x+12,y+94,"Enter or Escape closes",ROYALE_INK);
+        } else for(unsigned i=0;i<wm_context_count(&model);i++){
+            bool enabled=wm_context_enabled(&model,i);
+            if(i==model.context_item && enabled)round_box(x+3,y+(int)i*28+2,214,24,3,0x90bde9,0x4584c4);
+            ui(FONT_SMALL,x+10,y+(int)i*28+7,model.context==1?desktop_items[i]:icon_items[i],enabled?ROYALE_INK:0x7f8c9b);
+            if(model.context==1 && i==1 && model.auto_arrange)ui(FONT_SMALL,x+198,y+(int)i*28+7,"*",ROYALE_INK);
+            if(model.context==1 && (i==5 || i==6)){char n[21];decimal(n,i==5?model.double_click_ms:model.cursor_size);ui(FONT_SMALL,x+180,y+(int)i*28+7,n,ROYALE_INK);}
+        }
+    }
+    if(preferences_failed)ui(FONT_SMALL,128,screen.height-112,"Desktop settings could not be saved. Retry after restart.",0xffe2b0);
 output:;
-    static const uint8_t arrow[10]={0x80,0xc0,0xe0,0xf0,0xf8,0xfc,0xe0,0xb0,0x18,0x18};
-    for(unsigned y=0;y<10;y++) for(unsigned x=0;x<8;x++) if(arrow[y]&(0x80>>x)) rect(model.mouse_x+(int)x,model.mouse_y+(int)y,1,1,0xffffff);
+    gfx_cursor(&screen,model.mouse_x,model.mouse_y,model.cursor_size);
     volatile uint32_t *fb=(void *)(uintptr_t)boot->framebuffer;
     for(int y=damage_y;y<damage_y+damage_h;y++) for(int x=damage_x;x<damage_x+damage_w;x++) {
         uint32_t rgb=screen.pixels[(size_t)y*screen.width+x];
@@ -315,12 +334,13 @@ void desktop_start(struct pmm *p,struct chos_boot_info *b) {
     screen=(struct surface){.pixels=(void *)(uintptr_t)memory,.width=(int)b->width,.height=(int)b->height,.stride=(int)b->width};
     damage_x=damage_y=0;damage_w=screen.width;damage_h=screen.height;
     wm_init(&model,screen.width,screen.height);model.theme=setup_configuration()->theme;
+    uint8_t preferences[96];if(setup_desktop_load(preferences))(void)wm_preferences_decode(&model,preferences,sizeof(preferences));
     model.mouse_x=input_get()->x;model.mouse_y=input_get()->y;
     struct input_event event;while(input_next(&event)) {} /* discard diagnostic input */
     extern bool ram_volume_start(struct pmm *);
     if(!setup_persistent() && !ram_volume_start(p))panic("RAM VOLUME START FAILED");
     active=true;
-    setup_entry=b->boot_medium==2;
+    setup_entry=b->boot_medium==2 || setup_pending();
     if(desktop_launch(setup_entry?7:6)<0) panic("INITIAL CLIENT LOAD FAILED");
     render();
 }
@@ -328,9 +348,10 @@ void desktop_step(void) {
     setup_step();
     bool pointer_only=!model.dirty;
     int old_x=model.mouse_x,old_y=model.mouse_y;
+    model.now_ms=timer_ticks()*10;
     input_poll();struct input_event event;
     while(input_next(&event)) {
-        if(event.type!=2 || model.drag>=0 || model.menu || model.confirm)pointer_only=false;
+        if(event.type!=2 || model.drag>=0 || model.icon_drag>=0 || model.context || model.menu || model.confirm)pointer_only=false;
         if(event.type==2) {
             int64_t x=model.mouse_x,y=model.mouse_y;
             if(event.code==0) x+=event.value;
@@ -338,7 +359,18 @@ void desktop_step(void) {
             if(x<0)x=0;if(y<0)y=0;if(x>=screen.width)x=screen.width-1;if(y>=screen.height)y=screen.height-1;
             wm_mouse(&model,(int)x,(int)y,-1);
         } else if(event.type==1 && event.code==272) wm_mouse(&model,model.mouse_x,model.mouse_y,event.value?1:0);
+        else if(event.type==1 && event.code==273 && event.value)wm_context(&model,model.mouse_x,model.mouse_y);
         else if(event.type==1 && event.code<256) wm_key(&model,event.code,event.value);
+    }
+    if(model.preferences_dirty){
+        model.preferences_dirty=false;
+        if(setup_persistent()){
+            uint8_t preferences[96];wm_preferences_encode(&model,preferences);
+            uint64_t mask;__asm__ volatile("mrs %0, daif; msr daifset, #2":"=r"(mask)::"memory");
+            preferences_failed=!setup_desktop_save(preferences);
+            __asm__ volatile("msr daif, %0"::"r"(mask):"memory");
+        }
+        model.dirty=true;pointer_only=false;
     }
     if(model.power){(void)platform_power(boot,model.power);model.power=0;model.dirty=true;}
     if(model.logout) {
@@ -354,7 +386,7 @@ void desktop_step(void) {
         for(unsigned j=0;j<WM_WINDOWS;j++) if(model.windows[j].owner==p->pid && model.windows[j].count) scheduler_wake(p->pid);
     }
     if(setup_take_live()) {
-        setup_entry=false;pointer_only=false;model.dirty=true;
+        setup_entry=false;pointer_only=false;model.dirty=true;model.theme=setup_configuration()->theme;
         if(!model.count)model.launch=6;
     }
     if(model.launch) { pointer_only=false; (void)desktop_launch(model.launch);model.launch=0; }
@@ -371,8 +403,8 @@ void desktop_step(void) {
         damage_x=damage_y=0;damage_w=screen.width;damage_h=screen.height;
         if(pointer_only) {
             damage_x=old_x<model.mouse_x?old_x:model.mouse_x;damage_y=old_y<model.mouse_y?old_y:model.mouse_y;
-            damage_w=(old_x>model.mouse_x?old_x:model.mouse_x)-damage_x+10;
-            damage_h=(old_y>model.mouse_y?old_y:model.mouse_y)-damage_y+12;
+            damage_w=(old_x>model.mouse_x?old_x:model.mouse_x)-damage_x+(int)model.cursor_size+4;
+            damage_h=(old_y>model.mouse_y?old_y:model.mouse_y)-damage_y+(int)model.cursor_size+4;
             if(damage_x+damage_w>screen.width)damage_w=screen.width-damage_x;
             if(damage_y+damage_h>screen.height)damage_h=screen.height-damage_y;
         }

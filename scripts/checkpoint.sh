@@ -22,11 +22,11 @@ python3 - "$chos_reproduce_dir" <<'PY'
 import hashlib,json,shutil,subprocess,sys
 from pathlib import Path
 out=Path('build/release');out.mkdir(exist_ok=True)
-images=[('CHOS-ARM64.iso','CHOS-ARM64.iso'),('CHOS-ARM64-M7I-INPUT.iso','CHOS-ARM64-M7I-INPUT.iso'),('CHOS-ARM64-M7C.iso','CHOS-ARM64-M7I-DIAGNOSTIC.iso')]
+images=[('CHOS-ARM64.iso','CHOS-ARM64-M8.iso'),('CHOS-ARM64-M7I-INPUT.iso','CHOS-ARM64-M8-INPUT.iso'),('CHOS-ARM64-M7C.iso','CHOS-ARM64-M8-DIAGNOSTIC.iso')]
 sums=[]
 for src,name in images:
  p=Path('build')/src;target=out/name;shutil.copyfile(p,target);sums.append(hashlib.sha256(target.read_bytes()).hexdigest()+'  '+name+'\n')
 (out/'SHA256SUMS').write_text(''.join(sums))
 Path('build/checkpoint-reproduction.json').write_text(json.dumps({'passed':True,'source_commit':subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),'clean_source_directory':sys.argv[1],'all_three_images_byte_identical':True},indent=2)+'\n')
 PY
-printf 'Checkpoint passed: 83 QEMU cases, 20 portable test programs, sanitizers and three clean-source image reproductions. Files: build/release/\n'
+printf 'Checkpoint passed: full QEMU suite, 20 portable test programs, sanitizers and three clean-source image reproductions. Files: build/release/\n'

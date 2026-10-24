@@ -28,7 +28,8 @@ build/%.o: %.S Makefile
 	$(CC) $(KFLAGS) -DCHOS_MMU_TABLE_CAPACITY=$(KERNEL_TABLE_CAPACITY) -c $< -o $@
 build/kernel.ld: kernel/arch/arm64/kernel.ld include/kernel_image.h | build
 	$(CC) -E -P -x c -D__ASSEMBLER__ -Iinclude $< -o $@
-build/kernel.elf: $(KOBJECTS) build/kernel.ld
+build/kernel.elf: $(KOBJECTS) build/kernel.ld tests/kernel_relocations.py
+	python3 tests/kernel_relocations.py $(KOBJECTS)
 	ld.lld -T build/kernel.ld --no-undefined -o $@ $(KOBJECTS)
 .PHONY: test-memory
 test-memory: | build

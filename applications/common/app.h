@@ -9,6 +9,8 @@ extern struct ui_context app_gui;
 extern unsigned app_role;
 void gui_initialize(void);
 void explorer_widget(unsigned,unsigned);
+void explorer_context(int,int);
+void explorer_pointer(const struct chos_event *);
 extern bool app_persistent;
 const char *volume_status(void);
 void setup_paint(void);void setup_key(unsigned);

@@ -17,8 +17,6 @@ def new_disk(name,mib):
 def welcome(g):g.wait(lambda p:p(30,160)==0x244da8,'dedicated ISO Setup',120)
 def authorize(g):
     for _ in range(4):g.key('ret')
-    g.wait(lambda p:matches(p,256,100,'Personalize CHOS',0xf2f6ff,2),'native configuration')
-    g.key('ret')
     g.wait(lambda p:matches(p,32,92,'Confirm destruction',0xf2f6ff),'erase confirmation')
     type_text(g,'ERASE')
     # Send Enter without a host dwell so interruption can catch an early stage.
@@ -30,7 +28,7 @@ fault.write_text('[inject-error]\nevent = "write_aio"\nerrno = "5"\nonce = "on"\
 g=Guest('setup-io-error',disk=disk,optical=True,live=False,fault_config=fault)
 try:
     welcome(g);authorize(g)
-    g.wait(lambda p:matches(p,256,198,'GPT write, flush or read-back failed.',0xffd9a0,0),'actual NVM write error displayed',20)
+    g.wait(lambda p:matches(p,32,148,'GPT write, flush or read-back failed.',0xffd9a0,0),'actual NVM write error displayed',20)
     g.snapshot('setup-io-error');g.key('f3')
     g.wait(lambda p:p(60,250)==0x326bb0,'error exits safely to live diagnostics')
     result['boots'].append({'kind':'nvme_write_error','command':g.command,'passed':True,'error':'GPT write/read-back failure','safe_live_exit':True})
@@ -41,7 +39,7 @@ disk=new_disk('interrupted.img',70);before=digest(disk)
 g=Guest('setup-interrupted',disk=disk,optical=True,live=False)
 try:
     welcome(g);authorize(g)
-    g.wait(lambda p:matches(p,256,100,'Installing CHOS',0xf2f6ff,2),'active graphical install',20)
+    g.wait(lambda p:matches(p,32,92,'Installing CHOS system files',0xf2f6ff),'active graphical install',20)
     g.qmp('stop');g.snapshot('setup-interrupted')
     result['boots'].append({'kind':'interrupt_active_writer','command':g.command,'passed':True,'method':'QMP stop followed by VM termination'})
 finally:g.close()
@@ -54,15 +52,14 @@ try:
     welcome(g);g.key('ret');g.key('ret')
     g.wait(lambda p:matches(p,32,240,'Existing primary GPT verified:',0xf2f6ff),'read-only existing GPT inventory')
     g.snapshot('setup-existing-gpt');g.key('esc');g.key('esc');authorize(g)
-    g.wait(lambda p:matches(p,256,154,'CHOS installation completed successfully.',0xf2f6ff,0),'retry completes and verifies actual files',30)
+    g.wait(lambda p:matches(p,32,92,'CHOS has completed the first stage',0xf2f6ff),'retry completes and verifies actual files',30)
     g.snapshot('setup-retry-complete')
     result['boots'].append({'kind':'retry_interrupted_destination','command':g.command,'passed':True,'existing_gpt_inventory':True})
 finally:g.close()
 # The 70 MiB native retry must boot with the installation ISO entirely absent.
 g=Guest('setup-small-installed',disk=disk)
 try:
-    g.wait(lambda p:p(60,250)==0x326bb0,'installed boot on a 70 MiB destination',120)
-    g.wait(lambda p:matches(p,40,332,'Installed system disk.',0x163b65,3),'persistent CHFS mount on near-minimum disk')
+    g.wait(lambda p:matches(p,256,100,'Personalize CHOS',0xf2f6ff,2),'installed pending configuration on a 70 MiB destination',120)
     g.snapshot('setup-small-installed');result['boots'].append({'kind':'near_minimum_installed_boot','disk_mib':70,'command':g.command,'passed':True})
 finally:g.close()
 # Small target: exact layout error, no arbitrary 128 MiB prerequisite and no writes.

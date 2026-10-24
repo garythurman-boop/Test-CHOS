@@ -11,10 +11,12 @@ bool install_plan_make(uint64_t,uint32_t,const uint8_t[16],struct install_plan *
 uint64_t install_minimum_bytes(uint32_t);
 bool install_gpt_write(struct block_device,uint32_t,const struct install_plan *,bool confirmed,struct gpt_workspace *);
 bool install_gpt_verify(struct block_device,uint32_t,const struct install_plan *,struct gpt_workspace *);
+struct display_preference;
 struct install_payload { const uint8_t *loader,*kernel; size_t loader_size,kernel_size; };
 bool install_fat32_write(struct block_device,const struct install_plan *,const struct install_payload *,bool confirmed,struct gpt_workspace *);
 bool install_fat32_verify(struct block_device,const struct install_plan *,const struct install_payload *,struct gpt_workspace *);
 bool install_gpt_probe(struct block_device,uint32_t,struct install_plan *,struct gpt_workspace *);
 typedef void (*install_report)(void *,unsigned,uint64_t,uint64_t);
 bool install_fat32_observed(struct block_device,const struct install_plan *,const struct install_payload *,bool,struct gpt_workspace *,install_report,void *);
+bool install_display_save(struct block_device,const struct install_plan *,const struct install_payload *,const struct display_preference *,struct gpt_workspace *);
 #endif

@@ -5,6 +5,7 @@ Only a freshly created disposable image is attached as the destination.
 import argparse
 import hashlib
 import json
+import shutil
 from pathlib import Path
 import struct
 import tempfile
@@ -37,30 +38,45 @@ try:
     guest.snapshot(f'setup-destination-{sector}{suffix}')
     assert digest(disk)==before,'Disk changed before selection/confirmation'
     guest.key('ret');guest.snapshot(f'setup-layout-{sector}{suffix}');guest.key('ret')
-    guest.wait(lambda p:matches(p,256,100,'Personalize CHOS',0xf2f6ff,2),'full-screen native configuration')
-    guest.key('u',('ctrl',));type_text(guest,'BAD/NAME');guest.key('ret')
-    guest.wait(lambda p:matches(p,256,658,'Invalid computer name',0xffdea2,0),'invalid setup configuration feedback')
-    assert digest(disk)==before,'Invalid setup configuration modified disk'
-    guest.click(380,184);guest.key('u',('ctrl',));type_text(guest,'CHOSTEST')
-    guest.click(462,225);guest.click(602,264);guest.click(260,308)
-    guest.snapshot(f'setup-configuration-{sector}{suffix}')
-    guest.click(920,703)
     guest.wait(lambda p:matches(p,32,92,'Confirm destruction',0xf2f6ff),'exact disk erase confirmation')
     type_text(guest,'WRONG');guest.key('ret')
     guest.wait(lambda p:matches(p,32,703,'Confirmation refused',0xffe7a5,0),'wrong erase rejection')
     assert digest(disk)==before,'Rejected typed confirmation modified disk'
     guest.snapshot(f'setup-confirmation-{sector}{suffix}')
     guest.key('u',('ctrl',));type_text(guest,'ERASE');guest.key('ret')
-    guest.wait(lambda p:matches(p,256,100,'Installing CHOS',0xf2f6ff,2),'graphical disk installation in progress',90)
+    guest.wait(lambda p:matches(p,32,92,'Installing CHOS system files',0xf2f6ff),'graphical disk installation in progress',90)
     guest.snapshot(f'setup-progress-{sector}{suffix}')
-    guest.wait(lambda p:matches(p,256,154,'CHOS installation completed successfully.',0xf2f6ff,0),'verified installation completion',90)
+    guest.wait(lambda p:matches(p,32,92,'CHOS has completed the first stage',0xf2f6ff),'verified installation completion',90)
     guest.snapshot(f'setup-complete-{sector}{suffix}')
     guest.key('r');deadline=time.monotonic()+8
     while guest.proc.poll() is None and time.monotonic()<deadline:time.sleep(.1)
     assert guest.proc.poll()==0 and guest.power_reason()=='guest-reset','Setup Restart did not produce a guest reset'
     result['boots'].append({'kind':'dedicated_native_installer_from_iso','command':guest.command,'passed':True,'confirmation_no_write_checks':True,'completion_restart_button':True})
 finally:guest.close()
-# The ISO is entirely absent from the next two VMs. This is not the host builder.
+pending_disk=run/'pending-stage-two.img';shutil.copyfile(disk,pending_disk)
+result['pending_disk']=str(pending_disk)
+# Cold boot is a separate VM with no optical device; pending marker survives RAM loss.
+guest=Guest(f'installed-pending-{sector}{suffix}',disk=disk,sector_bytes=sector,**machine)
+try:
+    guest.wait(lambda p:matches(p,256,100,'Personalize CHOS',0xf2f6ff,2),'disk-only graphical continuation',120)
+    guest.snapshot(f'setup-phase-two-{sector}{suffix}')
+    result['boots'].append({'kind':'pending_phase_two_interrupted_cold_boot','command':guest.command,'passed':True})
+finally:guest.close()
+guest=Guest(f'installed-configure-{sector}{suffix}',disk=disk,sector_bytes=sector,**machine)
+try:
+    guest.wait(lambda p:matches(p,256,100,'Personalize CHOS',0xf2f6ff,2),'pending graphical setup resumes',120)
+    guest.key('u',('ctrl',));type_text(guest,'BAD/NAME');before_invalid=digest(disk);guest.key('ret')
+    guest.wait(lambda p:matches(p,256,658,'Invalid computer name',0xffdea2,0),'invalid stage-two configuration feedback')
+    assert digest(disk)==before_invalid,'Invalid phase-two configuration modified disk'
+    guest.click(380,184);guest.key('u',('ctrl',));type_text(guest,'CHOSTEST')
+    guest.click(462,225);guest.click(602,264);guest.click(260,308)
+    guest.snapshot(f'setup-configuration-{sector}{suffix}');guest.click(920,703)
+    guest.wait(lambda p:matches(p,256,100,'Welcome to CHOS',0xf2f6ff,2),'verified configuration and first run welcome')
+    guest.snapshot(f'setup-welcome-{sector}{suffix}');guest.key('ret')
+    guest.wait(lambda p:p(60,250)==0x326bb0,'first installed desktop')
+    result['boots'].append({'kind':'graphical_configuration_verified_then_welcome_and_desktop','command':guest.command,'passed':True})
+finally:guest.close()
+# Subsequent boots bypass setup; existing file/settings persistence checks remain.
 guest=Guest(f'installed-write-{sector}{suffix}',disk=disk,sector_bytes=sector,**machine)
 try:
     guest.wait(lambda p:p(60,250)==0x326bb0,'installed boot with no ISO',120)
@@ -97,6 +113,7 @@ with disk.open('rb') as file:
             file.seek(system_start+first*4096);data=file.read(size);assert len(data)==size and zlib.crc32(data)==crc;contents[name]=data
     assert b'GPT primary/backup' in contents['/system/install-log']
     assert contents['/system/computer']==b'CHOSTEST'
+    assert contents['/system/setup-stage']==b'CHOS SETUP READY 1\n'
     assert contents['/system/license']==(BUILD.parent/'LICENSE').read_bytes()
     assert contents['/system/font-ofl']==(BUILD.parent/'assets/fonts/OFL.txt').read_bytes()
     assert contents['/documents/note.txt']==b'INSTALLED CHOS 123'

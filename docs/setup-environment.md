@@ -120,3 +120,12 @@ failure/interruption does not promise an on-disk recovery log.
 All automated writes attach newly created regular disposable QEMU image files.
 No test opens a host block device or relies on a real user-data disk. QEMU evidence
 does not establish VMware Fusion compatibility; EL2/GICv3/USB remain blockers.
+
+## M8 continuation
+
+[Milestone 8](milestone-8.md) supersedes the earlier ordering: the optical phase
+stays blue through GPT/format/copy/read-back/flush. Exact ERASE confirmation remains
+bound to the selected disk/session. Completion instructs removal of the ISO and
+requests a real guest reset. A persisted setup-stage record launches full-screen
+Royale configuration on the next installed-disk boot, followed by Welcome and the
+desktop. Later ready boots bypass Setup. Account authentication is unfinished.

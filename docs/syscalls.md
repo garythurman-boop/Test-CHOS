@@ -208,3 +208,24 @@ address, filesystem or device write is accepted. Original apps query and reject
 invalid spans on startup. On this single-CPU kernel, syscall/driver access is
 serialized by exception/input execution. The report contains firmware/device and
 initialization status, never raw memory, password input or HID key contents.
+
+## M8 additions
+
+`SYS_DISPLAY` (35): operation 0 copies `chos_display_info` (actual boot-time GOP
+modes, current width/height and trial status). Operations 1/2 require Control Panel
+or Setup on a persistent installed M8 volume: 1 accepts an enumerated
+`chos_display_mode` pointer and saves a reboot trial, 2 confirms the current trial.
+There is no runtime firmware call. Internal operation 3 lets Control Panel consume
+a shell request to open its Display tab. Invalid pointers/roles/modes and failed
+identity/GPT/ESP checks are refused.
+
+`SYS_SETUP` additions: operation 4 queries persisted graphical-setup continuation;
+5 validates, saves and verifies configuration and commits the ready marker.
+These remain restricted to application role 7. Destructive operation 1 accepts
+exactly ERASE and still requires optical boot, the selected kernel-held disk,
+owner PID, session token, inventory and final NVMe identity/writable revalidation.
+
+`EVENT_CONTEXT` (8) is a right-click in a client area, with client coordinates.
+Explorer uses it for native filesystem-object menus. It is distinct from primary
+pointer press/release; other applications can ignore it. Desktop shortcut gestures
+remain in the shell and do not bypass filesystem syscalls.

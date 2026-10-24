@@ -6,6 +6,7 @@ from pathlib import Path
 import struct
 import subprocess
 import tempfile
+import zlib
 ROOT=Path(__file__).resolve().parents[1];BUILD=ROOT/'build'
 def digest(path):
     with path.open('rb') as file:return hashlib.file_digest(file,'sha256').hexdigest()
@@ -68,6 +69,11 @@ for sector in [512,4096]:
             assert e[2]==0x20
             raw=chain(e[0]);assert raw[:e[1]]==source.read_bytes() and raw[e[1]:]==bytes(len(raw)-e[1])
             files[name]=hashlib.sha256(raw[:e[1]]).hexdigest()
+        e=chos['DISPLAY.BIN'];assert e[1:]==(32,0x20)
+        raw=chain(e[0]);assert len(raw)==4096 and raw[:8]==b'CHOSDSP1'
+        assert struct.unpack_from('<III',raw,8)==(1024,768,0)
+        assert zlib.crc32(raw[:28])==struct.unpack_from('<I',raw,28)[0]
+        assert raw[32:]==bytes(4096-32)
         for c in range(2,clusters+2):
             value=struct.unpack_from('<I',tables,c*4)[0]&0x0fffffff
             assert (value!=0)==(c in used)

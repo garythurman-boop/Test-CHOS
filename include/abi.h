@@ -2,11 +2,11 @@
 #define CHOS_ABI_H
 #include <stdint.h>
 #include "hardware.h"
-enum { SYS_ABI=0,SYS_WRITE=1,SYS_TICKS=2,SYS_EXIT=3,SYS_YIELD=4,SYS_ALLOC=5,SYS_FREE=6,SYS_SEND=7,SYS_RECV=8,SYS_PID=9,SYS_OPEN=10,SYS_FREAD=11,SYS_FWRITE=12,SYS_CLOSE=13,SYS_MKDIR=14,SYS_UNLINK=15,SYS_RENAME=16,SYS_SEEK=17,SYS_SIZE=18,SYS_LIST=19,SYS_WINDOW=20,SYS_DRAW=21,SYS_PRESENT=22,SYS_EVENT=23,SYS_INFO=24,SYS_LAUNCH=25,SYS_THEME=26,SYS_REPLACE=27,SYS_POWER=28,SYS_TASK=29,SYS_SETUP=30,SYS_RENDER=31,SYS_CONFIG=32,SYS_HARDWARE=33,SYS_DIAGNOSTICS=34 };
+enum { SYS_ABI=0,SYS_WRITE=1,SYS_TICKS=2,SYS_EXIT=3,SYS_YIELD=4,SYS_ALLOC=5,SYS_FREE=6,SYS_SEND=7,SYS_RECV=8,SYS_PID=9,SYS_OPEN=10,SYS_FREAD=11,SYS_FWRITE=12,SYS_CLOSE=13,SYS_MKDIR=14,SYS_UNLINK=15,SYS_RENAME=16,SYS_SEEK=17,SYS_SIZE=18,SYS_LIST=19,SYS_WINDOW=20,SYS_DRAW=21,SYS_PRESENT=22,SYS_EVENT=23,SYS_INFO=24,SYS_LAUNCH=25,SYS_THEME=26,SYS_REPLACE=27,SYS_POWER=28,SYS_TASK=29,SYS_SETUP=30,SYS_RENDER=31,SYS_CONFIG=32,SYS_HARDWARE=33,SYS_DIAGNOSTICS=34,SYS_DISPLAY=35 };
 struct chos_dirent { char path[60]; uint32_t size,kind; };
 struct chos_message { uint64_t sender,value; };
 enum { DRAW_CLEAR=0,DRAW_RECT=1,DRAW_TEXT=2,DRAW_ROUND=3,DRAW_UI_TEXT=4 };
-enum { EVENT_KEY=1,EVENT_CLICK=2,EVENT_RESIZE=3,EVENT_CLOSE=4,EVENT_POINTER=5,EVENT_RELEASE=6,EVENT_REFRESH=7 };
+enum { EVENT_KEY=1,EVENT_CLICK=2,EVENT_RESIZE=3,EVENT_CLOSE=4,EVENT_POINTER=5,EVENT_RELEASE=6,EVENT_REFRESH=7,EVENT_CONTEXT=8 };
 enum { KEY_UP=256,KEY_DOWN=257,KEY_LEFT=258,KEY_RIGHT=259,KEY_CTRL=65536,KEY_SHIFT=131072,KEY_ALT=262144 };
 #define KEY_F3 260
 struct chos_window { char title[48]; int32_t width,height; };
@@ -16,6 +16,9 @@ struct chos_task { uint64_t pid,ticks; uint32_t application,state; };
 struct chos_info { uint64_t ticks,total_pages,used_pages,switches; uint32_t processes,width,height,theme,persistent,reserved; char computer[32]; };
 struct chos_config { uint32_t version,theme; int32_t utc_offset; uint32_t clock_seconds; char computer[32]; uint32_t reserved[4]; };
 _Static_assert(sizeof(struct chos_config)==64,"configuration ABI");
+#define CHOS_DISPLAY_MODES 32
+struct chos_display_mode {uint32_t width,height,stride,format;};
+struct chos_display_info {uint32_t count,current_width,current_height,trial;struct chos_display_mode modes[CHOS_DISPLAY_MODES];};
 struct chos_render { uint64_t frames,pixels,partial_frames,last_us,total_us; };
 enum { VOLUME_LIVE=0,VOLUME_PERSISTENT=1,VOLUME_NO_DEVICE=2,VOLUME_BAD_GPT=3,VOLUME_IDENTITY=4,VOLUME_BAD_CHFS=5,VOLUME_BAD_CONFIG=6 };
 /* chos_info.reserved reports VOLUME_* while preserving the 88-byte ABI. */

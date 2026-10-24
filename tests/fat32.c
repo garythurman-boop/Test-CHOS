@@ -46,6 +46,10 @@ int main(void) {
         last_phase=reports=0;last_done=0;
         assert(install_fat32_observed(device,&plan,&payload,true,&workspace,report,0));
         assert(last_phase==4 && last_done==1025 && reports>=6);
+        unsigned root=0;while(root<d->count && memcmp(d->slots[root].data+32,"CHOS       ",11))root++;
+        assert(root<d->count);d->slots[root].data[43]|=0x20;d->slots[root].data[54]=0xa5;d->slots[root].data[56]=0x58;
+        assert(install_fat32_verify(device,&plan,&payload,&workspace));
+        d->slots[root].data[58]^=1;assert(!install_fat32_verify(device,&plan,&payload,&workspace));d->slots[root].data[58]^=1;
         unsigned writes=d->writes;assert(install_fat32_verify(device,&plan,&payload,&workspace));
         struct block_device readonly=device;readonly.write=0;readonly.flush=0;
         assert(install_fat32_verify(readonly,&plan,&payload,&workspace));

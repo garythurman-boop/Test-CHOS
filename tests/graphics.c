@@ -38,6 +38,16 @@ int main(void) {
     for(int spread=8;spread>0;spread--)gfx_round(&a,8-spread,5-spread+4,40+spread*2,24+spread*2,6+spread,0x020b20,0x020b20,9);
     gfx_shadow(&b,8,5,40,24,6);gfx_round(&a,8,5,40,24,6,0xabcdef,0xabcdef,255);gfx_round(&b,8,5,40,24,6,0xabcdef,0xabcdef,255);
     assert(!memcmp(reference,optimized,sizeof(reference)));
+    gfx_clip(&s,0,0,64,40);gfx_rect(&s,0,0,64,40,0x557799);
+    gfx_cursor(&s,5,5,28);unsigned light=0,dark=0;
+    for(unsigned i=0;i<64*40;i++){if(buf.pixels[i]==0xf9fcff)light++;if(buf.pixels[i]==0x102035)dark++;}
+    assert(light>30 && dark>20);
+    gfx_cursor(&s,63,39,36);assert(buf.before==0x76543210 && buf.after==0x12345678);
+    struct display_preference pref={1280,720,1},decoded;uint8_t wire[32];
+    assert(display_encode(&pref,wire) && display_decode(&decoded,wire,32) && decoded.state==1 && decoded.width==1280);
+    wire[8]^=1;assert(!display_decode(&decoded,wire,32));
+    pref.state=3;assert(!display_encode(&pref,wire));pref.state=2;
+    assert(display_encode(&pref,wire) && display_decode(&decoded,wire,32) && decoded.state==2);
     uint32_t w=0,h=0;assert(display_request("1024x768",8,&w,&h) && w==1024 && h==768);
     assert(display_request("800x600\n",8,&w,&h));
     assert(!display_request("10000x768",9,&w,&h) && !display_request("0x0",3,&w,&h));

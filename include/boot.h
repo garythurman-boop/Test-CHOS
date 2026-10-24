@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "hardware.h"
+#include "abi.h"
 #define CHOS_BOOT_MAGIC UINT64_C(0x43484f53424f4f54)
 struct chos_boot_info {
     uint64_t magic;
@@ -22,6 +23,7 @@ struct chos_boot_info {
     struct chos_pci_device pci[32];
     uint32_t firmware_revision,uefi_revision;
     uint64_t kernel_base,kernel_memory_bytes,stack_base,stack_bytes;
+    struct chos_display_info display;
 };
 #define CHOS_BOOT_CONTRACT (((uint32_t)sizeof(struct chos_boot_info)<<16)|1u)
 _Static_assert(sizeof(struct chos_boot_info)<65536,"boot contract size encoding");
