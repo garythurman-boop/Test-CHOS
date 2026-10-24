@@ -1,0 +1,8 @@
+Debian clang version 19.1.7 (3+b1)
+Target: x86_64-pc-linux-gnu
+Thread model: posix
+InstalledDir: /usr/lib/llvm-19/bin
+Debian LLD 19.1.7 (compatible with GNU linkers)
+QEMU emulator version 10.0.13 (Debian 1:10.0.13+ds-0+deb13u1)
+Copyright (c) 2003-2025 Fabrice Bellard and the QEMU Project developers
+86493b7dc94bb917347116c600e7e94c12ee9b295aef990bed00a101237e0d69  /usr/share/qemu-efi-aarch64/QEMU_EFI.fd

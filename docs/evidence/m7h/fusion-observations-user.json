@@ -1,0 +1,127 @@
+{
+  "source": "Nine original user-supplied PNG screenshots in chos diag-20261023T235923Z-1-001.zip, inspected directly; eight distinct images/pages, one exact duplicate",
+  "zip_sha256": "0f73c6aead9379a972191871123ce8bca784ed82ea4bc9967c352f90edd59ff0",
+  "capture_date_client": "2026-10-23",
+  "raw_screenshots_published": false,
+  "raw_screenshots_reason": "Original frames include unrelated host desktop/browser content; retain locally and publish sanitized CHOS field transcription/hashes only",
+  "screenshots": [
+    {
+      "local_id": "01",
+      "diagnostic_page": 1,
+      "sha256": "fc541537f25793f05f6d5f9f3a7fb5717d67a70fc34c2a5ded3113c1403e5bd3"
+    },
+    {
+      "local_id": "02",
+      "diagnostic_page": 2,
+      "sha256": "f1314f6f01dbb5de46f9ff3b927dee7c169ca7f35240dc7522e106f6831f8c46"
+    },
+    {
+      "local_id": "03",
+      "diagnostic_page": 2,
+      "sha256": "f1314f6f01dbb5de46f9ff3b927dee7c169ca7f35240dc7522e106f6831f8c46"
+    },
+    {
+      "local_id": "04",
+      "diagnostic_page": 3,
+      "sha256": "f1dfee7bb45bcdcf35745a5a470de1b1c1180a692560c59d8a6d76cf47937d5c"
+    },
+    {
+      "local_id": "05",
+      "diagnostic_page": 4,
+      "sha256": "973b2fa859ee62004a15de771211f1e47b44117dfd5d48835fb1cbc01c0f5797"
+    },
+    {
+      "local_id": "06",
+      "diagnostic_page": 5,
+      "sha256": "c3af94579dce3696fb7160c47f4fc3f35982ce3c91bae0f77717be60dadc8c36"
+    },
+    {
+      "local_id": "07",
+      "diagnostic_page": 6,
+      "sha256": "a4feab539946482ad239c54571d834b4b56c41e9b7f56b933cf3cc00bc09ed9c"
+    },
+    {
+      "local_id": "08",
+      "diagnostic_page": 7,
+      "sha256": "23b37ce40a8477fd6dd92cfb193fe1f232249e88074173ff80c944e46362141a"
+    },
+    {
+      "local_id": "09",
+      "diagnostic_page": 8,
+      "sha256": "13dff935a6d09df4aa597511a81c3ad4529a794676f52d588bc6c5483d0a2f6f"
+    }
+  ],
+  "tested_image_user_reported": "M7G INPUT ISO",
+  "tested_iso_checksum_user_supplied": false,
+  "host_user_reported": "Apple M1 MacBook Air, one vCPU, 2 GiB, Secure Boot disabled",
+  "firmware": "EDK II",
+  "firmware_revision": "0x10000",
+  "uefi_revision": "0x20046",
+  "firmware_el": 1,
+  "kernel_el": 1,
+  "acpi_table_count": 6,
+  "acpi_mask": "0xf",
+  "gic_version": 3,
+  "timer_ppi": 30,
+  "timer_delivered_ticks": 31,
+  "mmu_table_pages": 531,
+  "mmu_table_capacity": 1024,
+  "ram_descriptors": 29,
+  "highest_physical_end": "0x100000000",
+  "kernel_file_bytes": 274720,
+  "kernel_memory_bytes": 507904,
+  "gop": [
+    1024,
+    768,
+    1024,
+    1
+  ],
+  "nvme_bdf": "0000:12:00.0",
+  "nvme_id": "15ad:07f0",
+  "nvme_mmio": "0x3ee00000",
+  "nvme_cap": "0x20140100ff",
+  "nvme_version": "0x10400",
+  "nvme_namespace_sectors": 16777216,
+  "nvme_sector_bytes": 512,
+  "nvme_identify_and_read_only_first_last_reads_and_write_guard": "PASS shown on page 5",
+  "xhci_bdf": "0000:0a:00.0",
+  "xhci_id": "15ad:077a",
+  "xhci_mmio": "0x3f600000",
+  "xhci_caplength_version": "0x120020",
+  "xhci_hcsparams1": "0x8001f7f",
+  "xhci_hcsparams2": "0x7f",
+  "xhci_hccparams1": "0x38f081",
+  "xhci_hccparams2": "0x0",
+  "xhci_dboff": "0x820",
+  "xhci_rtsoff": "0xa20",
+  "xhci_scratchpads": 0,
+  "xhci_root_ports": 8,
+  "xhci_stage": 8,
+  "xhci_reason": 0,
+  "xhci_halt_reset_dma_rings_run": "PASS shown on page 6",
+  "connected_ports": [
+    5,
+    6,
+    7,
+    8
+  ],
+  "connected_port_count": 4,
+  "enumerated_header_count": 4,
+  "operational_hid_count": 0,
+  "live_input_event_count": 0,
+  "keyboard": "NOT DETECTED",
+  "mouse": "NOT DETECTED",
+  "portsc_disconnected_1_to_4": "0x2a0",
+  "portsc_connected_before_reset": "0x202e1",
+  "portsc_after_failure": "0x220603",
+  "speed_id_logged_before_reset": 0,
+  "speed_id_decoded_from_after_failure": 1,
+  "enumeration_failure_stage": 18,
+  "actual_stage_18_refusal_predicate": "Not present in M7G screenshots: combined length/full-read/parser condition",
+  "unknown": [
+    "USB VID/PID and device/interface descriptors",
+    "Exact stage-18 length/transfer/parser refusal",
+    "Whether any device uses boot/composite/alternate/report protocol",
+    "M7H target HID/input, installation and persistence"
+  ]
+}

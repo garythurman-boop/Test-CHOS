@@ -1,0 +1,25 @@
+{
+  "passed": true,
+  "baseline": "a8a0c91",
+  "runtime_source": "36b32fef286be3d5047b006a3ea594f95504424b",
+  "unchanged_paths": [
+    "boot/uefi",
+    "drivers/storage",
+    "filesystem",
+    "kernel/memory",
+    "kernel/interrupts",
+    "drivers/interrupts",
+    "drivers/usb/ring.c",
+    "applications",
+    "desktop",
+    "userspace",
+    "installer"
+  ],
+  "hid_report_decoder_unchanged": true,
+  "xhci_stage_2_through_startup_unchanged": true,
+  "byte_identical_payloads": {
+    "BOOTAA64.EFI": "62016b28c4d5c7e4e033f1ff2b073ade6bb7c60f200162959113763a8017c586",
+    "desktop.elf": "a8a6c41a03c39187d7afd06451fc1669cf08033295509744eb49536a108f50a1"
+  },
+  "format_only_fix_preserves_all_three_image_hashes": true
+}

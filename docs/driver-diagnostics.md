@@ -1,6 +1,6 @@
-# M7G device initialization and input diagnostics
+# M7H device initialization and input diagnostics
 
-Use `CHOS-ARM64-M7G-INPUT.iso` for the next Fusion trial. This original UEFI/kernel
+Use `CHOS-ARM64-M7H-INPUT.iso` for the next Fusion trial. This original UEFI/kernel
 image runs normal protection/timer tests, skips Setup/filesystem mounting, attempts
 bounded driver initialization and rotates reports automatically. A fixed lower
 panel shows live USB keyboard/mouse availability, selected controller ID, actual
@@ -21,7 +21,7 @@ identification and operational I/O are distinct. A class match is never an input
 success. Reports include PCI config/BDF/IDs, MMIO base, HCCPARAMS1/HCSPARAMS2, root
 port count, each port's initial PORTSC, connected-port count, actual enumeration
 stage/failure, HID protocol/interface and operational HID count. Failed enumeration
-also captures PORTSC after failure. Data is bounded by the existing 32-port/two-HID
+also captures PORTSC after failure. Data is bounded by the existing 32-port/four-HID
 limit; initialized devices continue using the known polled event ring.
 
 xHCI controller stage: 1 discovery/BAR/memory decode, 2 capabilities/offsets/ports,
@@ -43,7 +43,7 @@ root-port connection count, not a hotplug topology service.
 UHCI/EHCI/OHCI remain inventoried but unsupported. The target screenshot proves
 these controllers exist, not which owns the keyboard/mouse. No duplicate HID/input
 API or speculative alternate controller driver was added. Existing limits remain:
-one AC64 xHCI, two direct-root USB2 boot-HID devices, bounded contexts/rings; no USB
+one AC64 xHCI, four direct-root USB2 boot-HID devices, bounded contexts/rings; no USB
 interrupt routing, hubs/general HID, firmware ownership takeover, scratchpads,
 USB3 input, hotplug re-enumeration or controller reset recovery. Timeouts are bounded;
 uncertain DMA pages remain reserved. Unexpected MMIO exceptions still use the
@@ -68,6 +68,42 @@ The failure log includes a readable cause. Stage 2 performs no allocation, reset
 or ownership operation. The M7F target report's eight-port line narrows its old
 stage-2 refusal to slots/offsets; raw register values are still needed to identify
 the exact old predicate. [Audit and correction](milestone-7g.md).
+
+## USB enumeration reasons (M7H)
+
+The fixed panel's bottom `ENUM` fields are last stage / reason / root port. They
+are independent of controller stage/reason (8/0 can coexist with HID refusal).
+Existing enumeration stages 10–21 are preserved. Reasons 810–817, 819 and 820
+identify port reset, speed, slot, allocation, address, initial descriptor,
+context update, full descriptor, configuration/protocol and endpoint command
+failures respectively. Last xHCI completion is printed without report payloads. Common values are 1
+(success), 4 (USB transaction error), 5 (TRB error), 6 (stall) and 13 (short packet).
+A parser refusal can follow completion 1: the transfer succeeded, but its descriptor
+layout was malformed or unsupported. Controller 8/0 and enumeration 18/1103, for
+example, mean a running controller with a non-boot HID interface refusal.
+
+| Code | Refusal |
+|---|---|
+| 901 | Control request length/direction/DMA span outside policy |
+| 902 | Data completion code/residual invalid |
+| 903 | Status completion failure or missing data completion |
+| 904 | Control error completion on another TRB in this endpoint |
+| 905 / 906 / 907 | Control timeout / short descriptor / malformed device descriptor |
+| 1001 / 1002 / 1003 | Malformed configuration header / total length / descriptor span |
+| 1004 / 1005 / 1006 | Interface length / endpoint length / endpoint outside interface |
+| 1007 / 1008 / 1009 | Invalid endpoint address / duplicate address / endpoint count |
+| 1010 / 1011 | Duplicate interface+alternate / interface count mismatch |
+| 1012 / 1013 | Invalid HID subordinate table / missing boot HID descriptor |
+| 1101 | Unsupported 512-byte / 64-descriptor / 32-interface-alternate budget |
+| 1102 / 1103 / 1104 | No HID / non-boot subclass / unsupported boot protocol |
+| 1105 / 1106 | No interrupt IN / multiple interrupt IN endpoints |
+| 1107 / 1108 | Unsupported packet size/transactions / polling interval |
+
+Configuration trace is bounded to 160 scalar fields per boot, never arbitrary
+memory or device strings. An explicit budget notice marks omitted detail. VID/PID
+and class triplets identify devices; a controller PCI ID does not identify USB
+peripherals. Readable malformed/unsupported causes accompany parser reasons.
+See [actual target facts and selection policy](milestone-7h.md).
 
 ## NVMe stages and read-only policy
 

@@ -8,10 +8,11 @@
 | 4: CHOS Desktop/window manager/taskbar/Start | Working core; Royale widgets and multi-window usage tested; dedicated Search/Help and wallpaper file loading remain |
 | 5: six native applications | Functional bounded native apps with installed persistence and shared widgets; see desktop.md |
 | 6: graphical installer/GPT/ESP/installed boot | Dedicated full-screen blue/Royale native setup, disk boot and persistent system volume; saved computer/theme/fixed clock offset implemented; account/password/layout and graphical mode configuration unfinished |
-| 7: VMware Fusion validation | M7F Fusion boot/MMU/GIC/GOP and NVMe identify/read-only I/O user-confirmed; input still fails at xHCI stage 2. M7G fixes compact register-layout validation/adds precise refusals; target input pending |
+| 7: VMware Fusion validation | M7G Fusion boot/MMU/GIC/GOP/NVMe/read-only probes and xHCI startup verified in supplied screenshots; four roots fail enumeration stage 18. M7H descriptor/transfer diagnostics and bounded boot-HID selection; actual HID/input pending |
 | 8: CHOS 0.1 | Not ready |
 
-Current ISO/results: [M7G xHCI layout/refusal diagnostics](milestone-7g.md).
+Current ISO/results: [M7H USB descriptor/HID diagnostics](milestone-7h.md).
+Preserved [M7G xHCI layout/refusal diagnostics](milestone-7g.md).
 Preserved [M7F discovery/input/read-only storage](milestone-7f.md).
 Preserved [M7E MMU correction](milestone-7e.md).
 Preserved [M7D bootstrap/diagnostic hardening](milestone-7d.md).

@@ -2,10 +2,10 @@
 
 M7C adds original C xHCI bring-up and USB boot-keyboard/mouse decoding. No Linux,
 BSD, firmware USB driver or third-party USB stack is linked or called by the
-running kernel. **Only the documented QEMU controller/device configurations are
-verified for HID operation. Actual Fusion xHCI is `15ad:077a` at `0a:00.0`;
-M7F reaches capability stage 2 but refuses initialization. M7G accepts bounded
-compact register layouts; actual corrected initialization/HID remains pending.**
+running kernel. **Only documented QEMU device configurations are verified for HID operation.**
+M7G Fusion screenshots now verify xHCI startup, four connected roots and stage-18
+refusal with zero operational HID devices. M7H target descriptor capture/input is
+pending. [Actual evidence and correction scope](milestone-7h.md).
 
 ## Boundaries
 
@@ -60,10 +60,10 @@ re-enumeration is implemented.
 
 ## Supported subset and remaining work
 
-One xHCI controller, up to two successful direct-root boot-HID devices, AC64,
+One xHCI controller, up to four successful direct-root boot-HID devices, AC64,
 32/64-byte contexts, no scratchpads, USB low/full/high speed, endpoint packets at
 most 64 bytes, configuration at most 512 bytes. Initial USB2 port reset and control
-transfers are supported. Hubs, composite/multiple boot interfaces, USB3 devices,
+transfers are supported. Hubs, simultaneously managing multiple boot interfaces on one device, USB3 devices,
 legacy controller drivers, firmware ownership takeover and broad HID layouts are
 not implemented. Failed root-port enumeration is bounded and reported.
 
@@ -87,3 +87,12 @@ M7G replaces the arbitrary 4 KiB DBOFF/RTSOFF minimum with validated register
 block lengths/overlap checks and distinct refusal reasons. Extended capability
 spans are checked before reads; the input panel separates controller, connection,
 descriptor and HID readiness. [Audit/results](milestone-7g.md).
+
+M7H moves bounded configuration parsing into `drivers/usb/descriptors.c`, selects
+one boot interface/alternate among other functions, handles extra OUT endpoints
+and distinguishes malformed data from unsupported HID/budgets. Nonzero alternate
+selection uses SET_INTERFACE; SET_PROTOCOL uses the selected interface. Only the
+first configuration and one interrupt-IN endpoint are managed per physical device.
+Control data IOC/residual/status validation supplies actual initialized lengths;
+optional SET_IDLE is omitted. Raw USB strings and live report contents are never
+logged. See [reason codes](driver-diagnostics.md) and [M7H evidence](milestone-7h.md).

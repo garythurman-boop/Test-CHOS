@@ -1,0 +1,8 @@
+clang -std=c11 -Wall -Wextra -Werror -Iinclude tests/usb.c tests/usb_descriptors.c drivers/usb/layout.c drivers/usb/descriptors.c drivers/usb/hid.c drivers/usb/ring.c -o build/test-usb
+./build/test-usb
+USB descriptor composite/extra OUT/non-HID/alternate selection, ordering, distinct malformed/unsupported codes and every-prefix trace bounds passed
+xHCI compact sub-page layout, exact block bounds/overlap, extended capabilities, stable refusal reasons passed
+USB rings cycle/link/event wrap/DMA bounds; boot descriptor bounds/type/endpoint rejection, HID key/release/modifier/rollover/duplicates, signed mouse/buttons/wheel and event-capacity atomicity passed
+USB descriptor composite/extra OUT/non-HID/alternate selection, ordering, distinct malformed/unsupported codes and every-prefix trace bounds passed
+xHCI compact sub-page layout, exact block bounds/overlap, extended capabilities, stable refusal reasons passed
+USB rings cycle/link/event wrap/DMA bounds; boot descriptor bounds/type/endpoint rejection, HID key/release/modifier/rollover/duplicates, signed mouse/buttons/wheel and event-capacity atomicity passed

@@ -1,3 +1,17 @@
+# M7H — USB descriptor/transfer evidence and bounded boot-HID selection
+
+M7G Fusion captures verify xHCI startup and four connected roots, with stage-18
+refusal and no HID input. M7H records device/interface/endpoint summaries and
+separates actual transfer lengths, malformed descriptors and unsupported layouts.
+Boot selection supports surrounding interfaces, extra OUT endpoints and selected
+alternates. Control data/status completion is checked; optional SET_IDLE is omitted.
+Capacity is four direct-root devices; one boot interface/first configuration per
+device remains the policy. NVMe, controller startup and Royale are preserved.
+Actual M7H target HID/input, installation and persistence remain pending.
+Validation passed 78 QEMU cases, 20 host programs, portable sanitizers and
+clean source reproduction of all three distributable ISOs.
+[M7H report](milestone-7h.md).
+
 # M7G — xHCI register-layout correction and precise diagnostics
 
 M7F Fusion NVMe identify/read-only first/last reads and write guard now pass in

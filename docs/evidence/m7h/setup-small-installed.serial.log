@@ -1,0 +1,73 @@
+UEFI firmware (version 2025.02-8+deb13u1 built at 18:06:17 on Nov  8 2025)
+BdsDxe: loading Boot0001 "UEFI QEMU NVMe Ctrl CHOS-GPT-BOOT 1" from PciRoot(0x0)/Pci(0x3,0x0)/NVMe(0x1,00-00-00-00-00-00-00-00)
+BdsDxe: starting Boot0001 "UEFI QEMU NVMe Ctrl CHOS-GPT-BOOT 1" from PciRoot(0x0)/Pci(0x3,0x0)/NVMe(0x1,00-00-00-00-00-00-00-00)
+CHOS - ARM64 UEFI loader
+CHOS: firmware entry EL1
+CHOS: firmware Debian distribution of EDK II
+CHOS: firmware revision 00010000 UEFI 00020046
+CHOS: PCI 0000:00:00.0 ID 1b36:0008 CLASS 060000
+CHOS: PCI 0000:00:01.0 ID 1af4:1052 CLASS 090000
+CHOS: PCI 0000:00:02.0 ID 1af4:1052 CLASS 090200
+CHOS: PCI 0000:00:03.0 ID 1b36:0010 CLASS 010802
+CHOS: ACPI 2.x RSDP present
+CHOS: kernel loaded; leaving firmware
+CHOS diagnostic report v1; inventory read-only
+Debian distribution of EDK II
+Firmware revision: 0x10000
+UEFI revision: 0x20046
+Firmware entry EL: 1
+Current kernel EL: 1
+ACPI XSDT/checksums: PASS
+ACPI table count: 9
+ACPI mask APIC/GTDT/MCFG/FADT/SPCR: 0x1f
+Framebuffer width: 1024
+Framebuffer height: 768
+Framebuffer stride: 1024
+GOP pixel format: 1
+PCI retained: 4
+PCI firmware handles: 4
+PCI 0000:00:00.0 1b36:0008 class 060000
+Other PCI device
+PCI 0000:00:01.0 1af4:1052 class 090000
+Virtio input
+PCI 0000:00:02.0 1af4:1052 class 090200
+Virtio input
+PCI 0000:00:03.0 1b36:0010 class 010802
+Storage NVMe
+Native serial: ACPI SPCR PL011 or unavailable
+GIC discovered version: 2
+MMU table pages: 254
+MMU table capacity: 1024
+MMU RAM descriptors: 85
+MMU highest physical end: 0x60000000
+Kernel MMU: PASS
+Kernel file bytes: 278816
+Kernel memory bytes: 512000
+Bootstrap stack bytes: 65536
+Controlled file growth bytes: 0
+Controlled BSS growth bytes: 0
+Kernel image contract and growth checks: PASS
+Timer initialized PPI: 30
+Timer delivered ticks: 31
+GIC delivery and preemption: PASS
+NVMe driver selected
+Driver PCI segment/bus/devfn: 0x18
+Driver PCI device/vendor: 0x101b36
+Driver PCI config: 0x4010018000
+Driver PCI discovery result: 0
+NVMe MMIO base: 0x8000008000
+NVMe CAP: 0x4008200f0107ff
+NVMe version: 0x10400
+NVMe ready timeout ms: 7500
+NVMe namespace 1 sectors: 143360
+NVMe sector bytes: 512
+NVMe normal policy: explicit installer confirmation
+NVMe controller and namespace operational: PASS
+NVMe initialized: PASS
+xHCI PCI discovery
+Driver PCI segment/bus/devfn: 0x0
+Driver PCI device/vendor: 0x0
+Driver PCI config: 0x0
+Driver PCI discovery result: 4
+Input initialized devices: 2
+Core exception/EL0/IPC/protection tests: PASS
