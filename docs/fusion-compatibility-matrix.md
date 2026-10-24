@@ -1,13 +1,12 @@
-# ARM64 compatibility matrix — M7H checkpoint
+# ARM64 compatibility matrix — M7I checkpoint
 
-**M7G real Fusion screenshots now verify xHCI startup**, MMU/GIC/GOP and NVMe
-identify/read-only first/last reads/write guard. The nine supplied images cover
-eight distinct pages and show four connected roots (5–8), all refusing enumeration
-at stage 18, with zero HID/input events. Raw DBOFF `0x820` / RTSOFF `0xa20` confirm
-the old M7F offset defect. **M7H target descriptor/HID/input remains pending.**
-M1 MacBook Air, one CPU, 2 GiB, ARM64 UEFI, Secure Boot off; reported macOS 27
-“Golden Gate,” Fusion “26H1u1” (full build unspecified). No Fusion host is attached
-here. [Current actual target evidence/audit](milestone-7h.md).
+**M7H actual Fusion captures verify xHCI/core boot and NVMe read-only operation,
+and identify report-only HID plus USB hubs.** Port 6 (`0e0f:0003`) has two 03/00/00
+interfaces; ports 7/8 (`0e0f:0002`) are full/high-speed hubs. M7I adds bounded HID
+report interpretation, hub-child routing and a unified normal/fallback ISO.
+**Actual M7I keyboard/trackpad, installation and persistence remain pending.**
+One CPU, 2 GiB, ARM64 UEFI, Secure Boot off, M1 MacBook Air; exact Fusion/macOS
+versions must accompany target results. [Current evidence/scope](milestone-7i.md).
 
 | Subsystem | Existing CHOS implementation | Fusion requirement / missing evidence | Status | Required changes / test evidence |
 |---|---|---|---|---|
@@ -18,7 +17,7 @@ here. [Current actual target evidence/audit](milestone-7h.md).
 | Timer | GTDT non-secure physical PPI, CNTFRQ, nominal 100 Hz | Actual PPI/flags and physical timer permission | Fusion PPI 30/31 ticks observed; QEMU both EL handoffs pass | Protection, preemption, IPC and input checks on all four EL/GIC combinations |
 | ACPI/CPU topology | Checksummed RSDP/XSDT/MADT/GTDT; MCFG firmware BDF/segment windows; boot CPU only | Actual tables, PSCI conduit and CPU affinity | QEMU pass; no DT-only or SMP | ACPI-off refusal; capture target tables before modifying discovery |
 | Storage | Original polling NVMe, one controller/namespace, 512/4096 sectors, GPT/FAT32/CHFS | Actual IDs/class, BARs, namespace, DMA and geometry | QEMU install/persistence pass; M7F Fusion NVMe identify/read-only first/last reads and write guard user-confirmed | Repeat read-only gate in M7G; actual installed persistence remains pending; no SCSI/SATA support |
-| Input | Virtio PCI and original polled xHCI USB2 boot keyboard/relative mouse | Actual USB controller(s), PCI class/programming interface, topology and HID descriptors, or other interface | M7G Fusion xHCI startup/rings pass; four roots fail stage 18; no HID/input. M7H descriptor selection/diagnostics tested in QEMU; target retest pending | Capture USB VID/PID/config/interface/endpoint/HID summaries and precise refusal/completion, then actual events; no HID format assumed |
+| Input | Virtio PCI and original polled xHCI USB2 hub/boot/report-HID, relative/absolute pointer | Actual USB controller(s), PCI class/programming interface, topology and HID descriptors, or other interface | M7H transfers pass; report-only HID refused 1103 and hubs 1102. M7I USB2 hub/report/absolute support passes representative QEMU tests; actual input pending | Capture USB VID/PID/config/interface/endpoint/HID summaries and precise refusal/completion, then actual events; no HID format assumed |
 | Display | GOP RGB/BGR linear framebuffer, pre-exit mode choice, original renderer | Actual format/stride/mode and post-exit mapping lifetime | Fusion post-MMU 1024×768 diagnostics observed; normal desktop/input pending | Test target pointer alignment, clipping, redraw and framebuffer stability; no VMware GPU driver claim |
 | Network | No driver/stack | Actual adapter IDs/protocol | Unsupported | Later after boot/input/storage stability |
 | Installation | Confirmed native GPT/ESP/CHFS writer, verification, reset, disk-only persistence | All target hardware prerequisites plus optical exclusion/disk identity | QEMU pass on both sectors and EL1/GICv2, EL2/GICv3 | Separate full Fusion checklist; QEMU cannot satisfy it |

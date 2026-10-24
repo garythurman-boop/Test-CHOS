@@ -1,6 +1,12 @@
-# M7H device initialization and input diagnostics
+# M7I device initialization and input diagnostics
 
-Use `CHOS-ARM64-M7H-INPUT.iso` for the next Fusion trial. This original UEFI/kernel
+The normal **CHOS-ARM64.iso** now enters automatic read-only input diagnostics
+if initialization is incomplete; it does not launch Setup or mount a system volume
+in that case. `CHOS-ARM64-M7I-INPUT.iso` always displays the live panel. The same
+NVMe guard rejects writes/flushes in either diagnostic path. Static USB descriptor
+metadata can be retained in a bounded **64 KiB** volatile buffer, never a disk log.
+
+Use `CHOS-ARM64-M7I-INPUT.iso` for the next Fusion trial. This original UEFI/kernel
 image runs normal protection/timer tests, skips Setup/filesystem mounting, attempts
 bounded driver initialization and rotates reports automatically. A fixed lower
 panel shows live USB keyboard/mouse availability, selected controller ID, actual
@@ -21,7 +27,7 @@ identification and operational I/O are distinct. A class match is never an input
 success. Reports include PCI config/BDF/IDs, MMIO base, HCCPARAMS1/HCSPARAMS2, root
 port count, each port's initial PORTSC, connected-port count, actual enumeration
 stage/failure, HID protocol/interface and operational HID count. Failed enumeration
-also captures PORTSC after failure. Data is bounded by the existing 32-port/four-HID
+also captures PORTSC after failure. Data is bounded by the 32-root-port/16-HID-channel
 limit; initialized devices continue using the known polled event ring.
 
 xHCI controller stage: 1 discovery/BAR/memory decode, 2 capabilities/offsets/ports,
@@ -43,8 +49,8 @@ root-port connection count, not a hotplug topology service.
 UHCI/EHCI/OHCI remain inventoried but unsupported. The target screenshot proves
 these controllers exist, not which owns the keyboard/mouse. No duplicate HID/input
 API or speculative alternate controller driver was added. Existing limits remain:
-one AC64 xHCI, four direct-root USB2 boot-HID devices, bounded contexts/rings; no USB
-interrupt routing, hubs/general HID, firmware ownership takeover, scratchpads,
+one AC64 xHCI, bounded USB2 hubs and boot/report-HID interfaces, bounded contexts/rings; no USB
+interrupt routing, general touch/vendor HID, firmware ownership takeover, scratchpads,
 USB3 input, hotplug re-enumeration or controller reset recovery. Timeouts are bounded;
 uncertain DMA pages remain reserved. Unexpected MMIO exceptions still use the
 kernel exception screen; automatic controller recovery is not implemented. No target HID success is claimed yet.
@@ -69,7 +75,11 @@ or ownership operation. The M7F target report's eight-port line narrows its old
 stage-2 refusal to slots/offsets; raw register values are still needed to identify
 the exact old predicate. [Audit and correction](milestone-7g.md).
 
-## USB enumeration reasons (M7H)
+## Retained USB enumeration reasons
+
+M7H boot-selection reasons 1103/1104 remain in the compatibility helper; M7I
+attempts the report path for those interfaces and uses 1201–1205 for compiler
+refusals.
 
 The fixed panel's bottom `ENUM` fields are last stage / reason / root port. They
 are independent of controller stage/reason (8/0 can coexist with HID refusal).
@@ -136,3 +146,30 @@ IOMMU support, interrupt-driven storage or recovery.
 
 See [actual target observations](fusion-observations-m7e.md),
 [PCI correction](pci-discovery.md), [retest instructions](fusion-first-boot.md).
+
+## M7I report/HID/hub additions
+
+- Stage 22: hub descriptor/configuration; 23: hub discovery complete; 24: interface
+  report descriptor/compiler. A later successful hub operation can clear the last
+  ENUM reason; earlier interface errors and keyboard/mouse readiness still matter.
+- 1201: malformed/truncated HID items; 1202: report/field/stream/wire-size budget;
+  1203: unsupported item or ambiguous state; 1204: no recognized keyboard/pointer
+  inputs; 1205: invalid logical range/field.
+- 1301: hub descriptor transfer; 1302: invalid/unsupported descriptor prefix/port
+  count; 1303: hub context command; 1304: hub port status; 1310: node/channel budget.
+  Control errors 901–907 and actual xHCI completion codes remain available.
+
+Report descriptor LE32 lines contain successive groups of at most four static
+bytes, little endian, scoped by selected physical device/interface and received
+length. Last-group padding is zero and is not part of the descriptor. Live Input
+report payloads and typed content are never logged. Descriptor words permit an
+unsupported target layout to be reproduced without guessing its format.
+
+Limits are now 16 physical nodes/16 HID channels/four HID functions per device;
+first configuration, one IN endpoint/function, USB2-only hub tree, 15 ports/hub,
+five route nibbles, 1 KiB report descriptors, 96 admitted fields, 16 report IDs,
+64-byte Input reports and 24 held keys. The legacy serial marker “operational boot
+HID devices” counts ready HID channels including report-protocol channels. The
+panel's HID count describes keyboard/pointer functions, not proof of event delivery.
+
+[Unified workflow, actual test scope and remaining target gate](milestone-7i.md).

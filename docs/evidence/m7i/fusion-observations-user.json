@@ -1,0 +1,128 @@
+{
+  "source": "Twelve user-supplied screenshots in three ZIPs; visually inspected; raw frames retained locally, not published",
+  "tested_image_user_reported": "M7H INPUT",
+  "kernel_file_bytes_shown": 278816,
+  "kernel_memory_bytes_shown": 512000,
+  "mmu_pass": true,
+  "gicv3_timer_pass": true,
+  "nvme_identify_reads_write_guard_pass": true,
+  "xhci_initialized": true,
+  "connected_root_ports": [
+    5,
+    6,
+    7,
+    8
+  ],
+  "operational_hid": 0,
+  "live_events": 0,
+  "devices": [
+    {
+      "root_port": 5,
+      "vid": "0e0f",
+      "pid": "000b",
+      "speed": 3,
+      "device_class_triplet": "ef0201",
+      "configuration_length": 168,
+      "interfaces_class_triplets": [
+        "0e0100",
+        "0e0200"
+      ],
+      "classification": "Video-class interfaces, no HID",
+      "stage": 18,
+      "reason": 1102,
+      "last_completion": 1
+    },
+    {
+      "root_port": 6,
+      "vid": "0e0f",
+      "pid": "0003",
+      "speed": 1,
+      "device_class_triplet": "000000",
+      "configuration_length": 59,
+      "configuration_value": 1,
+      "interfaces": [
+        {
+          "number": 0,
+          "alternate": 0,
+          "class": 3,
+          "subclass": 0,
+          "protocol": 0,
+          "hid_descriptor_length": 9,
+          "endpoint": "81",
+          "type": 3,
+          "packet": 8,
+          "interval": 1
+        },
+        {
+          "number": 1,
+          "alternate": 0,
+          "class": 3,
+          "subclass": 0,
+          "protocol": 0,
+          "hid_descriptor_length": 9,
+          "endpoint": "82",
+          "type": 3,
+          "packet": 8,
+          "interval": 1
+        }
+      ],
+      "stage": 18,
+      "reason": 1103,
+      "last_completion": 1,
+      "classification": "Non-boot HID; report formats not captured"
+    },
+    {
+      "root_port": 7,
+      "vid": "0e0f",
+      "pid": "0002",
+      "speed": 1,
+      "class_triplet": "090000",
+      "configuration_length": 25,
+      "endpoint": "81",
+      "packet": 1,
+      "interval": 255,
+      "stage": 18,
+      "reason": 1102,
+      "last_completion": 1,
+      "classification": "USB hub; downstream devices not enumerated by current driver"
+    },
+    {
+      "root_port": 8,
+      "vid": "0e0f",
+      "pid": "0002",
+      "speed": 3,
+      "class_triplet": "090000",
+      "configuration_length": 25,
+      "endpoint": "81",
+      "packet": 1,
+      "interval": 4,
+      "stage": 18,
+      "reason": 1102,
+      "last_completion": 1,
+      "classification": "USB hub; downstream devices not enumerated by current driver"
+    }
+  ],
+  "unestablished": [
+    "HID report descriptor contents and which usages each port-6 interface supplies",
+    "Devices attached behind hubs on ports 7/8",
+    "Actual keyboard/trackpad input delivery"
+  ],
+  "next_engineering": [
+    "Retrieve bounded HID report descriptors for the observed subclass-0 interfaces; decode supported usages from actual descriptor contents",
+    "Enumerate hub ports and configure xHCI child topology as justified by downstream discovery"
+  ],
+  "screenshots": {
+    "01.png": "8f266b914b5d101aaa32f60d010b41dd230cbeb101a212fb53fe6a21fc21fd9a",
+    "02.png": "bd542f92c8cc2d45748addec9a47ada96c0dc51bd84bd2bbc7725b7a4b3a01a7",
+    "03.png": "5ec1389874d07739faaede66462c8f94906116655b4f55f3c463912fc9432669",
+    "04.png": "cac0d84e4b49e28ca54e5cfdff8797e0918b20adabcda5f895c53a52a910e760",
+    "05.png": "2d31fc2da9194c6d66cf0897d599bdcba58bea750423fb981900f340bf48f9bb",
+    "06.png": "48d6ce2723d03ff3b52ca8d0b38cce6e7869c3f5c704ce796df813a4ce828b11",
+    "07.png": "50d1faf2d2abbb04b34819fddea6572186c9e0bd48e1f24c9de999a03e2536eb",
+    "08.png": "8f3857cb7ff1b82495e4be708fe10040076bbccc25194b93d4ddc335c240ad16",
+    "09.png": "a4719cad6e2c70e7791d45e007fb3ce1d4298d2b79870896d15bfee741f85dfc",
+    "10.png": "8d69b56ddd0b525842e6b28ddf687377ff7233aaf4cb2b4692b2fb8005075c38",
+    "11.png": "35e98f64369f15d975ac338b2cd89ca293a366421b3f3cea0f8a18c5a96014aa",
+    "12.png": "019446c2e27579490f751613cbfe838da905470b754d226ecba5af4982cc047f"
+  }
+}

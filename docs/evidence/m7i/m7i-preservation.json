@@ -1,0 +1,30 @@
+{
+  "passed": true,
+  "baseline": "cd77e1d",
+  "source_commit": "54eb2d43adf725b96e51ce79a092673dcb4fcf25",
+  "unchanged_source_paths": [
+    "boot/uefi",
+    "boot/image.c",
+    "kernel/memory",
+    "kernel/arch/arm64",
+    "kernel/interrupts",
+    "kernel/scheduler",
+    "kernel/process",
+    "kernel/syscall",
+    "drivers/interrupts",
+    "drivers/usb/layout.c",
+    "drivers/usb/ring.c",
+    "filesystem",
+    "applications",
+    "desktop",
+    "userspace",
+    "installer"
+  ],
+  "nvme_existing_functions_unchanged_guard_setter_only": true,
+  "byte_identical_payloads": {
+    "BOOTAA64.EFI": "62016b28c4d5c7e4e033f1ff2b073ade6bb7c60f200162959113763a8017c586",
+    "desktop.elf": "a8a6c41a03c39187d7afd06451fc1669cf08033295509744eb49536a108f50a1"
+  },
+  "normal_kernel_file_bytes": 291104,
+  "normal_kernel_memory_bytes": 614400
+}

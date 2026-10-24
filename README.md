@@ -22,17 +22,17 @@ Blue keyboard-driven disk selection and typed confirmation lead to native Royale
 configuration/progress/completion. Progress follows real operations and copied
 bytes. Original GPT/FAT32/CHFS writers verify the files and installed boot path.
 
-**M7G now passes xHCI startup on the user's M1/Fusion VM**, alongside boot,
-MMU/GIC/GOP and NVMe identify/read-only validation. Actual screenshots show four
-connected USB roots reaching stage 18, with no operational HID devices. M7H adds
-bounded device/configuration/interface/endpoint diagnostics, actual control-transfer
-lengths and distinct malformed/unsupported refusals. It selects boot HID interfaces
-among composite layouts and supports a selected nonzero alternate. **Actual M7H
-Fusion HID/input remains pending**; target descriptors have not yet been captured.
-See [M7H audit/results](docs/milestone-7h.md), [driver reasons](docs/driver-diagnostics.md)
-and [Fusion retest](docs/fusion-first-boot.md).
-USB interrupts/hubs/general HID, authentication/ACLs, full regional/display setup,
-networking, SMP and CHOS 0.1 remain unfinished.
+**M7I is the combined Fusion input candidate.** It adds USB2 hub/child discovery,
+simultaneous HID interfaces, report descriptor parsing, keyboard modifiers/releases
+and relative/absolute pointing. The normal **CHOS-ARM64.iso** boots Setup when input
+initializes and automatically opens read-only diagnostics if input is unavailable.
+One workflow, `bash scripts/checkpoint.sh`, validates and reproduces the three images
+into `build/release/`. **Actual M7I keyboard/trackpad operation on Fusion remains
+pending target testing.** The M7H captures established non-boot HID interfaces and
+USB hubs; they did not contain report descriptors or downstream device inventories.
+See [M7I architecture/results](docs/milestone-7i.md) and [Fusion test instructions](docs/fusion-first-boot.md).
+USB3, general touch/vendor HID, USB interrupts, authentication/ACLs, full regional
+setup, networking, SMP and CHOS 0.1 remain unfinished.
 
 M7D replaces the fixed 512 KiB bootstrap ceiling with a validated versioned kernel
 image and a separately allocated 64 KiB guarded stack. Controlled large-file/BSS
@@ -44,9 +44,9 @@ to disk. [First Fusion evaluation instructions](docs/fusion-first-boot.md).
 
 ## Download testing images
 
-- [Current live USB input test ISO](artifacts/milestone-7h/CHOS-ARM64-M7H-INPUT.iso).
-- [Current noninteractive M7H diagnostic ISO](artifacts/milestone-7h/CHOS-ARM64-M7H-DIAGNOSTIC.iso).
-- [Current M7H Setup/Live Desktop ISO](artifacts/milestone-7h/CHOS-ARM64.iso).
+- **[Current unified M7I Setup/Live Desktop ISO](artifacts/milestone-7i/CHOS-ARM64.iso)** — normal startup plus automatic read-only input-failure diagnostics.
+- [Optional always-on M7I input test ISO](artifacts/milestone-7i/CHOS-ARM64-M7I-INPUT.iso).
+- [Current full-page M7I diagnostic ISO](artifacts/milestone-7i/CHOS-ARM64-M7I-DIAGNOSTIC.iso).
 - [Preserved noninteractive M7C diagnostic ISO](artifacts/milestone-7c/CHOS-ARM64-M7C.iso).
 - [Preserved M7C Setup/Live Desktop ISO](artifacts/milestone-7c/CHOS-ARM64.iso).
 - [Preserved M7A/7B boot/interrupt compatibility ISO](artifacts/milestone-7a-b/CHOS-ARM64.iso).
@@ -63,7 +63,7 @@ to disk. [First Fusion evaluation instructions](docs/fusion-first-boot.md).
 - [Older M2A ISO](artifacts/milestone-2a/CHOS-ARM64.iso).
 
 On GitHub choose **Download raw file**, then verify the adjacent SHA256SUMS.
-Read [current image notes](artifacts/milestone-7h/README.md) before testing. The
+Read [current image notes](artifacts/milestone-7i/README.md) before testing. The
 separate STORAGE-TEST ISO is for the automated disposable-disk tests only, with
 an explicit boot-volume opt-in and exact device identity gate. It is not an installer.
 
@@ -75,7 +75,7 @@ native Linux toolchain alternative.
 ```sh
 ./scripts/container.sh image
 ./scripts/container.sh make
-./scripts/container.sh bash scripts/validate.sh
+bash scripts/checkpoint.sh
 ```
 
 `build/CHOS-ARM64.iso` contains EFI/BOOT/BOOTAA64.EFI and CHOS/KERNEL.BIN on an
@@ -83,7 +83,7 @@ El Torito FAT boot volume. Secure Boot must be off. The FAT volume is not an
 installed ESP. `kernel.elf` is a debug artifact; the separate static ELF loader
 runs original acceptance and application programs embedded in the kernel.
 
-Validation runs twenty host C test programs (both ELF payloads) and seventy-eight real
+Validation runs twenty host C test programs (both ELF payloads) and eighty-three real
 AArch64 UEFI QEMU cases, including 512 MiB/1 GiB boots, protection/IPC, keyboard/
 mouse window and application interactions, native restart/shutdown, three cold
 NVMe/CHFS boots, two GPT/ESP disk-only boots and expected error/safety cases.
@@ -125,7 +125,8 @@ after toolchain installation. Tests start/stop their own QEMU processes.
 
 - [Acceptance criteria and evidence](docs/acceptance.md)
 - [Dedicated installation environment and safety](docs/setup-environment.md)
-- [Current M7H USB descriptor/HID checkpoint](docs/milestone-7h.md)
+- [Current M7I unified input candidate](docs/milestone-7i.md)
+- [Preserved M7H USB descriptor/HID checkpoint](docs/milestone-7h.md)
 - [Preserved M7G xHCI layout/diagnostic checkpoint](docs/milestone-7g.md)
 - [Preserved M7F discovery/input/storage checkpoint](docs/milestone-7f.md)
 - [Preserved M7E MMU hardening](docs/milestone-7e.md)

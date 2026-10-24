@@ -1,3 +1,14 @@
+# M7I — unified hub/report-HID/absolute-input candidate
+
+Normal Setup and automatic read-only input diagnostics now share one ISO. Original
+USB2 hub discovery and bounded HID report decoding add simultaneous interfaces,
+report IDs, keyboard modifiers/releases and relative/absolute pointers. Native
+application/desktop code remains unchanged. A single `scripts/checkpoint.sh`
+workflow validates, sanitizes, reproduces and packages images. Actual Fusion input
+and installation remain pending the Mac test. Validation passed 83 QEMU cases,
+20 portable programs, sanitizers and all three clean-source image reproductions.
+[M7I report](milestone-7i.md).
+
 # M7H — USB descriptor/transfer evidence and bounded boot-HID selection
 
 M7G Fusion captures verify xHCI startup and four connected roots, with stage-18

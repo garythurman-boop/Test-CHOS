@@ -8,10 +8,11 @@
 | 4: CHOS Desktop/window manager/taskbar/Start | Working core; Royale widgets and multi-window usage tested; dedicated Search/Help and wallpaper file loading remain |
 | 5: six native applications | Functional bounded native apps with installed persistence and shared widgets; see desktop.md |
 | 6: graphical installer/GPT/ESP/installed boot | Dedicated full-screen blue/Royale native setup, disk boot and persistent system volume; saved computer/theme/fixed clock offset implemented; account/password/layout and graphical mode configuration unfinished |
-| 7: VMware Fusion validation | M7G Fusion boot/MMU/GIC/GOP/NVMe/read-only probes and xHCI startup verified in supplied screenshots; four roots fail enumeration stage 18. M7H descriptor/transfer diagnostics and bounded boot-HID selection; actual HID/input pending |
+| 7: VMware Fusion validation | M7H Fusion screenshots identify report-only HID and two USB hubs. M7I adds hub topology, report HID, simultaneous endpoints and absolute input; target keyboard/trackpad and installation remain pending |
 | 8: CHOS 0.1 | Not ready |
 
-Current ISO/results: [M7H USB descriptor/HID diagnostics](milestone-7h.md).
+Current ISO/results: [M7I unified input candidate](milestone-7i.md).
+Preserved [M7H descriptor/HID diagnostics](milestone-7h.md).
 Preserved [M7G xHCI layout/refusal diagnostics](milestone-7g.md).
 Preserved [M7F discovery/input/read-only storage](milestone-7f.md).
 Preserved [M7E MMU correction](milestone-7e.md).
@@ -32,8 +33,8 @@ not an installer or desktop persistence environment.
 - One CPU, EL1 or supported non-VHE EL2→EL1 entry, ACPI 2.x, GICv2/v3 and GTDT.
   No VHE/LPA2/52-bit/MMU-off/big-endian EL2 handoff, DT-only discovery, SMP,
   GIC ITS/LPI/MSI or full Fusion hardware support. Original xHCI supports a
-  bounded polled USB2 root-port boot-HID subset only; no USB interrupts, hubs,
-  general HID reports, legacy controllers, ownership takeover or hotplug re-enumeration.
+  bounded polled USB2 hub/boot/report-HID subset; no USB interrupts, USB3,
+  general touch/vendor layouts, legacy controllers, ownership takeover or hotplug re-enumeration.
 - Eight user processes/twelve threads; private static AArch64 ELF subset, no
   dynamic linker, public arbitrary-executable spawn/wait or signals. Application
   launch selects one embedded ELF entry role. FP/SIMD traps; general registers only.

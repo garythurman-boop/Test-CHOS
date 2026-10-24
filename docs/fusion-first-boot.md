@@ -1,86 +1,41 @@
-# M7H Fusion retest — input first, read-only storage second
+# M7I Fusion test — one normal ISO first
 
-M7G actual screenshots confirm core boot/MMU/GIC/GOP, NVMe read-only probes and
-xHCI startup. They show **four connected roots (5–8)** failing stage 18 with no
-HID/input, not two. M7H adds the missing descriptor/transfer evidence and bounded
-boot-interface selection. [Screenshot facts and limits](milestone-7h.md).
+The M7H captures now establish the missing paths: port 6 has two report-only HID
+interfaces (`0e0f:0003`, 03/00/00); ports 7/8 are USB2 hubs (`0e0f:0002`). xHCI,
+MMU/GIC/GOP and NVMe read-only probes pass. M7I implements report HID and hub-child
+discovery; actual keyboard/trackpad behavior must be checked on the Mac.
 
-## First trial: no disk required
+1. Download [the normal M7I CHOS-ARM64.iso](../artifacts/milestone-7i/CHOS-ARM64.iso)
+   using **Download raw file**, and compare `shasum -a 256` with adjacent SHA256SUMS.
+2. Reuse the same ARM64 UEFI VM: one CPU, 2 GiB, Secure Boot off. Cold boot with
+   **no disk attached first**. Preserve M7H. Record the exact Fusion/macOS build and
+   whether optical boot was automatic; previous version strings are user-reported.
+3. With initialized input, the usual blue Setup should appear. Check Up/Down,
+   Enter/license, Escape/back, Tab/focus and L/F3 Live Desktop. Confirm the pointer
+   aligns with buttons, then test Start menu, a native text window, Shift/control
+   combinations, ordinary key presses/releases, dragging and left/right clicks.
+   This is the real input gate; recognizing descriptors/endpoints is not enough.
+4. If either input category is unavailable, the **same ISO automatically opens
+   read-only diagnostics**, with no keypress or second ISO required. Capture a full
+   page cycle, especially hub ports/routes/child identities, selected interface,
+   report descriptor LE32 words/length, HID compiler or xHCI completion failures,
+   and the fixed keyboard/mouse/event/ENUM fields. It skips Setup/mounting and
+   forces the NVMe write/flush guard. Do not change VM controller settings before
+   capturing the baseline. The last successful operation may be a hub operation;
+   its zero ENUM reason does not override earlier HID/compiler refusals.
+5. The optional [INPUT ISO](../artifacts/milestone-7i/CHOS-ARM64-M7I-INPUT.iso)
+   always shows the live panel even when input works. Use it for pointer coordinates,
+   button/keyboard events, topology/descriptor captures and the next read-only disk
+   test. Only the last numeric event is volatile; no key content/history is saved.
 
-1. Download [CHOS-ARM64-M7H-INPUT.iso](../artifacts/milestone-7h/CHOS-ARM64-M7H-INPUT.iso)
-   using GitHub **Download raw file**. Verify the adjacent SHA256SUMS with
-   `shasum -a 256 CHOS-ARM64-M7H-INPUT.iso`.
-2. Reuse the known ARM64 UEFI configuration: **one CPU, 2 GiB, Secure Boot off**,
-   ISO connected at power-on. No network or hard disk is required. Preserve the
-   working M7E ISO. Fusion UI labels vary by release; do not select an x86 guest.
-3. Cold boot. Wait for the kernel tests, automatic report pages and lower
-   **CHOS USB HARDWARE TEST** panel. No keyboard is needed to see the reports.
-   The report should now identify and select xHCI at bus `0a`, rather than silently
-   miss it. Seeing a selected controller does not establish working input.
-4. Capture **every rotating page until page 1 returns**, especially ports 5–8,
-   **USB VID/PID, device class/configuration count, total config length/value,
-   interface number/alternate/class/subclass/protocol, endpoint address/type/packet/interval,
-   HID descriptor and selected interface or exact enumeration refusal/completion**.
-   Preserve xHCI PCI config/ID/MMIO,
-   CAPLENGTH, HCSPARAMS1/2, HCCPARAMS1/2, **DBOFF/RTSOFF**,
-   **failure stage/reason and readable cause**, root ports and each PORTSC, initialization/ownership
-   errors, enumeration port/stage, HID interface/protocol and ready counts.
-   The supplied target has no SPCR table, so native serial is not expected; screens
-   are the primary evidence. Record the last stable error/exception if boot stops.
-5. In the fixed panel, press/release ordinary test keys, move the mouse and press/
-   release left/right buttons. Capture numeric last-key code/value, changing pointer
-   coordinates/buttons and event count. The driver must actually decode events;
-   a “controller selected” line alone is not a pass. Event content/history is not
-   logged or persisted. The panel remains visible as report pages rotate.
-6. Record ISO checksum, exact Fusion About version/build, macOS version and whether
-   optical boot was automatic or manually selected. Previously reported strings
-   are macOS 27 “Golden Gate,” Fusion “26H1u1”; full build is still unspecified.
+After input passes, attach a **designated disposable NVMe virtual disk** and cold
+boot the INPUT ISO. Repeat controller/namespace identify, first/last 4 KiB reads
+and diagnostic write guard; these passed on M7H and must not regress. Capture
+sector size/capacity and errors. Do not infer reliable persistence from these reads.
 
-If xHCI runs but no HID devices are ready, capture all port/status/enum pages.
-UHCI/EHCI presence does not prove attachment. Do not change controller settings or
-attach alternate devices until the baseline evidence is recorded; later controlled
-comparisons can then identify the actual path. Firmware ownership, scratchpads,
-USB3/hub/general HID and alternate controllers remain bounded unsupported paths.
-One boot interface per device and the first configuration remain the bounded
-policy. Additional candidates are logged, not simultaneously managed. Non-boot
-HID formats require actual report descriptors before implementation. No alternate
-controller driver or general report parser is guessed from PCI IDs.
-
-## Gate 4: Setup interaction without a disk
-
-After actual keyboard/mouse events pass, boot the [normal ISO](../artifacts/milestone-7h/CHOS-ARM64.iso)
-with **no disk attached**. Verify Down/Up highlight, Enter/license, Escape/back and keyboard focus;
-L/F3 selects Live Desktop. Verify mouse movement/selection, Start menu opening
-and application launch, window focus and native typing. Record this separately
-from the input-panel result.
-Do not attempt installation. Then return to the INPUT ISO for storage testing.
-
-## Gates 5–6: read-only NVMe
-
-After input and Setup-interaction prerequisites pass, attach **an explicitly designated
-disposable virtual disk** using the observed virtual NVMe controller. Boot the
-**same INPUT ISO**, which enforces a driver-level write/flush rejection and skips
-Setup/filesystem mounting. No partitioning or formatting occurs. Capture:
-
-- Actual NVMe BDF/ID, mapped config/BAR and selected-driver result.
-- CAP, version, timeout budget and the exact failure stage/completion DWORD if any.
-- Controller/namespace operational state, namespace sectors and sector bytes.
-- `NVMe first/last 4KiB reads: PASS` and `NVMe diagnostic write guard: PASS`.
-
-The user already reported these M7G reads/guard passing; repeat them to rule out
-a regression in M7H. These reads identify I/O readiness; they do not validate persistence or filesystem
-integrity. No sector contents are displayed. Do not infer namespace support from a
-PCI class match or from the word “NVMe” in the firmware inventory.
-
-## Later gates
-
-The normal ISO preserves the approved full-screen Setup and Live Desktop. After
-all input/Setup/read-only storage gates pass, installation is a separate explicitly confirmed
-action on a disposable disk, with exact identity/capacity review and typed `ERASE`.
-Do not install on Fusion before all prerequisites pass. Installed disk-only boot
-and file persistence are further independent gates.
-
-The separate [standard diagnostic ISO](../artifacts/milestone-7h/CHOS-ARM64-M7H-DIAGNOSTIC.iso)
-retains full-page automatic reports without the fixed input panel; it also enforces
-read-only storage. [Driver stage codes](driver-diagnostics.md),
-[PCI resource findings](pci-discovery.md), [compatibility matrix](fusion-compatibility-matrix.md).
+Only after actual input, Setup interaction and read-only storage gates pass may
+normal Setup installation be tested with exact disk identity/capacity review and
+typed ERASE confirmation. Disk-only reboot and saved-file integrity are further
+independent gates. M7I Fusion input/installation/persistence are pending until
+those observations arrive. [Implementation/limits](milestone-7i.md),
+[codes](driver-diagnostics.md), [compatibility matrix](fusion-compatibility-matrix.md).

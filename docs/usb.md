@@ -1,98 +1,49 @@
-# Original USB boot-HID architecture and limits
+# Original USB2 / HID architecture — M7I
 
-M7C adds original C xHCI bring-up and USB boot-keyboard/mouse decoding. No Linux,
-BSD, firmware USB driver or third-party USB stack is linked or called by the
-running kernel. **Only documented QEMU device configurations are verified for HID operation.**
-M7G Fusion screenshots now verify xHCI startup, four connected roots and stage-18
-refusal with zero operational HID devices. M7H target descriptor capture/input is
-pending. [Actual evidence and correction scope](milestone-7h.md).
+The running guest uses original CHOS C for xHCI, USB2 hubs, boot HID and a bounded
+HID report compiler/decoder. No firmware USB service or external OS USB stack is
+used after ExitBootServices. [M7I scope and evidence](milestone-7i.md).
 
-## Boundaries
+`drivers/usb/xhci.c` retains firmware-BDF/MCFG/live-ID discovery and polled command/
+event rings. Physical nodes own EP0/address/configuration/output contexts; up to
+four HID functions share that slot while owning independent IN rings, report
+buffers and held state. Input endpoint contexts are configured together with the
+correct slot ContextEntries/flags. Boot functions use SET_PROTOCOL(0); report-only
+functions fetch their interface-indexed HID descriptor and compile its layout.
+Nonzero alternates use SET_INTERFACE. No VMware VID/PID packet layout is hardcoded.
 
-`drivers/usb/xhci.c` discovers PCI class 0c/03/30 through the existing ACPI MCFG
-firmware-BDF/MCFG/live-config path added at M7F, with the old bus-zero fallback. It uses firmware-assigned BARs, kernel MMIO mappings, PMM
-pages and explicit DMA cache maintenance. No QEMU MMIO address or device vendor ID
-is used for controller selection. Other USB classes (UHCI/OHCI/EHCI/unknown) are
-identified in automatic inventory and left unsupported.
+`drivers/usb/descriptors.c` validates configuration spans/counts/addresses/HID
+tables and collects compatible functions/alternates. `drivers/usb/hub.c` checks USB2
+hub descriptor prefixes and xHCI route arithmetic. The hardware wrapper configures
+hub slot/TT information, powers/resets ports and discovers bounded child trees.
+It polls one hub port per 100 ms across active hubs, releases disconnected child/
+subtree state and stops an unreachable subtree. Uncertain DMA/slots remain owned
+until reboot. Automatic reconnect/re-enumeration/controller reset is unfinished.
 
-`drivers/usb/ring.c` implements portable fixed-page command/transfer producer
-rings and event consumption. It validates indices, cycle bits, alignment and
-bounded DMA spans. Command/transfer rings have 255 data TRBs plus a toggling Link;
-event rings have 256 entries. Native wrappers publish cleaned DMA pages, use
-barriers/doorbells, invalidate completed pages and advance ERDP/EHB. Only bounded
-outstanding work is submitted: one command/control operation, eight interrupt-IN
-receive transfers with distinct bounded buffers per active device. Completion slot/endpoint/TRB pointers and residual
-lengths are checked before decoding. These bounds do not implement an IOMMU or
-protect against a hostile DMA device/hypervisor.
+`drivers/usb/report.c` compiles bounded short items into Input fields, accounting
+for padding, report IDs, collections, global push/pop and usage lists/ranges.
+Keyboard arrays/modifiers/variable keys and Generic Desktop relative/absolute
+pointer axes/buttons/wheel are supported. Unknown required layouts fail explicitly.
+Input state is independent by report ID; Output/Feature items never shift Input
+bit offsets. Valid reports translate through the original CHOS event queue.
+Absolute values scale by logical min/max into the framebuffer; native apps receive
+the existing relative-event ABI. Duplicate relative axes from the same composite
+device are suppressed while actual absolute reports are arriving. USB key/button
+reference counts prevent another interface's release from clearing a held input.
 
-`drivers/usb/hid.c` validates bounded configuration/interface/endpoint descriptors
-and decodes explicitly selected HID **boot protocol** into existing CHOS
-`input_event` codes. Six-key keyboard arrays and eight modifiers generate press/
-release changes; malformed, duplicate and rollover reports preserve prior state.
-Three-button relative mouse reports generate existing movement/button events;
-an optional fourth wheel byte is decoded, but the desktop has no wheel-scrolling
-feature. This is not a general HID report-descriptor parser, tablet or NKRO driver.
-`drivers/input/virtio.c` remains working and calls the USB initializer/poller;
-both paths feed the same input FIFO/window manager without a second desktop API.
+Limits: one AC64 xHCI, 32 controller root ports, 16 physical nodes, 16 HID channels,
+four HID functions/device, five route nibbles, USB2 hubs with at most 15 ports,
+first configuration, one IN endpoint per function, 512-byte configurations,
+1 KiB report descriptors, 96 admitted fields/16 report IDs/64-byte Input reports,
+24 simultaneously held keys. No USB3, legacy controller driver, general touch/
+consumer/vendor layouts, report-feature negotiation, USB interrupts, ownership
+handoff or scratchpads. High-speed hub TT setup follows the architecture but
+actual Fusion high-speed child operation is still unverified. QEMU's hub model
+and portable simultaneous-interface fixtures do not establish that target pass.
 
-## Controller lifecycle
-
-Enable PCI memory decoding before reading capability registers. Validate capability,
-port/slot/context size, register windows, 4 KiB page support and extension bounds.
-Reject scratchpads and unhandled firmware ownership requirements explicitly. Halt
-and reset with generic-counter timeouts. Allocate/zero/clean private DMA pages;
-enable bus mastering before programming DCBAA/CRCR/event-table registers, which
-may cause DMA reads immediately. Set the event-ring table and start the controller.
-Actual QEMU testing caught the ordering defect when bus mastering was delayed
-until after event-table programming; the corrected order is regression tested.
-
-Reset connected USB2 root ports, enable slots, allocate input/output/endpoint
-contexts and control buffers, address devices, retrieve bounded device/configuration
-descriptors, select configuration and boot protocol, and configure interrupt-IN
-endpoints. Use an eight-entry receive pipeline to avoid single-transfer starvation during
-rendering; buffers occupy distinct 512-byte regions of one owned DMA page. Use
-hardware interval scheduling and poll completion events from the
-existing kernel input loop. A stopped/disconnected endpoint releases held HID
-keys/buttons and stops resubmission. Timeout/unsupported-device paths log errors;
-DMA pages with uncertain hardware ownership are retained until reboot, never
-freed for another owner. No automatic controller-reset recovery or hotplug
-re-enumeration is implemented.
-
-## Supported subset and remaining work
-
-One xHCI controller, up to four successful direct-root boot-HID devices, AC64,
-32/64-byte contexts, no scratchpads, USB low/full/high speed, endpoint packets at
-most 64 bytes, configuration at most 512 bytes. Initial USB2 port reset and control
-transfers are supported. Hubs, simultaneously managing multiple boot interfaces on one device, USB3 devices,
-legacy controller drivers, firmware ownership takeover and broad HID layouts are
-not implemented. Failed root-port enumeration is bounded and reported.
-
-**USB completion is polled. MSI/MSI-X/INTx routing and USB interrupt delivery are
-not implemented or tested.** Existing GIC/timer interrupt delivery remains tested
-separately. Future host-controller drivers should keep their register/ring/DMA
-mechanisms separate and share descriptor/HID/event code; general report parsing,
-USB interrupt routing, ownership handoff and safe reset recovery require their own
-acceptance evidence before expanding support claims.
-
-Tests include host descriptor/length/type/DMA/cycle/wrap/error cases with ASan/UBSan;
-real QEMU USB-only keyboard modifiers/releases and mouse/buttons; native editing/
-save/reopen/dragging; more than a full hardware transfer/event-ring wrap; disconnect;
-and noninteractive unsupported-controller/non-boot-device cases. Check the
-[iteration report](milestone-7c.md) for final results, not assumptions.
-
-M7F adds controller/port/enum status and a live input test ISO without replacing
-the polled path. [Reports/policy](driver-diagnostics.md), [PCI correction](pci-discovery.md).
-
-M7G replaces the arbitrary 4 KiB DBOFF/RTSOFF minimum with validated register
-block lengths/overlap checks and distinct refusal reasons. Extended capability
-spans are checked before reads; the input panel separates controller, connection,
-descriptor and HID readiness. [Audit/results](milestone-7g.md).
-
-M7H moves bounded configuration parsing into `drivers/usb/descriptors.c`, selects
-one boot interface/alternate among other functions, handles extra OUT endpoints
-and distinguishes malformed data from unsupported HID/budgets. Nonzero alternate
-selection uses SET_INTERFACE; SET_PROTOCOL uses the selected interface. Only the
-first configuration and one interrupt-IN endpoint are managed per physical device.
-Control data IOC/residual/status validation supplies actual initialized lengths;
-optional SET_IDLE is omitted. Raw USB strings and live report contents are never
-logged. See [reason codes](driver-diagnostics.md) and [M7H evidence](milestone-7h.md).
+The 64 KiB volatile diagnostic buffer can include bounded static HID descriptor
+words for reproduction; it never logs typed content or live report payloads.
+Normal distribution boot falls back to this read-only mode when input startup is
+incomplete, before Setup/filesystem initialization; NVMe write/flush is guarded.
+No automatic mid-install mode switch is attempted. [Codes](driver-diagnostics.md),
+[target facts and test instructions](fusion-first-boot.md).

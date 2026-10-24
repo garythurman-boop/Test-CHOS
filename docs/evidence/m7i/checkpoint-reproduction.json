@@ -1,0 +1,6 @@
+{
+  "passed": true,
+  "source_commit": "54eb2d43adf725b96e51ce79a092673dcb4fcf25",
+  "clean_source_directory": "build/reproduce-checkpoint-vDBebK",
+  "all_three_images_byte_identical": true
+}
