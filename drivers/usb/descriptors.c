@@ -83,7 +83,8 @@ unsigned usb_boot_select(const uint8_t *p,unsigned n,unsigned speed,struct usb_b
             if(!active)return USB_DESC_ORDER;
             if(d[0]<6 || d[0]!=(unsigned)6+3*d[5] || !d[5] || c.hid)return USB_DESC_HID;
             bool report=false;for(unsigned i=0;i<d[5];i++)if(d[6+3*i]==0x22 && le16(d+7+3*i))report=true;
-            if(!report)return USB_DESC_HID;c.hid=true;
+            if(!report)return USB_DESC_HID;
+            c.hid=true;
         }else if(d[1]==2)return USB_DESC_HEADER;
         at+=d[0];
     }
