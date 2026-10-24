@@ -66,8 +66,9 @@ Restart invokes the existing ACPI/PSCI guest power path.
 
 A verified `/system/setup-stage` record survives power loss: `CHOS SETUP PENDING
 2` resumes Royale configuration only from the matching installed ESP/CHFS disk;
-`CHOS SETUP READY 1` bypasses setup. Legacy disks without a marker preserve their
-old behavior. Malformed records fail into the existing temporary recovery
+`CHOS SETUP READY 1` bypasses setup. A missing marker is also refused: an interrupted install must never be mistaken
+for a completed legacy system. Older installations keep their original boot pair;
+there is no in-place M8 migration utility. Missing or malformed records fail into the existing temporary recovery
 session; they never authorize repartitioning. Missing/incomplete first-stage
 files likewise do not trigger automatic writes or retries. A retained ISO shows
 explicit remove-media guidance and still requires selection, review and ERASE.
@@ -164,3 +165,12 @@ while retaining exact names, type bits, allocation, cluster chains, lengths,
 boot metadata and payload checks. Host tests distinguish legitimate timestamps
 from a changed directory cluster. No arbitrary directory/payload changes are
 accepted.
+
+The interrupted-install audit also found a missing-marker ambiguity. M8 now
+requires a valid continuation record before mounting its installed system as
+ready. A byte-valid CHFS fixture with only that record removed reproduced the
+pre-fix problem: the old candidate entered a persistent desktop. A new cold-boot
+regression requires temporary recovery and zero writes instead. This deliberately
+refuses automatic migration of marker-less legacy installations; their existing
+boot pair/backup remains usable. The source checkpoint was revised before final
+integration acceptance.

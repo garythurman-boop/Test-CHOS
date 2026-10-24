@@ -86,6 +86,7 @@ void gfx_blit(struct surface *s,int x,int y,const uint32_t *src,int w,int h,int 
 /* Original arrow geometry, four coverage samples per pixel. Its top-left tip
  * is the hotspot. Transparent samples preserve the composed desktop beneath. */
 static bool cursor_inside(int x,int y){
+    x+=4;y+=4; /* Geometry tip is precisely the logical hotspot (0,0). */
     static const int px[7]={4,4,28,48,64,44,80},py[7]={4,96,72,112,104,64,64};
     bool in=false;
     for(unsigned i=0,j=6;i<7;j=i++)if((py[i]>y)!=(py[j]>y)){

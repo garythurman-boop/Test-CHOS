@@ -36,6 +36,22 @@ g=Guest('setup-stage-two-write-retry',disk=disk)
 try:
  g.wait(lambda p:matches(p,256,100,'Personalize CHOS',0xf2f6ff,2),'cold boot still pending',120);g.snapshot('m8-stage-two-retry');result['cases'].append({'kind':'failed_commit_cold_boot_continuation','passed':True,'command':g.command})
 finally:g.close()
+# An absent marker must also refuse persistent completion, with an otherwise
+# structurally valid CHFS root (including its allocation bitmap and CRC).
+missing=run/'missing-stage.img';shutil.copyfile(disk,missing)
+base,index,raw,at,first,data=stage_record(missing)
+blocks=struct.unpack_from('<I',raw,at+64)[0]
+for block in range(first,first+blocks):raw[32+block//8]&=~(1<<(block%8))
+raw[at:at+80]=bytes(80);struct.pack_into('<I',raw,12,zlib.crc32(raw))
+with missing.open('r+b') as f:f.seek(base+index*4096);f.write(raw)
+before_missing=digest(missing);g=Guest('setup-missing-continuation',disk=missing)
+try:
+ g.wait(lambda p:p(60,250)==0x326bb0,'temporary desktop after absent stage',120)
+ g.wait(lambda p:matches(p,40,332,'System configuration invalid',0x163b65,3),'missing continuation recovery status')
+ assert all(b['stats']['wr_operations']==0 for b in g.qmp('query-blockstats'))
+ g.snapshot('m8-stage-missing-recovery');result['cases'].append({'kind':'missing_stage_no_automatic_writes','passed':True,'command':g.command})
+finally:g.close()
+assert digest(missing)==before_missing
 # Keep filesystem CRCs correct while deliberately corrupting stage semantics.
 base,index,raw,at,first,data=stage_record(disk);bad=b'X'+data[1:];struct.pack_into('<I',raw,at+76,zlib.crc32(bad));struct.pack_into('<I',raw,12,zlib.crc32(raw))
 with disk.open('r+b') as f:f.seek(base+first*4096);f.write(bad);f.seek(base+index*4096);f.write(raw)

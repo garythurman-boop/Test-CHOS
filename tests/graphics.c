@@ -39,7 +39,7 @@ int main(void) {
     gfx_shadow(&b,8,5,40,24,6);gfx_round(&a,8,5,40,24,6,0xabcdef,0xabcdef,255);gfx_round(&b,8,5,40,24,6,0xabcdef,0xabcdef,255);
     assert(!memcmp(reference,optimized,sizeof(reference)));
     gfx_clip(&s,0,0,64,40);gfx_rect(&s,0,0,64,40,0x557799);
-    gfx_cursor(&s,5,5,28);unsigned light=0,dark=0;
+    gfx_cursor(&s,5,5,28);assert(buf.pixels[5*64+5]!=0x557799);unsigned light=0,dark=0;
     for(unsigned i=0;i<64*40;i++){if(buf.pixels[i]==0xf9fcff)light++;if(buf.pixels[i]==0x102035)dark++;}
     assert(light>30 && dark>20);
     gfx_cursor(&s,63,39,36);assert(buf.before==0x76543210 && buf.after==0x12345678);

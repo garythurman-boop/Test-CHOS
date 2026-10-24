@@ -6,8 +6,9 @@ cd "$(dirname "$0")/.."
 git diff --quiet
 git diff --cached --quiet
 mkdir -p build
-./scripts/container.sh bash scripts/validate.sh > build/checkpoint-validation.log 2>&1
+./scripts/container.sh make -j4 iso > build/checkpoint-build.log 2>&1
 bash scripts/sanitize.sh > build/checkpoint-sanitizers.log 2>&1
+./scripts/container.sh bash scripts/validate.sh > build/checkpoint-validation.log 2>&1
 chos_reproduce_dir=$(mktemp -d build/reproduce-checkpoint-XXXXXX)
 python3 - "$chos_reproduce_dir" <<'PY'
 import io,subprocess,sys,tarfile

@@ -41,7 +41,13 @@ void settings_key(unsigned key) {
 }
 void settings_paint(void) {
     initialize();begin(ROYALE_APP_BG);label(16,"CHOS Control Panel");
+    if(app_width<620){
+        int width=(app_width-24)/4;
+        static const char *const names[]={"Style","Clock","System","Screen"};
+        for(unsigned i=0;i<4;i++)ui_tab(&app_gui,1+i,512+i,12+(int)i*width,44,width-4,names[i],tab==i);
+    } else {
     ui_tab(&app_gui,1,512,12,44,140,"Appearance",tab==0);ui_tab(&app_gui,2,513,158,44,140,"Clock",tab==1);ui_tab(&app_gui,3,514,304,44,140,"System",tab==2);ui_tab(&app_gui,4,515,450,44,140,"Display",tab==3);
+    }
     if(tab==0) {
         rounded(16,82,app_width-32,42,ROYALE_WIDGET_BOTTOM);rounded(16,142,app_width-32,42,ROYALE_WIDGET_BOTTOM);rounded(app_width-104,88,70,30,0x1c4f82);rounded(app_width-104,148,70,30,0x23565a);
         ui_radio(&app_gui,10,'1',28,90,"1  Deep blue",settings.theme==0,true);ui_radio(&app_gui,11,'2',28,150,"2  Harbor green",settings.theme==1,true);

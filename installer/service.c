@@ -79,6 +79,7 @@ void setup_initialize(struct block_device *device,struct chos_boot_info *b,struc
                 if(!config_valid(&configuration))return;
             }
             const struct chfs_entry *stage=chfs_stat(&system_volume,STAGE_PATH);
+            if(!stage)return; /* Incomplete/legacy media require explicit recovery, never assume ready. */
             if(stage){
                 char record[32];size_t got=0;
                 if(!chfs_read(&system_volume,STAGE_PATH,0,record,sizeof(record),&got))return;
