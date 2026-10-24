@@ -1,6 +1,7 @@
 /* Original USB boot-interface validation and HID-to-CHOS event translation. */
 #include "usb.h"
-static uint16_t code(unsigned usage){
+#include "hid_report.h"
+uint16_t usb_usage_code(unsigned usage){
     static const uint8_t letters[26]={30,48,46,32,18,33,34,35,23,36,37,38,50,49,24,25,16,19,31,20,22,47,17,45,21,44};
     static const uint8_t rest[]={2,3,4,5,6,7,8,9,10,11,28,1,14,15,57,12,13,26,27,43,43,39,40,41,51,52,53,58,59,60,61,62,63,64,65,66,67,68,87,88,99,70,119,110,102,104,111,107,109,106,105,108,103};
     if(usage>=4 && usage<=29)return letters[usage-4];
@@ -19,8 +20,8 @@ bool usb_hid_report(struct usb_hid_state *s,unsigned protocol,const uint8_t *p,u
         }
         static const uint8_t mods[8]={29,42,56,125,97,54,100,126};
         for(unsigned i=0;i<8;i++)if((s->modifiers^p[0])&(1u<<i))temp[used++]=(struct input_event){1,mods[i],(p[0]>>i)&1};
-        for(unsigned i=0;i<6;i++)if(s->keys[i] && !contains(p+2,s->keys[i]) && code(s->keys[i]))temp[used++]=(struct input_event){1,code(s->keys[i]),0};
-        for(unsigned i=2;i<8;i++)if(p[i] && !contains(s->keys,p[i]) && code(p[i]))temp[used++]=(struct input_event){1,code(p[i]),1};
+        for(unsigned i=0;i<6;i++)if(s->keys[i] && !contains(p+2,s->keys[i]) && usb_usage_code(s->keys[i]))temp[used++]=(struct input_event){1,usb_usage_code(s->keys[i]),0};
+        for(unsigned i=2;i<8;i++)if(p[i] && !contains(s->keys,p[i]) && usb_usage_code(p[i]))temp[used++]=(struct input_event){1,usb_usage_code(p[i]),1};
         if(used>32-*count)return false;
         s->modifiers=p[0];for(unsigned i=0;i<6;i++)s->keys[i]=p[i+2];
     }else if(protocol==2){

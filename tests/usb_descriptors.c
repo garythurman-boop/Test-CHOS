@@ -51,5 +51,8 @@ void test_usb_descriptors(void){
  begin(2);interface(0,0,0,0xfe,1,1);uint8_t dfu[]={9,0x21,0,0,0,0,0,0,0};add(dfu,9);
  interface(1,0,1,3,1,1);hid();endpoint(0x81,3,8,10);assert(!select(&out));
  traced=0;usb_descriptor_trace(config,length,trace);assert(traced>0 && traced<32);
+ struct usb_hid_interface selected[USB_INTERFACES];unsigned selected_count=0;
+ begin(2);interface(0,0,1,3,0,0);hid();endpoint(0x81,3,8,1);interface(1,0,1,3,0,0);hid();endpoint(0x82,3,8,1);
+ assert(!usb_hid_interfaces(config,length,1,selected,&selected_count) && selected_count==2 && selected[0].number==0 && selected[1].number==1 && selected[0].endpoint==1 && selected[1].endpoint==2);
  puts("USB descriptor composite/extra OUT/non-HID/alternate selection, ordering, distinct malformed/unsupported codes and every-prefix trace bounds passed");
 }

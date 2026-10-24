@@ -5,9 +5,9 @@ from desktop import Guest
 from boot import BUILD
 results=[]
 for label,peripherals,count in [
- ('usb-compat-rejections',['usb-tablet,id=tablet0,bus=xhci.0','usb-tablet,id=tablet1,bus=xhci.0','usb-kbd,id=usbkbd,bus=xhci.0','usb-mouse,id=usbmouse,bus=xhci.0'],2),
+ ('usb-compat-rejections',['usb-ccid,id=tablet0,bus=xhci.0','usb-ccid,id=tablet1,bus=xhci.0','usb-kbd,id=usbkbd,bus=xhci.0','usb-mouse,id=usbmouse,bus=xhci.0'],2),
  ('usb-compat-four',['usb-kbd,id=kbd0,bus=xhci.0','usb-mouse,id=mouse0,bus=xhci.0','usb-kbd,id=usbkbd,bus=xhci.0','usb-mouse,id=usbmouse,bus=xhci.0'],4)]:
- g=Guest(label,ram=2048,live=False,gic_version=3,input_backend='none',iso=BUILD/'CHOS-ARM64-M7H-INPUT.iso',extra_devices=['qemu-xhci,id=xhci,p2=8,p3=0',*peripherals])
+ g=Guest(label,ram=2048,live=False,gic_version=3,input_backend='none',iso=BUILD/'CHOS-ARM64-M7I-INPUT.iso',extra_devices=['qemu-xhci,id=xhci,p2=8,p3=0',*peripherals])
  try:
   serial=BUILD/(label+'.serial.log');deadline=time.monotonic()+120
   while 'Diagnostic mode: no installer, no filesystem writes' not in serial.read_text(errors='replace'):
@@ -16,7 +16,7 @@ for label,peripherals,count in [
    time.sleep(.2)
   text=serial.read_text(errors='replace')
   for expected in ['USB connected root ports: 4',f'Input initialized devices: {count}','USB device VID:','USB device PID:','USB interface class/subclass/protocol:','USB endpoint max packet:','USB descriptor selection: PASS']:assert expected in text,expected
-  if count==2:assert 'USB enumeration refusal reason: 1103' in text and 'USB unsupported: HID subclass is not boot' in text
+  if count==2:assert 'USB enumeration refusal reason: 1102' in text and 'USB unsupported: no HID interface' in text
   else:assert text.count('USB boot keyboard initialized: PASS')==2 and text.count('USB boot mouse initialized: PASS')==2
   g.wait(lambda p:p(0,g.dimensions()[1]-24)==0x244da8,'live USB compatibility panel')
   h=g.dimensions()[1];digits={'0':[14,17,19,21,25,17,14],'1':[4,12,4,4,4,4,14],'2':[14,17,1,2,4,8,31],'3':[30,1,1,14,1,1,30]}

@@ -35,7 +35,7 @@ try:
  g.snapshot('fusion-m7e-baseline-nonzero');results.append(record(g,expected_old_discovery_failure=True))
 finally:g.close()
 assert sha(disk)==before
-g=Guest('fusion-bus-input',disk=disk,optical=True,live=False,gic_version=3,iso=BUILD/'CHOS-ARM64-M7H-INPUT.iso',**BRIDGED)
+g=Guest('fusion-bus-input',disk=disk,optical=True,live=False,gic_version=3,iso=BUILD/'CHOS-ARM64-M7I-INPUT.iso',**BRIDGED)
 try:
  text=diagnostic(g)
  for s in ['xHCI halt: PASS','xHCI reset/CNR: PASS','xHCI four aligned DMA pages allocated: PASS','xHCI DBOFF raw:','xHCI RTSOFF raw:','xHCI PCI command DMA:','USB boot keyboard initialized: PASS','USB boot mouse initialized: PASS','NVMe initialized: PASS','NVMe first/last 4KiB reads: PASS','NVMe diagnostic write guard: PASS']:assert s in text,s
@@ -69,14 +69,14 @@ try:
 finally:g.close()
 assert sha(disk)==before,'Unconfirmed normal Setup changed disk'
 for label,devices in [('fusion-input-absent',['qemu-xhci']),('fusion-input-refusal',['qemu-xhci,p2=0,p3=0'])]:
- g=Guest(label,ram=2048,live=False,gic_version=3,input_backend='none',iso=BUILD/'CHOS-ARM64-M7H-INPUT.iso',extra_devices=devices)
+ g=Guest(label,ram=2048,live=False,gic_version=3,input_backend='none',iso=BUILD/'CHOS-ARM64-M7I-INPUT.iso',extra_devices=devices)
  try:
   text=diagnostic(g);assert 'Input initialized devices: 0' in text
   if label.endswith('refusal'):assert 'xHCI failure stage: 2' in text and 'xHCI failure reason: 205' in text
   else:assert 'xHCI reset and polled event ring: PASS' in text and 'USB connected root ports: 0' in text
   g.snapshot(label);results.append(record(g,no_disk_or_input=True))
  finally:g.close()
-g=Guest('fusion-nvme-refusal',ram=2048,disk=disk,optical=True,live=False,gic_version=3,input_backend='none',iso=BUILD/'CHOS-ARM64-M7H-INPUT.iso',storage_pci_bus='nvmeroot',early_devices=['pcie-root-port,id=nvmeroot,chassis=2'],nvme_options='mqes=7')
+g=Guest('fusion-nvme-refusal',ram=2048,disk=disk,optical=True,live=False,gic_version=3,input_backend='none',iso=BUILD/'CHOS-ARM64-M7I-INPUT.iso',storage_pci_bus='nvmeroot',early_devices=['pcie-root-port,id=nvmeroot,chassis=2'],nvme_options='mqes=7')
 try:
  text=diagnostic(g);assert 'NVME CAPABILITIES UNSUPPORTED' in text and 'NVMe failure stage: 4' in text
  # Wait for the actual controller error line, not an unrelated first report page.

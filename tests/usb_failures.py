@@ -3,7 +3,7 @@
 import hashlib,json,time
 from desktop import Guest
 from boot import BUILD
-cases=[('usb-controller-refusal',['qemu-xhci,p2=0,p3=0'],'xHCI failure stage:'),('usb-nonboot-refusal',['qemu-xhci,id=xhci','usb-tablet,bus=xhci.0'],'USB device enumeration failed/unsupported'),('usb-ohci-refusal',['pci-ohci,id=ohci','usb-kbd,bus=ohci.0'],'USB OHCI unsupported')]
+cases=[('usb-controller-refusal',['qemu-xhci,p2=0,p3=0'],'xHCI failure stage:'),('usb-nonhid-refusal',['qemu-xhci,id=xhci','usb-ccid,bus=xhci.0'],'USB device enumeration failed/unsupported'),('usb-ohci-refusal',['pci-ohci,id=ohci','usb-kbd,bus=ohci.0'],'USB OHCI unsupported')]
 results=[]
 for name,devices,expected in cases:
     g=Guest(name,live=False,gic_version=3,virtualization=True,input_backend='none',iso=BUILD/'CHOS-ARM64-M7C.iso',extra_devices=devices)

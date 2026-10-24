@@ -11,6 +11,7 @@
 #include "storage.h"
 #include "vfs.h"
 #include "input.h"
+#include "usb.h"
 #include "desktop.h"
 #include "setup.h"
 #include "diagnostic.h"
@@ -188,23 +189,26 @@ void kernel_main(struct chos_boot_info *info) {
         __asm__ volatile("msr daifclr, #2":::"memory");
     }
     __asm__ volatile("msr daifset, #2":::"memory");
-    if(!storage_phase && !(boot->reserved&CHOS_DIAGNOSTIC_BOOT))setup_initialize(disk_ready?&disk:0,boot,&physical);
     int input_devices=input_initialize(&physical,boot);
     if(input_devices<0){
         diagnostic_log("Optional Virtio input initialization failed");
-        if(!(boot->reserved&CHOS_DIAGNOSTIC_BOOT))panic("VIRTIO INPUT SETUP FAILED");
         input_devices=0;
     }
+    const struct usb_status *usb=usb_status();
+    bool input_fallback=!storage_phase && !(boot->reserved&CHOS_DIAGNOSTIC_BOOT) &&
+        (!input_devices || (usb->initialized && (unsigned)input_devices==usb->keyboards+usb->mice && (!usb->keyboards || !usb->mice)));
+    if(input_fallback){nvme_diagnostic_guard();diagnostic_log(nvme_writable()?"Automatic fallback write guard: FAILED":"Automatic fallback write guard: PASS");diagnostic_force_input();diagnostic_log("Automatic input fallback: read-only diagnostics; Setup not started");}
+    if(!storage_phase && !(boot->reserved&CHOS_DIAGNOSTIC_BOOT) && !input_fallback)setup_initialize(disk_ready?&disk:0,boot,&physical);
     platform_record(boot,&platform,(unsigned)input_devices,disk_ready);
     diagnostic_value("Input initialized devices: ",(unsigned)input_devices,false);
     if(!input_devices)diagnostic_log("Input unsupported/absent; inventory needs no input");
     diagnostic_log("Core exception/EL0/IPC/protection tests: PASS");
-    if(boot->reserved&CHOS_DIAGNOSTIC_BOOT){
+    if((boot->reserved&CHOS_DIAGNOSTIC_BOOT) || input_fallback){
         diagnostic_log("Diagnostic mode: no installer, no filesystem writes");
         unsigned page=0,pages=diagnostic_screen(0);uint64_t next=timer_ticks()+500;
         __asm__ volatile("msr daifclr, #2":::"memory");
-        for(;;){input_poll();struct input_event ignored;bool changed=false;while(input_next(&ignored)){if(boot->reserved&CHOS_INPUT_TEST_BOOT)diagnostic_input_event(&ignored);changed=true;}
-            if(changed && (boot->reserved&CHOS_INPUT_TEST_BOOT))diagnostic_input_panel();
+        for(;;){input_poll();struct input_event ignored;bool changed=false;while(input_next(&ignored)){if(input_fallback || (boot->reserved&CHOS_INPUT_TEST_BOOT))diagnostic_input_event(&ignored);changed=true;}
+            if(changed && (input_fallback || (boot->reserved&CHOS_INPUT_TEST_BOOT)))diagnostic_input_panel();
             if(timer_ticks()>=next){page=(page+1)%pages;pages=diagnostic_screen(page);next=timer_ticks()+500;}
             __asm__ volatile("wfi");
         }

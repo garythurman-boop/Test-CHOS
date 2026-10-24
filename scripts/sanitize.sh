@@ -39,7 +39,7 @@ build/sanitized/gic
 
 cc "${flags[@]}" tests/diagnostic.c kernel/diagnostics/buffer.c -o build/sanitized/diagnostic
 build/sanitized/diagnostic
-cc "${flags[@]}" tests/usb.c tests/usb_descriptors.c drivers/usb/layout.c drivers/usb/descriptors.c drivers/usb/hid.c drivers/usb/ring.c -o build/sanitized/usb
+cc "${flags[@]}" tests/usb.c tests/usb_descriptors.c tests/hid_report.c drivers/usb/layout.c drivers/usb/descriptors.c drivers/usb/report.c drivers/usb/hub.c drivers/usb/hid.c drivers/usb/ring.c -o build/sanitized/usb
 build/sanitized/usb
 
 cc "${flags[@]}" tests/image.c boot/image.c -o build/sanitized/image

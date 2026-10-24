@@ -25,5 +25,11 @@ int main(void) {
     assert(input_next(&e) && e.code==272 && e.value==0);
     assert(input_next(&e) && e.code==46 && e.value==1);
     assert(input_next(&e) && e.code==46 && e.value==0 && !input_next(&e));
+    input_reset(1024,768);
+    input_accept((struct input_event){3,0,65535});input_accept((struct input_event){3,1,0});
+    assert(input_get()->x==1023 && input_get()->y==0);
+    assert(input_next(&e) && e.type==2 && e.code==0 && e.value==79);
+    assert(input_next(&e) && e.type==2 && e.code==1 && e.value==-708);
+    input_accept((struct input_event){3,0,32768});assert(input_get()->x==511);
     puts("PASS: input decoding, key releases, signed motion/clamping, buttons, FIFO ordering and bounded overflow");
 }

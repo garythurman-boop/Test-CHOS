@@ -8,7 +8,8 @@
 #include "usb.h"
 static const struct chos_boot_info *boot;
 static uint64_t uart;
-static bool serial_ready;
+static bool serial_ready,force_input;
+void diagnostic_force_input(void){force_input=true;}
 static void send(char c){
     if(!serial_ready)return;
     volatile uint32_t *reg=(void *)(uintptr_t)uart;
@@ -63,7 +64,7 @@ void diagnostic_inventory(const struct chos_boot_info *b){
     diagnostic_log("Native serial: ACPI SPCR PL011 or unavailable");
 }
 void diagnostic_init(const struct chos_boot_info *b){
-    boot=b;diagnostic_reset();uart=0;serial_ready=false;(void)platform_serial(b,&uart);
+    boot=b;force_input=false;diagnostic_reset();uart=0;serial_ready=false;(void)platform_serial(b,&uart);
     diagnostic_inventory(b);
 }
 void diagnostic_map_serial(void){
@@ -72,7 +73,7 @@ void diagnostic_map_serial(void){
 }
 unsigned diagnostic_screen(unsigned page){
     if(!boot)return 1;
-    const unsigned panel=(boot->reserved&CHOS_INPUT_TEST_BOOT)?204:0;
+    const unsigned panel=(force_input || (boot->reserved&CHOS_INPUT_TEST_BOOT))?204:0;
     const unsigned rows=(boot->height-96-panel)/18,cols=(boot->width-32)/12;
     console_rect(0,0,boot->width,boot->height,0x102b50);
     console_text(16,16,"CHOS HARDWARE DIAGNOSTICS",0xffffff);
@@ -104,7 +105,7 @@ void diagnostic_input_event(const struct input_event *e){
     if(e->type==1 && e->code>=272 && e->code<=274){unsigned mask=1u<<(e->code-272);if(e->value)mouse_buttons|=mask;else mouse_buttons&=~mask;}
 }
 void diagnostic_input_panel(void){
-    if(!boot || !(boot->reserved&CHOS_INPUT_TEST_BOOT))return;
+    if(!boot || (!force_input && !(boot->reserved&CHOS_INPUT_TEST_BOOT)))return;
     const struct usb_status *s=usb_status();const struct input_state *i=input_get();unsigned y=boot->height-184;
     console_rect(0,y-36,boot->width,196,0x163a64);
     console_text(16,y-32,"CONTROLLER INITIALIZED",0x9ed7ff);console_text(304,y-32,s->initialized?"YES":"NO",0xffffff);

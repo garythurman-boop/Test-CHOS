@@ -161,3 +161,6 @@ bool nvme_recheck(void){
     struct nvme_namespace ns;if(!nvme_namespace(b,4096,&ns) || ns.sectors!=controller.sectors || ns.sector_bytes!=controller.sector_size)return false;
     read_only=ns.read_only;return true;
 }
+
+/* Automatic input-failure diagnostics use the same non-writable media policy. */
+void nvme_diagnostic_guard(void){diagnostic_only=true;}

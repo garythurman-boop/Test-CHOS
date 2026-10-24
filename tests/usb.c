@@ -4,8 +4,9 @@
 #include <string.h>
 static _Alignas(4096) struct usb_trb page[256];
 void test_usb_descriptors(void);
+void test_hid_report(void);
 int main(void){
-    test_usb_descriptors();
+    test_usb_descriptors();test_hid_report();
     struct xhci_layout l;
     /* Actual M7G Fusion register values transcribed from the supplied page 5. */
     assert(!xhci_layout_validate(0x120020,0x08001f7f,0x7f,0x38f081,0x820,0xa20,65536,&l));

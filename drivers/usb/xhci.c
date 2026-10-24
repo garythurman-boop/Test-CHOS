@@ -1,14 +1,18 @@
-/* Original xHCI boot-HID bring-up. One controller, four direct-root devices.
- * Polled event ring: MSI/INTx routing and hubs remain explicitly unsupported. */
+/* Original bounded xHCI host: USB2 hubs and boot/report HID functions.
+ * Completion is polled; USB3, MSI/INTx and automatic reset recovery are unsupported. */
 #include "usb.h"
+#include "hid_report.h"
 #include "platform.h"
 #include "mmu.h"
 #include "diagnostic.h"
 #include "pci.h"
 static struct usb_status report;
 const struct usb_status *usb_status(void){return &report;}
-struct hid_device {unsigned slot,port,speed,dci,received;struct usb_ring control,input;uint64_t contexts,output,data,report,pending[8],reports;struct usb_boot_interface interface;struct usb_hid_state hid;bool ready,warned;};
-static struct {uint64_t base,op,runtime,doorbell,dcbaa,events,erst;struct usb_ring commands;unsigned consumer,cycle,context_size,ports,slots,count;bool running;struct pmm *memory;struct hid_device device[4];} host;
+#define USB_NODES 16
+#define USB_CHANNELS 16
+struct hid_device {unsigned slot,port,speed,received,route,parent,parent_port,depth,hub_ports,hub_protocol,tt_slot,tt_port,think,poll_port;struct usb_ring control;uint64_t contexts,output,data,absolute_tick;bool alive,hub;};
+struct hid_channel {unsigned node,dci,protocol;struct usb_hid_interface interface;struct usb_ring input;uint64_t report,pending[8],reports;struct usb_hid_state boot;struct hid_layout layout;struct hid_report_state state;bool ready,warned,keyboard,pointer;};
+static struct {uint64_t base,op,runtime,doorbell,dcbaa,events,erst,hub_next;struct usb_ring commands;unsigned consumer,cycle,context_size,ports,slots,count,channels,hub_node,hub_port;bool running;struct pmm *memory;struct hid_device device[USB_NODES];struct hid_channel channel[USB_CHANNELS];uint8_t held[288];} host;
 static uint32_t r32(uint64_t a){return *(volatile uint32_t *)(uintptr_t)a;}
 static void w32(uint64_t a,uint32_t v){*(volatile uint32_t *)(uintptr_t)a=v;}
 static void w64(uint64_t a,uint64_t v){w32(a,(uint32_t)v);w32(a+4,(uint32_t)(v>>32));}
@@ -34,25 +38,48 @@ static bool event(struct usb_trb *out){
     w64(host.runtime+0x18,(host.events+host.consumer*16)|8);return true;
 }
 
-static void submit_input(struct hid_device *d,unsigned receive){
-    d->pending[receive]=enqueue(&d->input,d->report+receive*512,d->interface.packet,(1u<<10)|(1u<<5)|(1u<<2));ring_doorbell(d->slot,d->dci);
+static void deliver(struct input_event *batch,unsigned count){
+    struct input_event filtered[32];unsigned n=0;
+    for(unsigned i=0;i<count;i++){
+        struct input_event e=batch[i];
+        if(e.type==1 && e.code<288 && (e.value==0 || e.value==1)){
+            unsigned before=host.held[e.code];
+            if(e.value){if(before<255)host.held[e.code]++;if(before)continue;}
+            else {if(before)host.held[e.code]--;if(!before || host.held[e.code])continue;}
+        }
+        filtered[n++]=e;
+    }
+    input_accept_batch(filtered,n);
 }
-static void disconnect(struct hid_device *d){
+static void submit_input(struct hid_channel *d,unsigned receive){
+    d->pending[receive]=enqueue(&d->input,d->report+receive*512,d->interface.packet,(1u<<10)|(1u<<5)|(1u<<2));ring_doorbell(host.device[d->node].slot,d->dci);
+}
+static void disconnect(struct hid_channel *d){
     struct input_event batch[32];unsigned count=0;uint8_t empty[8]={0};
-    if(usb_hid_report(&d->hid,d->interface.protocol,empty,d->interface.protocol==1?8:3,batch,&count))input_accept_batch(batch,count);
+    bool ok=d->protocol?usb_hid_report(&d->boot,d->protocol,empty,d->protocol==1?8:3,batch,&count):hid_release(&d->state,batch,&count);
+    if(ok)deliver(batch,count);
     diagnostic_value("USB releases on disconnect: ",count,false);
-    d->ready=false;if(d->interface.protocol==1 && report.keyboards)report.keyboards--;if(d->interface.protocol==2 && report.mice)report.mice--;
+    d->ready=false;if(d->keyboard && report.keyboards)report.keyboards--;if(d->pointer && report.mice)report.mice--;
 }
 static void input_event(const struct usb_trb *e){
     unsigned slot=e->control>>24,endpoint=(e->control>>16)&31,completion=e->status>>24;
-    for(unsigned i=0;i<host.count;i++){
-        struct hid_device *d=&host.device[i];if(!d->ready || d->slot!=slot || d->dci!=endpoint)continue;
+    for(unsigned i=0;i<host.channels;i++){
+        struct hid_channel *d=&host.channel[i];if(!d->ready || host.device[d->node].slot!=slot || d->dci!=endpoint)continue;
         unsigned receive=0;while(receive<8 && d->pending[receive]!=e->parameter)receive++;if(receive==8)continue;
-        uint64_t buffer=d->report+receive*512;
-        unsigned residual=e->status&0xffffff;
+        uint64_t buffer=d->report+receive*512;unsigned residual=e->status&0xffffff;
         if((completion!=1 && completion!=13) || residual>d->interface.packet || !usb_dma_span(d->report,4096,buffer,d->interface.packet-residual)){disconnect(d);diagnostic_log("USB HID transfer failed; endpoint stopped");return;}
         cache(d->report,true);struct input_event batch[32];unsigned count=0;
-        if(usb_hid_report(&d->hid,d->interface.protocol,(void *)(uintptr_t)buffer,d->interface.packet-residual,batch,&count))input_accept_batch(batch,count);
+        bool ok=d->protocol?usb_hid_report(&d->boot,d->protocol,(void *)(uintptr_t)buffer,d->interface.packet-residual,batch,&count):hid_decode(&d->layout,&d->state,(void *)(uintptr_t)buffer,d->interface.packet-residual,batch,&count);
+        if(ok){
+            struct hid_device *node=&host.device[d->node];
+            for(unsigned j=0;j<count;j++)if(batch[j].type==3 && batch[j].code<=1)node->absolute_tick=now();
+            /* A composite virtual pointer can publish both relative and absolute
+             * streams. Prefer recently received absolute axes from that device;
+             * do not double-apply its relative deltas or suppress other mice. */
+            unsigned kept=0;bool absolute=node->absolute_tick && now()-node->absolute_tick<frequency()/4;
+            for(unsigned j=0;j<count;j++)if(!(absolute && batch[j].type==2 && batch[j].code<=1))batch[kept++]=batch[j];
+            deliver(batch,kept);
+        }
         else if(!d->warned){diagnostic_log("USB HID malformed/unsupported report rejected");d->warned=true;}
         d->reports++;if(d->reports%255==0)diagnostic_value("USB completed receive reports: ",d->reports,false);
         submit_input(d,receive);return;
@@ -72,8 +99,8 @@ static bool command(uint64_t parameter,uint32_t control,unsigned *slot){uint64_t
  * alone cannot establish how many initialized descriptor bytes were received. */
 static bool control(struct hid_device *d,unsigned request,unsigned value,unsigned index,unsigned length,bool in){
     d->received=0;
-    if(length>512 || (length && !in) || !usb_dma_span(d->data,4096,d->data,length)){report.enum_reason=901;return false;}
-    if(length){for(unsigned i=0;i<512;i++)((uint8_t *)(uintptr_t)d->data)[i]=0;cache(d->data,false);}
+    if(length>1024 || (length && !in) || !usb_dma_span(d->data,4096,d->data,length)){report.enum_reason=901;return false;}
+    if(length){for(unsigned i=0;i<1024;i++)((uint8_t *)(uintptr_t)d->data)[i]=0;cache(d->data,false);}
     uint64_t setup=(uint64_t)(request&255)|((uint64_t)(request>>8)<<8)|((uint64_t)value<<16)|((uint64_t)index<<32)|((uint64_t)length<<48);
     enqueue(&d->control,setup,8,(2u<<10)|(1u<<6)|((length?3u:0u)<<16));
     uint64_t data=length?enqueue(&d->control,d->data,length,(3u<<10)|(1u<<16)|(1u<<5)|(1u<<2)):0;
@@ -105,79 +132,143 @@ static void descriptor_value(const char *label,uint64_t value,bool hex){
     else if(descriptor_fields==160){descriptor_fields++;diagnostic_log("USB descriptor trace budget reached; later summaries only");}
 }
 static uint32_t *context(uint64_t base,unsigned index){return (void *)(uintptr_t)(base+(uint64_t)index*host.context_size);}
-static bool enumerate(struct hid_device *d,unsigned port){
-    report.enum_port=port;report.enum_stage=10;report.enum_reason=810;report.last_completion=0;
-    diagnostic_value("USB enumeration root port: ",port,false);
-    uint64_t portsc=host.op+0x400+(port-1)*16;uint32_t status=r32(portsc);
-    if(!(status&1))return false;
-    w32(portsc,(status&0xe00)|16); /* preserve power/indicator, start USB2 reset */
-    if(!wait_bits(portsc,16,0) || !wait_bits(portsc,2,2))return false;
-    report.enum_stage=11;report.enum_reason=811;
-    d->port=port;d->speed=(r32(portsc)>>10)&15;
-    if(d->speed<1 || d->speed>3){diagnostic_log("USB root speed unsupported (USB2 only)");return false;}
+static void slot_context(struct hid_device *d,unsigned entries){
+    uint32_t *s=context(d->contexts,1);
+    s[0]=(entries<<27)|(d->speed<<20)|d->route|(d->hub?(1u<<26):0)|((d->hub && d->hub_protocol==2)?1u<<25:0);
+    s[1]=(d->port<<16)|(d->hub_ports<<24);s[2]=d->tt_slot|(d->tt_port<<8)|(d->think<<16);
+}
+static void delay_ms(unsigned ms){uint64_t start=now(),ticks=frequency()*ms/1000;while(now()-start<ticks)__asm__ volatile("yield");}
+static bool hub_status(struct hid_device *d,unsigned port,uint32_t *status){
+    if(!control(d,0x00a3,0,port,4,true) || d->received!=4)return false;
+    const uint8_t *p=(void *)(uintptr_t)d->data;*status=p[0]|(uint32_t)p[1]<<8|(uint32_t)p[2]<<16|(uint32_t)p[3]<<24;return true;
+}
+static bool discover(unsigned,unsigned,unsigned,unsigned,unsigned);
+static bool hub_initialize(struct hid_device *d){
+    report.enum_stage=22;report.enum_reason=1301;
+    if(!control(d,0x06a0,0x2900,0,7,true) || d->received!=7)return false;
+    const uint8_t *p=(void *)(uintptr_t)d->data;unsigned length=p[0];
+    diagnostic_value("USB hub descriptor bLength: ",length,false);diagnostic_value("USB hub descriptor port count: ",p[2],false);
+    if(length<9 || length>64 || p[1]!=0x29 || !p[2] || p[2]>15){report.enum_reason=1302;return false;}
+    if(!control(d,0x06a0,0x2900,0,length,true) || d->received!=length)return false;
+    unsigned ports,characteristics,power;
+    if(!usb_hub_info(p,d->received,&ports,&characteristics,&power)){report.enum_reason=1302;return false;}
+    d->hub=true;d->hub_ports=ports;d->think=(characteristics>>5)&3;
+    for(unsigned i=0;i<4096;i++)((uint8_t *)(uintptr_t)d->contexts)[i]=0;
+    context(d->contexts,0)[1]=1;slot_context(d,1);cache(d->contexts,false);
+    report.enum_reason=1303;if(!command(d->contexts,(13u<<10)|(d->slot<<24),0))return false;
+    if((characteristics&3)!=2)for(unsigned port=1;port<=ports;port++)if(!control(d,0x0323,8,port,0,false))return false;
+    delay_ms(power+100);diagnostic_value("USB hub slot: ",d->slot,false);diagnostic_value("USB hub ports: ",ports,false);diagnostic_log("USB hub initialized: PASS");
+    unsigned index=(unsigned)(d-host.device);
+    for(unsigned port=1;port<=ports;port++){
+        uint32_t status;report.enum_reason=1304;if(!hub_status(d,port,&status))return false;
+        diagnostic_value("USB hub downstream port: ",port,false);diagnostic_value("USB hub port status: ",status,true);
+        if(!(status&1))continue;
+        if(!control(d,0x0323,4,port,0,false))return false;
+        uint64_t start=now();do{delay_ms(10);if(!hub_status(d,port,&status))return false;}while((status&16) && now()-start<frequency());
+        if(!(status&1) || !(status&2) || (status&16)){diagnostic_log("USB hub child reset failed");continue;}
+        for(unsigned bit=0;bit<5;bit++)if(status&(1u<<(16+bit)))(void)control(d,0x0123,16+bit,port,0,false);
+        unsigned speed=(status&512)?2:(status&1024)?3:1;
+        unsigned route;if(!usb_hub_route(d->route,d->depth,port,&route)){diagnostic_log("USB hub route depth/port limit");continue;}
+        (void)discover(d->port,speed,index+1,port,route);
+    }
+    report.enum_stage=23;report.enum_reason=0;return true;
+}
+static bool hid_initialize(struct hid_device *d,const uint8_t *configuration,unsigned bytes){
+    struct usb_hid_interface interfaces[USB_INTERFACES];unsigned count=0;
+    report.enum_reason=usb_hid_interfaces(configuration,bytes,d->speed,interfaces,&count);if(report.enum_reason)return false;
+    diagnostic_log("USB descriptor selection: PASS");
+    unsigned config=configuration[5];report.enum_stage=19;
+    diagnostic_value("USB SET_CONFIGURATION: ",config,false);if(!control(d,0x0900,config,0,0,false))return false;
+    unsigned first=host.channels,entries=1;uint32_t flags=1;
+    for(unsigned i=0;i<count;i++){
+        if(host.channels==USB_CHANNELS){report.enum_reason=1310;break;}
+        struct usb_hid_interface *f=&interfaces[i];
+        if(f->alternate && !control(d,0x0b01,f->alternate,f->number,0,false))break;
+        struct hid_channel *c=&host.channel[host.channels];*c=(struct hid_channel){.node=(unsigned)(d-host.device),.interface=*f,.dci=f->endpoint*2+1};
+        diagnostic_value("USB selected interface: ",f->number,false);diagnostic_value("USB selected alternate: ",f->alternate,false);
+        if(f->subclass==1 && (f->protocol==1 || f->protocol==2)){
+            if(!control(d,0x0b21,0,f->number,0,false))break;
+            c->protocol=f->protocol;c->keyboard=f->protocol==1;c->pointer=f->protocol==2;
+        }else{
+            report.enum_stage=24;
+            diagnostic_value("USB report descriptor requested bytes: ",f->report_bytes,false);
+            if(!control(d,0x0681,0x2200,f->number,f->report_bytes,true))break;
+            diagnostic_value("USB report descriptor received bytes: ",d->received,false);
+            if(d->received!=f->report_bytes){report.enum_reason=906;break;}
+            const uint8_t *p=(void *)(uintptr_t)d->data;
+            /* Static descriptor bytes only. Never dump live Input reports. */
+            for(unsigned at=0;at<d->received;at+=4){uint64_t word=0;for(unsigned k=0;k<4 && at+k<d->received;k++)word|=(uint64_t)p[at+k]<<(8*k);diagnostic_value("USB report descriptor LE32: ",word,true);}
+            report.enum_reason=hid_compile(p,d->received,&c->layout);
+            if(!report.enum_reason)for(unsigned ri=0;ri<c->layout.reports;ri++)if((c->layout.bits[ri]+7u)/8u+(c->layout.numbered?1u:0u)>f->packet)report.enum_reason=1202;
+            if(report.enum_reason){diagnostic_value("USB HID compiler refusal: ",report.enum_reason,false);continue;}
+            c->keyboard=c->layout.keyboard;c->pointer=c->layout.pointer;
+            diagnostic_value("USB HID compiled fields: ",c->layout.count,false);diagnostic_value("USB HID report IDs: ",c->layout.reports,false);
+            diagnostic_log(c->layout.absolute?"USB HID absolute pointer layout: PASS":"USB HID report layout: PASS");
+        }
+        c->report=page();if(!c->report || !ring_init(&c->input)){report.enum_reason=813;break;}
+        host.channels++;flags|=1u<<c->dci;if(c->dci>entries)entries=c->dci;
+    }
+    if(host.channels==first)return false;
+    for(unsigned i=0;i<4096;i++)((uint8_t *)(uintptr_t)d->contexts)[i]=0;
+    context(d->contexts,0)[1]=flags;slot_context(d,entries);
+    for(unsigned i=first;i<host.channels;i++){
+        struct hid_channel *c=&host.channel[i];uint32_t *ep=context(d->contexts,c->dci+1);
+        unsigned interval=0;if(d->speed==3)interval=c->interface.interval-1;else{unsigned n=c->interface.interval;while(n>1){interval++;n>>=1;}interval+=3;}
+        ep[0]=interval<<16;ep[1]=(c->interface.packet<<16)|(7u<<3)|6;*(uint64_t *)(ep+2)=c->input.address|1;ep[4]=c->interface.packet|((uint32_t)c->interface.packet<<16);
+    }
+    cache(d->contexts,false);report.enum_stage=20;report.enum_reason=820;
+    if(!command(d->contexts,(12u<<10)|(d->slot<<24),0))return false;
+    for(unsigned i=first;i<host.channels;i++){
+        struct hid_channel *c=&host.channel[i];c->ready=true;
+        if(c->keyboard)report.keyboards++;if(c->pointer)report.mice++;
+        diagnostic_value("USB HID protocol: ",c->protocol,false);diagnostic_value("USB HID interface: ",c->interface.number,false);
+        if(c->protocol)diagnostic_log(c->keyboard?"USB boot keyboard initialized: PASS":"USB boot mouse initialized: PASS");
+        else diagnostic_log("USB report HID initialized: PASS");
+        for(unsigned receive=0;receive<8;receive++)submit_input(c,receive);
+    }
+    report.enum_stage=21;report.enum_reason=0;return true;
+}
+static bool enumerate(struct hid_device *d){
+    report.enum_port=d->port;report.enum_stage=11;report.enum_reason=811;report.last_completion=0;
+    diagnostic_value("USB enumeration root port: ",d->port,false);diagnostic_value("USB route: ",d->route,true);diagnostic_value("USB parent hub slot: ",d->parent?host.device[d->parent-1].slot:0,false);
+    if(d->speed<1 || d->speed>3)return false;
     report.enum_stage=12;report.enum_reason=812;
     unsigned slot=0;if(!command(0,9u<<10,&slot) || !slot || slot>host.slots)return false;d->slot=slot;
     report.enum_stage=13;report.enum_reason=813;
-    d->contexts=page();d->output=page();d->data=page();d->report=page();
-    if(!d->contexts || !d->output || !d->data || !d->report || !ring_init(&d->control) || !ring_init(&d->input))return false;
+    d->contexts=page();d->output=page();d->data=page();if(!d->contexts || !d->output || !d->data || !ring_init(&d->control))return false;
     ((uint64_t *)(uintptr_t)host.dcbaa)[slot]=d->output;cache(host.dcbaa,false);
-    uint32_t *input=context(d->contexts,0),*s=context(d->contexts,1),*ep=context(d->contexts,2);
-    input[1]=3;s[0]=(1u<<27)|(d->speed<<20);s[1]=port<<16;
-    unsigned packet=d->speed==3?64:8;
+    context(d->contexts,0)[1]=3;slot_context(d,1);uint32_t *ep=context(d->contexts,2);unsigned packet=d->speed==3?64:8;
     ep[1]=(packet<<16)|(4u<<3)|6;*(uint64_t *)(ep+2)=d->control.address|1;ep[4]=8;cache(d->contexts,false);
-    report.enum_stage=14;report.enum_reason=814;
-    if(!command(d->contexts,(11u<<10)|(slot<<24),0))return false;
-    report.enum_stage=15;report.enum_reason=815;
-    diagnostic_value("USB speed after reset: ",d->speed,false);
-    if(!descriptor(d,0x100,8))return false;
-    const uint8_t *data=(void *)(uintptr_t)d->data;
+    report.enum_stage=14;report.enum_reason=814;if(!command(d->contexts,(11u<<10)|(slot<<24),0))return false;
+    report.enum_stage=15;report.enum_reason=815;diagnostic_value("USB speed after reset: ",d->speed,false);
+    if(!descriptor(d,0x100,8))return false;const uint8_t *data=(void *)(uintptr_t)d->data;
     if(data[0]!=18 || data[1]!=1 || (data[7]!=8 && data[7]!=16 && data[7]!=32 && data[7]!=64))return false;
     report.enum_stage=16;report.enum_reason=816;
-    if(packet!=data[7]){
-        input[1]=2;ep[1]=(ep[1]&65535)|((unsigned)data[7]<<16);cache(d->contexts,false);
-        if(!command(d->contexts,(13u<<10)|(slot<<24),0))return false;
-    }
-    report.enum_stage=17;report.enum_reason=817;
-    if(!descriptor(d,0x100,18))return false;
+    if(packet!=data[7]){context(d->contexts,0)[1]=2;ep[1]=(ep[1]&65535)|((unsigned)data[7]<<16);cache(d->contexts,false);if(!command(d->contexts,(13u<<10)|(slot<<24),0))return false;}
+    report.enum_stage=17;report.enum_reason=817;if(!descriptor(d,0x100,18))return false;
     if(data[0]!=18 || data[1]!=1 || !data[17]){report.enum_reason=907;return false;}
+    unsigned cls=data[4];d->hub_protocol=data[6];
     descriptor_value("USB device VID: ",data[8]|(unsigned)data[9]<<8,true);descriptor_value("USB device PID: ",data[10]|(unsigned)data[11]<<8,true);
-    descriptor_value("USB device class/subclass/protocol: ",(unsigned)data[4]<<16|(unsigned)data[5]<<8|data[6],true);
-    descriptor_value("USB device configurations: ",data[17],false);
-    if(!descriptor(d,0x200,9))return false;
-    report.enumerated++;report.enum_stage=18;
+    descriptor_value("USB device class/subclass/protocol: ",(unsigned)data[4]<<16|(unsigned)data[5]<<8|data[6],true);descriptor_value("USB device configurations: ",data[17],false);
+    if(!descriptor(d,0x200,9))return false;report.enumerated++;report.enum_stage=18;
+    unsigned bytes=data[2]|(unsigned)data[3]<<8;
     if(data[0]!=9 || data[1]!=2){report.enum_reason=USB_DESC_HEADER;return false;}
-    unsigned bytes=(unsigned)data[2]|(unsigned)data[3]<<8;
-    descriptor_value("USB advertised config total length: ",bytes,false);
-    descriptor_value("USB advertised config value: ",data[5],false);descriptor_value("USB advertised interface count: ",data[4],false);
-    if(bytes<9){report.enum_reason=USB_DESC_TOTAL;return false;}
-    if(bytes>512){report.enum_reason=USB_DESC_LIMIT;return false;}
-    if(!descriptor(d,0x200,bytes))return false;
-    usb_descriptor_trace(data,d->received,descriptor_value);
-    report.enum_reason=usb_boot_select(data,d->received,d->speed,&d->interface);
-    if(report.enum_reason)return false;
-    diagnostic_log("USB descriptor selection: PASS");
-    diagnostic_value("USB selected interface: ",d->interface.interface,false);diagnostic_value("USB selected alternate: ",d->interface.alternate,false);
-    diagnostic_value("USB selected boot protocol: ",d->interface.protocol,false);diagnostic_value("USB additional boot interfaces unclaimed: ",d->interface.additional,false);
-    report.enum_stage=19;report.enum_reason=819;
-    if(!control(d,0x0900,d->interface.configuration,0,0,false))return false;
-    if(d->interface.alternate && !control(d,0x0b01,d->interface.alternate,d->interface.interface,0,false))return false;
-    if(!control(d,0x0b21,0,d->interface.interface,0,false))return false;
-    /* SET_IDLE is optional and omitted; avoid stalling EP0 on unsupported requests. */
-    d->dci=d->interface.endpoint*2+1;
-    for(unsigned i=0;i<4096;i++)((uint8_t *)(uintptr_t)d->contexts)[i]=0;
-    input=context(d->contexts,0);s=context(d->contexts,1);ep=context(d->contexts,d->dci+1);
-    input[1]=1u|(1u<<d->dci);s[0]=(d->dci<<27)|(d->speed<<20);s[1]=port<<16;
-    unsigned interval=0;if(d->speed==3)interval=d->interface.interval-1;
-    else {unsigned n=d->interface.interval;while(n>1){interval++;n>>=1;}interval+=3;}
-    if(interval>15)return false;
-    ep[0]=interval<<16;ep[1]=(d->interface.packet<<16)|(7u<<3)|6;
-    *(uint64_t *)(ep+2)=d->input.address|1;ep[4]=d->interface.packet|((uint32_t)d->interface.packet<<16);cache(d->contexts,false);
-    report.enum_stage=20;report.enum_reason=820;
-    if(!command(d->contexts,(12u<<10)|(slot<<24),0))return false;
-    report.enum_stage=21;report.enum_reason=0;diagnostic_value("USB HID protocol: ",d->interface.protocol,false);diagnostic_value("USB HID interface: ",d->interface.interface,false);
-    if(d->interface.protocol==1)report.keyboards++;else report.mice++;
-    d->ready=true;for(unsigned receive=0;receive<8;receive++)submit_input(d,receive);
-    diagnostic_log(d->interface.protocol==1?"USB boot keyboard initialized: PASS":"USB boot mouse initialized: PASS");return true;
+    descriptor_value("USB advertised config total length: ",bytes,false);descriptor_value("USB advertised config value: ",data[5],false);descriptor_value("USB advertised interface count: ",data[4],false);
+    if(bytes<9 || bytes>512){report.enum_reason=USB_DESC_LIMIT;return false;}
+    if(!descriptor(d,0x200,bytes))return false;usb_descriptor_trace(data,bytes,descriptor_value);
+    d->alive=true;
+    if(cls==9){unsigned config=data[5];if(!control(d,0x0900,config,0,0,false))return false;return hub_initialize(d);}
+    return hid_initialize(d,data,bytes);
+}
+static bool discover(unsigned root,unsigned speed,unsigned parent,unsigned port,unsigned route){
+    if(host.count==USB_NODES){report.enum_reason=1310;return false;}
+    unsigned index=host.count++;struct hid_device *d=&host.device[index];*d=(struct hid_device){.port=root,.speed=speed,.parent=parent,.parent_port=port,.route=route};
+    if(parent){struct hid_device *p=&host.device[parent-1];d->depth=p->depth+1;
+        if(speed!=3){if(p->speed==3){d->tt_slot=p->slot;d->tt_port=port;}else{d->tt_slot=p->tt_slot;d->tt_port=p->tt_port;}}
+    }
+    bool ok=enumerate(d);
+    if(!ok){diagnostic_value("USB enumeration port: ",root,false);diagnostic_value("USB enumeration failure stage: ",report.enum_stage,false);diagnostic_value("USB enumeration refusal reason: ",report.enum_reason,false);if(report.enum_reason>=1000 && report.enum_reason<1200)diagnostic_log(usb_descriptor_reason_name(report.enum_reason));diagnostic_value("USB last completion code: ",report.last_completion,false);diagnostic_log("USB device enumeration failed/unsupported");}
+    return ok;
 }
 /* Register snapshot only after the layout helper has validated all used ranges. */
 static uint64_t r64(uint64_t a){uint32_t low=r32(a);return low|((uint64_t)r32(a+4)<<32);}
@@ -248,16 +339,16 @@ int usb_initialize(struct pmm *memory,const struct chos_boot_info *boot){
     stage=7;reason=XHCI_RUN;w32(host.op,1);if(!wait_bits(host.op+4,1,0))goto failure;
     report.stage=8;report.initialized=1;host.running=true;registers();diagnostic_log("xHCI reset and polled event ring: PASS");
     for(unsigned port=1;port<=host.ports;port++){
-        uint32_t portsc=r32(host.op+0x400+(port-1)*16);
+        uint64_t address=host.op+0x400+(port-1)*16;uint32_t portsc=r32(address);
         diagnostic_value("xHCI root port number: ",port,false);diagnostic_value("xHCI PORTSC before enumeration: ",portsc,true);
         if(!(portsc&1))continue;report.connected++;
-        diagnostic_value("USB connected port speed ID: ",(portsc>>10)&15,false);
-        if(host.count==4){diagnostic_log("USB bounded device capacity reached");continue;}
-        if(enumerate(&host.device[host.count],port))host.count++;
-        else {diagnostic_value("USB enumeration port: ",port,false);diagnostic_value("USB enumeration failure stage: ",report.enum_stage,false);diagnostic_value("USB enumeration refusal reason: ",report.enum_reason,false);if(report.enum_reason>=1000)diagnostic_log(usb_descriptor_reason_name(report.enum_reason));diagnostic_value("USB last completion code: ",report.last_completion,false);diagnostic_value("USB PORTSC after failure: ",r32(host.op+0x400+(port-1)*16),true);diagnostic_log("USB device enumeration failed/unsupported");}
+        w32(address,(portsc&0x200)|16);report.enum_stage=10;report.enum_reason=810;
+        if(!wait_bits(address,16,0) || !wait_bits(address,2,2)){diagnostic_log("USB root reset failed");continue;}
+        unsigned speed=(r32(address)>>10)&15;(void)discover(port,speed,0,0,0);
     }
-    diagnostic_value("USB connected root ports: ",report.connected,false);diagnostic_value("USB operational boot HID devices: ",host.count,false);
-    return (int)host.count;
+    unsigned ready=0;for(unsigned i=0;i<host.channels;i++)if(host.channel[i].ready)ready++;
+    diagnostic_value("USB connected root ports: ",report.connected,false);diagnostic_value("USB operational boot HID devices: ",ready,false);
+    return (int)ready;
 failure:
     /* No uncertain DMA ownership is reclaimed. A capability refusal allocates
      * no DMA; reserve language must not imply an allocator failure. */
@@ -267,8 +358,21 @@ failure:
     if(layout_valid)registers();
     diagnostic_log("xHCI initialization refused; see stage/reason/registers");return 0;
 }
+static void detach(unsigned index){
+    host.device[index].alive=false;
+    for(unsigned i=0;i<host.channels;i++)if(host.channel[i].ready && host.channel[i].node==index)disconnect(&host.channel[i]);
+    for(unsigned i=index+1;i<host.count;i++)if(host.device[i].alive && host.device[i].parent==index+1)detach(i);
+}
 void usb_poll(void){
     if(!host.running)return;
-    for(unsigned i=0;i<host.count;i++)if(host.device[i].ready && !(r32(host.op+0x400+(host.device[i].port-1)*16)&1)){disconnect(&host.device[i]);diagnostic_log("USB root disconnect; held keys/buttons released");}
+    for(unsigned i=0;i<host.count;i++)if(host.device[i].alive && !(r32(host.op+0x400+(host.device[i].port-1)*16)&1)){detach(i);diagnostic_log("USB root disconnect; held keys/buttons released");}
     struct usb_trb e;for(unsigned i=0;i<64 && event(&e);i++)if(((e.control>>10)&63)==32)input_event(&e);
+    if(now()<host.hub_next)return;host.hub_next=now()+frequency()/10;
+    for(unsigned i=0;i<host.count;i++){
+        unsigned index=host.hub_node++%host.count;struct hid_device *d=&host.device[index];if(!d->alive || !d->hub)continue;
+        unsigned port=1+(d->poll_port++%d->hub_ports);uint32_t status;
+        if(!hub_status(d,port,&status)){detach(index);diagnostic_log("USB hub polling failed; subtree stopped and held states released");break;}
+        if(!(status&1))for(unsigned child=index+1;child<host.count;child++)if(host.device[child].alive && host.device[child].parent==index+1 && host.device[child].parent_port==port){detach(child);diagnostic_log("USB hub child disconnect; held states released");}
+        break;
+    }
 }

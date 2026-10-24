@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #define CHOS_DIAGNOSTIC_BOOT 2u
 #define CHOS_INPUT_TEST_BOOT 4u
-#define DIAGNOSTIC_CAPACITY 16384u
+#define DIAGNOSTIC_CAPACITY 65536u
 void diagnostic_reset(void);
 void diagnostic_append(const char *);
 unsigned diagnostic_read(unsigned,void *,unsigned);
@@ -18,4 +18,5 @@ unsigned diagnostic_screen(unsigned);
 struct input_event;
 void diagnostic_input_event(const struct input_event *);
 void diagnostic_input_panel(void);
+void diagnostic_force_input(void);
 #endif

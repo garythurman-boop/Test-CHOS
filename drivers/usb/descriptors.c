@@ -111,3 +111,38 @@ void usb_descriptor_trace(const uint8_t *p,unsigned n,void (*emit)(const char *,
         at+=d[0];
     }
 }
+
+/* Collect independent HID functions. Existing walker supplies structural checks;
+ * this admission path additionally accepts report protocol and one-byte packets. */
+static unsigned collect_interface(struct usb_hid_interface *out,unsigned *count,const struct usb_hid_interface *c,unsigned cls,unsigned inputs,unsigned speed){
+    if(cls!=3)return USB_DESC_NO_HID;
+    if(inputs!=1)return inputs?USB_DESC_MULTIPLE_INPUT:USB_DESC_NO_INPUT;
+    if(!c->report_bytes || c->report_bytes>1024)return USB_DESC_HID;
+    if(!c->packet || c->packet>64)return USB_DESC_PACKET;
+    if(!c->interval || (speed==3 && c->interval>16))return USB_DESC_INTERVAL;
+    for(unsigned i=0;i<*count;i++)if(out[i].number==c->number){if(out[i].alternate && !c->alternate)out[i]=*c;return 0;}
+    if(*count==USB_INTERFACES)return USB_DESC_LIMIT;
+    out[(*count)++]=*c;return 0;
+}
+unsigned usb_hid_interfaces(const uint8_t *p,unsigned n,unsigned speed,struct usb_hid_interface *out,unsigned *count){
+    if(!out || !count)return USB_DESC_HEADER;
+    struct usb_boot_interface ignored;unsigned r=usb_boot_select(p,n,speed,&ignored);
+    if(r && (r<1100 || r==USB_DESC_LIMIT))return r;
+    if(!p || n<9 || n>512)return USB_DESC_HEADER;
+    struct usb_hid_interface list[USB_INTERFACES],c={0};unsigned found=0,cls=0,inputs=0,last=USB_DESC_NO_HID;bool active=false;
+    for(unsigned at=9;at<n;at+=p[at]){
+        if(n-at<2 || p[at]<2 || p[at]>n-at)return USB_DESC_WALK;
+        const uint8_t *d=p+at;
+        if(d[1]==4){
+            if(active){r=collect_interface(list,&found,&c,cls,inputs,speed);if(r==USB_DESC_LIMIT)return r;if(cls==3)last=r;}
+            c=(struct usb_hid_interface){.number=d[2],.alternate=d[3],.subclass=d[6],.protocol=d[7]};cls=d[5];inputs=0;active=true;
+        }else if(d[1]==0x21 && cls==3){
+            for(unsigned i=0;i<d[5];i++)if(d[6+i*3]==0x22)c.report_bytes=(uint16_t)le16(d+7+i*3);
+        }else if(d[1]==5 && (d[2]&128) && (d[3]&3)==3){inputs++;c.endpoint=d[2]&15;c.packet=(uint16_t)le16(d+4);c.interval=d[6];}
+    }
+    if(active){r=collect_interface(list,&found,&c,cls,inputs,speed);if(r==USB_DESC_LIMIT)return r;if(cls==3)last=r;}
+    if(!found)return last?last:USB_DESC_NO_HID;
+    uint32_t endpoints=0;for(unsigned i=0;i<found;i++){if(endpoints&(1u<<list[i].endpoint))return USB_DESC_DUP_ENDPOINT;endpoints|=1u<<list[i].endpoint;}
+    for(unsigned i=0;i<found;i++)out[i]=list[i];
+    *count=found;return 0;
+}

@@ -3,6 +3,11 @@
 #include "input.h"
 /* Boot HID is a deliberately bounded subset, not a report-descriptor interpreter. */
 struct usb_boot_interface {uint8_t configuration,interface,protocol,endpoint,interval,alternate,additional;uint16_t packet;};
+#define USB_INTERFACES 4
+struct usb_hid_interface {uint8_t number,alternate,subclass,protocol,endpoint,interval;uint16_t packet,report_bytes;};
+unsigned usb_hid_interfaces(const uint8_t *,unsigned,unsigned,struct usb_hid_interface *,unsigned *);
+bool usb_hub_info(const uint8_t *,unsigned,unsigned *,unsigned *,unsigned *);
+bool usb_hub_route(unsigned,unsigned,unsigned,unsigned *);
 struct usb_hid_state {uint8_t modifiers,keys[6],buttons;};
 enum usb_descriptor_reason {
  USB_DESC_HEADER=1001,USB_DESC_TOTAL=1002,USB_DESC_WALK=1003,USB_DESC_INTERFACE=1004,
