@@ -20,7 +20,7 @@ def authorize(g):
     g.wait(lambda p:matches(p,256,100,'Personalize CHOS',0xf2f6ff,2),'native configuration')
     g.key('ret')
     g.wait(lambda p:matches(p,32,92,'Confirm destruction',0xf2f6ff),'erase confirmation')
-    type_text(g,'ERASE CHOS-GPT-BOOT')
+    type_text(g,'ERASE')
     # Send Enter without a host dwell so interruption can catch an early stage.
     g.qmp('input-send-event',{'events':[{'type':'key','data':{'down':down,'key':{'type':'qcode','data':'ret'}}} for down in [True,False]]})
 run=Path(tempfile.mkdtemp(prefix='setup-flow-',dir=BUILD));result={'passed':False,'iso_sha256':digest(BUILD/'CHOS-ARM64.iso'),'boots':[]}

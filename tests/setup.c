@@ -4,12 +4,13 @@
 #include <stdio.h>
 int main(void){
     struct chos_setup d={.medium=2,.allowed=1,.serial="CHOS-SETUP-1"};
-    struct chos_confirm c={.erase="ERASE CHOS-SETUP-1",.computer="CHOS-PC"};
+    struct chos_confirm c={.erase="ERASE",.computer="CHOS-PC"};
     assert(setup_confirmation_valid(&d,&c));
     d.medium=1;assert(!setup_confirmation_valid(&d,&c));d.medium=0;assert(!setup_confirmation_valid(&d,&c));d.medium=2;
     d.allowed=0;assert(!setup_confirmation_valid(&d,&c));d.allowed=1;
-    c.erase[6]='X';assert(!setup_confirmation_valid(&d,&c));c.erase[6]='C';
-    c.erase[18]=' ';assert(!setup_confirmation_valid(&d,&c));c.erase[18]=0;
+    c.erase[0]='e';assert(!setup_confirmation_valid(&d,&c));c.erase[0]='E';
+    c.erase[5]=' ';assert(!setup_confirmation_valid(&d,&c));c.erase[5]=0;
+    strcpy(c.erase,"ERASE CHOS-SETUP-1");assert(!setup_confirmation_valid(&d,&c));strcpy(c.erase,"ERASE");
     c.computer[0]=0;assert(!setup_confirmation_valid(&d,&c));strcpy(c.computer,"bad/name");assert(!setup_confirmation_valid(&d,&c));
     memset(c.computer,'A',32);assert(!setup_confirmation_valid(&d,&c));strcpy(c.computer,"CHOS-PC");
     memset(d.serial,'A',24);assert(!setup_confirmation_valid(&d,&c));d.serial[0]=0;assert(!setup_confirmation_valid(&d,&c));

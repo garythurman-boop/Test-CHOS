@@ -16,5 +16,21 @@ int main(void){
  b[29]=1;assert(!nvme_namespace(b,sizeof(b),&n));b[29]=0;put(b,128,12u<<16|1);assert(!nvme_namespace(b,sizeof(b),&n));
  put(b,128,10u<<16);assert(!nvme_namespace(b,sizeof(b),&n));put(b,128,12u<<16);put(b,8,8192);assert(!nvme_namespace(b,sizeof(b),&n));
  put(b,8,4096);put(b,0,0xffffffff);put(b,4,0xffffffff);assert(!nvme_namespace(b,sizeof(b),&n));
+ uint8_t padded[20];char serial[21];memset(padded,' ',20);memcpy(padded,"VMware-NVME",11);
+ assert(nvme_serial_normalize(padded,20,serial) && !strcmp(serial,"VMware-NVME"));
+ struct nvme_identity a={.ns={4096,512,false}},b_identity;
+ memcpy(a.serial,serial,21);memset(padded+11,0,9);
+ assert(nvme_serial_normalize(padded,20,serial) && !strcmp(serial,a.serial));
+ b_identity=a;memcpy(b_identity.serial,serial,21);assert(nvme_identity_compare(&a,&b_identity)==NVME_CHECK_OK);
+ b_identity.serial[0]='X';assert(nvme_identity_compare(&a,&b_identity)==NVME_CHECK_SERIAL_CHANGED);
+ b_identity=a;b_identity.namespace_id[23]=1;assert(nvme_identity_compare(&a,&b_identity)==NVME_CHECK_NAMESPACE_ID);
+ b_identity=a;b_identity.ns.sectors++;assert(nvme_identity_compare(&a,&b_identity)==NVME_CHECK_SECTORS);
+ b_identity=a;b_identity.ns.sector_bytes=4096;assert(nvme_identity_compare(&a,&b_identity)==NVME_CHECK_SECTOR_SIZE);
+ b_identity=a;b_identity.ns.read_only=true;assert(nvme_identity_compare(&a,&b_identity)==NVME_CHECK_READONLY);
+ padded[5]=0;assert(!nvme_serial_normalize(padded,20,serial));
+ memset(padded,0,20);assert(!nvme_serial_normalize(padded,20,serial));
+ memset(padded,' ',20);assert(!nvme_serial_normalize(padded,20,serial));
+ memset(padded,'A',20);assert(nvme_serial_normalize(padded,20,serial) && serial[20]==0);
+ padded[19]=127;assert(!nvme_serial_normalize(padded,20,serial));
  puts("NVMe CAP queue/CSS/granule/stride/timeout and bounded namespace capacity/LBA-format/metadata/protection/overflow parsing passed");
 }

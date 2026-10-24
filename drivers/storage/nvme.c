@@ -9,6 +9,8 @@
 struct queue { uint64_t sq,cq; unsigned tail,head,phase,id; uint16_t cid; };
 static const char *error;
 static char serial_number[21];
+static struct nvme_identity original_identity;
+static unsigned check_error;
 static bool read_only,diagnostic_only;
 static unsigned driver_stage,last_completion;
 const char *nvme_error(void) { diagnostic_value("NVMe failure stage: ",driver_stage,false);diagnostic_value("NVMe last completion: ",last_completion,true);return error; }
@@ -122,8 +124,10 @@ bool nvme_init(struct pmm *physical,const struct chos_boot_info *boot,struct blo
     *reg(0x14)=(6u<<16)|(4u<<20)|1;
     if(!wait_ready(true) || !identify(0,1)) return false;
     const uint8_t *buffer=(void *)(uintptr_t)controller.buffer;
-    for(unsigned i=0;i<20;i++)serial_number[i]=(char)buffer[4+i];
-    serial_number[20]=0;for(unsigned i=20;i && serial_number[i-1]==' ';i--)serial_number[i-1]=0;
+    original_identity=(struct nvme_identity){0};check_error=NVME_CHECK_OK;
+    if(nvme_serial_normalize(buffer+4,20,serial_number))
+        for(unsigned i=0;i<21;i++)original_identity.serial[i]=serial_number[i];
+    else {serial_number[0]=0;diagnostic_log("NVMe serial invalid: installation disabled");}
     const char serial[]="CHOS-TEST-0001"; bool match=true;
     for(unsigned i=0;i<20;i++) if(buffer[4+i]!=(uint8_t)(i<sizeof(serial)-1?serial[i]:' ')) match=false;
     *identity=match;
@@ -131,6 +135,8 @@ bool nvme_init(struct pmm *physical,const struct chos_boot_info *boot,struct blo
     if(!identify(1,0)) return false;
     struct nvme_namespace ns;error="NVME SECTOR FORMAT UNSUPPORTED";
     if(!nvme_namespace(buffer,4096,&ns))return false;
+    original_identity.ns=ns;
+    for(unsigned i=0;i<24;i++)original_identity.namespace_id[i]=buffer[104+i];
     controller.sectors=ns.sectors;controller.sector_size=ns.sector_bytes;read_only=ns.read_only;
     diagnostic_value("NVMe namespace 1 sectors: ",controller.sectors,false);
     diagnostic_value("NVMe sector bytes: ",controller.sector_size,false);
@@ -152,14 +158,26 @@ uint64_t nvme_bar(void) { return controller.bar; }
 unsigned nvme_sector_size(void){return controller.ready?controller.sector_size:0;}
 const char *nvme_serial(void){return serial_number;}
 bool nvme_writable(void){return controller.ready && !read_only && !diagnostic_only;}
+unsigned nvme_check_error(void){return check_error;}
+static bool check_failed(unsigned code){
+    check_error=code;diagnostic_value("NVMe install recheck code: ",code,false);
+    diagnostic_log(nvme_check_message(code));return false;
+}
 bool nvme_recheck(void){
-    if(!controller.ready || !identify(0,1))return false;
+    check_error=NVME_CHECK_OK;
+    if(!controller.ready || (*reg(0x1c)&3)!=1)return check_failed(NVME_CHECK_NOT_READY);
+    if(diagnostic_only)return check_failed(NVME_CHECK_POLICY);
+    if(!identify(0,1))return check_failed(NVME_CHECK_CONTROLLER_IDENTIFY);
     const uint8_t *b=(void *)(uintptr_t)controller.buffer;
-    unsigned n=0;while(serial_number[n])n++;
-    for(unsigned i=0;i<20;i++)if(b[4+i]!=(uint8_t)(i<n?serial_number[i]:' '))return false;
-    if(!identify(1,0))return false;
-    struct nvme_namespace ns;if(!nvme_namespace(b,4096,&ns) || ns.sectors!=controller.sectors || ns.sector_bytes!=controller.sector_size)return false;
-    read_only=ns.read_only;return true;
+    struct nvme_identity current={0};
+    if(!nvme_serial_normalize(b+4,20,current.serial))return check_failed(NVME_CHECK_SERIAL_INVALID);
+    if(!identify(1,0))return check_failed(NVME_CHECK_NAMESPACE_IDENTIFY);
+    if(!nvme_namespace(b,4096,&current.ns))return check_failed(NVME_CHECK_NAMESPACE_FORMAT);
+    for(unsigned i=0;i<24;i++)current.namespace_id[i]=b[104+i];
+    read_only=current.ns.read_only;
+    unsigned code=nvme_identity_compare(&original_identity,&current);
+    if(code)return check_failed(code);
+    diagnostic_log("NVMe install identity and writable recheck: PASS");return true;
 }
 
 /* Automatic input-failure diagnostics use the same non-writable media policy. */

@@ -69,7 +69,7 @@ test-input: | build
 	$(CC) -std=c11 -Wall -Wextra -Werror -Iinclude tests/input.c drivers/input/events.c -o build/test-input
 	./build/test-input
 
-ASOURCES := userspace/libraries/gui/widgets.c applications/setup/main.c applications/common/runtime.c applications/desktop/main.c applications/explorer/main.c applications/notepad/main.c applications/terminal/main.c applications/control-panel/main.c applications/task-manager/main.c applications/about/main.c
+ASOURCES := drivers/storage/nvme_format.c userspace/libraries/gui/widgets.c applications/setup/main.c applications/common/runtime.c applications/desktop/main.c applications/explorer/main.c applications/notepad/main.c applications/terminal/main.c applications/control-panel/main.c applications/task-manager/main.c applications/about/main.c
 AOBJECTS := $(patsubst %.c,build/app/%.o,$(ASOURCES))
 build/app/%.o: %.c $(wildcard include/*.h) applications/common/app.h Makefile
 	mkdir -p $(dir $@)

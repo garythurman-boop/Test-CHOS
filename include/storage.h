@@ -7,6 +7,7 @@ uint64_t nvme_bar(void);
 unsigned nvme_sector_size(void);
 const char *nvme_serial(void);
 bool nvme_recheck(void);
+unsigned nvme_check_error(void);
 bool nvme_writable(void);
 void nvme_diagnostic_guard(void);
 const char *nvme_error(void);

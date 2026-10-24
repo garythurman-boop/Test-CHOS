@@ -5,6 +5,7 @@
 #include "console.h"
 #include "desktop.h"
 #include "timer.h"
+#include "nvme_format.h"
 static struct block_device disk;
 static struct chos_boot_info *boot;
 static struct pmm *physical;
@@ -110,7 +111,8 @@ static bool verify_file(const char *path,const void *bytes,size_t size){
 }
 static void install(void *unused){
     (void)unused;report(0,SETUP_PREPARE,0,0);
-    if(!nvme_recheck() || !nvme_writable()){state.error=1;return;}
+    if(!nvme_recheck()){state.error=64+nvme_check_error();return;}
+    if(!nvme_writable()){state.error=64+NVME_CHECK_READONLY;return;}
     struct block_device target=disk;
     if(!install_gpt_write(target,state.sector,&plan,true,&workspace)){state.error=2;return;}
     report(0,SETUP_FORMAT,0,0);partition();

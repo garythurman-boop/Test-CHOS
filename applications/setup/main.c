@@ -1,6 +1,7 @@
 /* Dedicated original setup presentation over the existing native installer.
  * Screens do not write disks: only the final process-bound ERASE request does. */
 #include "app.h"
+#include "nvme_format.h"
 enum { WELCOME,LICENSE,DESTINATION,LAYOUT,CONFIGURATION,CONFIRMATION,RECOVERY };
 static unsigned page,selection;
 static struct chos_config chosen;
@@ -62,7 +63,7 @@ static void blue(void){
         line(92,"Confirm destruction of the selected disk");line(140,"WARNING: all data on this disk will be lost.");
         line(184,"NVMe serial:");ui_text(4,224,184,disk.serial,WHITE);
         line(220,"Capacity:");size(224,220,disk.bytes,WHITE);
-        line(264,"Type ERASE followed by the exact serial.");
+        line(264,"Type ERASE to authorize only this disk.");
         ui_textfield(&app_gui,80,32,306,app_width-64,confirm.erase,sizeof(confirm.erase));
         ui_text(0,32,app_height-96,"Enter authorizes actual partitioning and writes.",0xc3d5ff);
     } else {
@@ -100,7 +101,7 @@ static void graphical(void){
     if(disk.error){
         ui_text(0,x,158,"The destination may be incomplete.",WHITE);
         static const char *const errors[]={"","Disk identity or write protection changed.","GPT write, flush or read-back failed.","EFI partition or payload verification failed.","System volume or configuration write failed.","Final partition or system file check failed.","Installation log write/read-back failed."};
-        ui_text(0,x,198,errors[disk.error<=6?disk.error:5],0xffd9a0);
+        ui_text(0,x,198,disk.error>=64?nvme_check_message(disk.error-64):errors[disk.error<=6?disk.error:5],0xffd9a0);
         ui_text(0,x,242,"Keep the ISO. Power off and back up the disk.",WHITE);
         ui_text(0,x,274,"Retry only a confirmed disposable destination.",WHITE);
         ui_text(0,x,306,"No rollback or filesystem repair is available.",WHITE);

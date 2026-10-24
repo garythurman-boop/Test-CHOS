@@ -50,7 +50,7 @@ try:
     guest.wait(lambda p:matches(p,32,703,'Confirmation refused',0xffe7a5,0),'wrong erase rejection')
     assert digest(disk)==before,'Rejected typed confirmation modified disk'
     guest.snapshot(f'setup-confirmation-{sector}{suffix}')
-    guest.key('u',('ctrl',));type_text(guest,'ERASE CHOS-GPT-BOOT');guest.key('ret')
+    guest.key('u',('ctrl',));type_text(guest,'ERASE');guest.key('ret')
     guest.wait(lambda p:matches(p,256,100,'Installing CHOS',0xf2f6ff,2),'graphical disk installation in progress',90)
     guest.snapshot(f'setup-progress-{sector}{suffix}')
     guest.wait(lambda p:matches(p,256,154,'CHOS installation completed successfully.',0xf2f6ff,0),'verified installation completion',90)
@@ -78,7 +78,7 @@ try:
     guest.snapshot(f'installed-notepad-reopen-{sector}{suffix}')
     saved=digest(disk);launch(guest,7);guest.key('ret');guest.key('ret')
     guest.wait(lambda p:matches(p,32,654,'Disabled: this is not an optical-media boot.',0xf2f6ff,0),'refusal to reinstall over own boot disk')
-    guest.key('ret');type_text(guest,'ERASE CHOS-GPT-BOOT\n');time.sleep(.3)
+    guest.key('ret');type_text(guest,'ERASE\n');time.sleep(.3)
     assert digest(disk)==saved,'Boot disk exclusion failed'
     result['boots'].append({'kind':'installed_cold_boot_persistent_read_and_self_erase_refusal','command':guest.command,'passed':True})
 finally:guest.close()
