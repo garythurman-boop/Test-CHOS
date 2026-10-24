@@ -1,0 +1,20 @@
+{
+  "passed": true,
+  "runtime_source_before_test_fix": "dfaa4f35570957ee85576bc4f3ebcf61ed1d913e",
+  "source_with_test_fix": "475c3a737295748a0bd2000d57f664c3fb877e81",
+  "runtime_source_paths_unchanged": [
+    "Makefile",
+    "boot",
+    "kernel",
+    "drivers",
+    "filesystem",
+    "userspace",
+    "desktop",
+    "applications",
+    "installer",
+    "include",
+    "assets"
+  ],
+  "normal_iso_sha256": "8a903ab0ab868c79aa54cd3c1a23fa743ad2eef4ab28703ecb37c00b4928026d",
+  "reason": "Only stale growth harness assertion changed from three to five boot steps; rerun failed growth case and remaining gates; retain earlier passing coverage."
+}

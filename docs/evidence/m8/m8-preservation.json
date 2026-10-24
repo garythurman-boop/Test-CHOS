@@ -1,0 +1,15 @@
+{
+  "passed": true,
+  "baseline": "fe3e1f5e94f2d72d133a9cfd5f5b518748bffd2c",
+  "unchanged_paths": [
+    "artifacts/milestone-7i",
+    "drivers/usb",
+    "drivers/input",
+    "drivers/interrupts",
+    "filesystem/chfs.c",
+    "kernel/memory",
+    "kernel/arch/arm64"
+  ],
+  "nvme_command_identify_transfer_read_write_flush_functions_unchanged": true,
+  "known_good_backup_unchanged": true
+}

@@ -1,0 +1,5 @@
+{
+  "passed": true,
+  "expected_absolute_pointer_refusal": true,
+  "output": "[\n  {\n    \"object\": \"build/absolute-pointer-test.o\",\n    \"section\": \".rela.data\",\n    \"relocation\": \"0000000000000000  0000000100000101 R_AARCH64_ABS64        0000000000000000 .text + 0\"\n  }\n]\nUnsupported absolute relocation in flat kernel\n"
+}

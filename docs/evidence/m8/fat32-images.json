@@ -1,0 +1,46 @@
+{
+  "passed": true,
+  "scope": "Build-time disk construction; not guest installation",
+  "cases": [
+    {
+      "passed": true,
+      "sector_bytes": 512,
+      "disk_image": "/src/build/fat32-test-eohfolqx/chos-512.img",
+      "sha256": "db030b82939abc8011b4509148f7086b5ba3a75b29c63722a2dce6d30286f5c7",
+      "files": {
+        "EFI/BOOT/BOOTAA64.EFI": "2234cd99f13ac947cbedad764f6de83d7b0c5aedf7a3dfaf7f8a53df912dc103",
+        "CHOS/KERNEL.BIN": "3015421489d793f21710f6780fe775d767a3add3727882d8cae28f1d0190c4c0"
+      },
+      "checks": [
+        "BPB and backup",
+        "FSInfo and backup",
+        "mirrored FATs",
+        "bounded non-cyclic non-crosslinked cluster chains",
+        "directory tree",
+        "exact original EFI/kernel bytes and zero padding",
+        "exclusive new-image creation",
+        "identical second fresh build"
+      ]
+    },
+    {
+      "passed": true,
+      "sector_bytes": 4096,
+      "disk_image": "/src/build/fat32-test-eohfolqx/chos-4096.img",
+      "sha256": "2bf8a8f3a9bf56df962c1755d4f9db7f4ecd7d9fd8dfe59982aea686b2d39c2f",
+      "files": {
+        "EFI/BOOT/BOOTAA64.EFI": "2234cd99f13ac947cbedad764f6de83d7b0c5aedf7a3dfaf7f8a53df912dc103",
+        "CHOS/KERNEL.BIN": "3015421489d793f21710f6780fe775d767a3add3727882d8cae28f1d0190c4c0"
+      },
+      "checks": [
+        "BPB and backup",
+        "FSInfo and backup",
+        "mirrored FATs",
+        "bounded non-cyclic non-crosslinked cluster chains",
+        "directory tree",
+        "exact original EFI/kernel bytes and zero padding",
+        "exclusive new-image creation",
+        "identical second fresh build"
+      ]
+    }
+  ]
+}

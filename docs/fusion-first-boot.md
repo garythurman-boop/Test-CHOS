@@ -1,3 +1,11 @@
+# Current M8 test build
+
+[Download CHOS-ARM64-M8.iso](https://raw.githubusercontent.com/garythurman-boop/Test-CHOS/main/artifacts/milestone-8/CHOS-ARM64-M8.iso)
+· [checksums](../artifacts/milestone-8/SHA256SUMS) · [report/screenshots](milestone-8.md).
+First verify M8 Setup and input with no target attached, then follow the M8
+installation retest below using a disposable NVMe disk. M7I is the known-good
+backup; older checkpoint-specific instructions below remain historical.
+
 # M7I Fusion test — one normal ISO first
 
 The M7H captures now establish the missing paths: port 6 has two report-only HID

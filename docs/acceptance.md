@@ -1,10 +1,12 @@
 # CHOS acceptance evidence
 
-Current sequence: [M7F discovery/input/storage](milestone-7f.md),
+Current sequence: [M8 installation/desktop continuation](milestone-8.md),
 [setup architecture](setup-environment.md). Earlier tables below retain their
 checkpoint-specific evidence; each new sequence reruns the earlier core coverage.
 
-These results are distinct. All VM results below are QEMU AArch64 UEFI, not Fusion.
+These results are distinct. Automated VM results are QEMU AArch64 UEFI. The user
+separately confirms M7I Fusion normal boot, keyboard/mouse, Setup and Live Desktop.
+M8 Fusion persistent installation remains pending.
 
 | Criterion | Result | Evidence |
 |---|---|---|
@@ -124,3 +126,7 @@ reproduction and ASan/UBSan are required. Controlled QEMU topologies use QEMU de
 Actual M7E Fusion core boot/diagnostics/Setup now pass. Input delivery, USB attachment,
 NVMe initialization/reads, installation and disk-only persistence remain target gates
 for the new image. Read-only diagnostics precede any target writes.
+
+## M8 automated acceptance
+
+See [the current gate table](milestone-8.md#final-automated-acceptance--2026-10-24) and [evidence summary](evidence/m8/summary.json). Full automated coverage, sanitizers, persistent installation/desktop interactions and three clean-source image reproductions pass. Actual Fusion M8 installation remains a separate open gate.

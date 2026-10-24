@@ -1,0 +1,6 @@
+{
+  "passed": true,
+  "source_commit": "475c3a737295748a0bd2000d57f664c3fb877e81",
+  "clean_source_directory": "build/reproduce-checkpoint-YTM3Nq",
+  "all_three_images_byte_identical": true
+}

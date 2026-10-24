@@ -40,7 +40,7 @@ identities, serial/namespace/geometry changes, read-only identity and exact
 ERASE-only confirmation. QEMU installation and later sub-milestone results are
 recorded below as they complete.
 
-## Remaining sequence
+## Development sequence
 
 M8B: persisted two-phase setup with actual disk-only reboot. M8C: desktop input
 semantics and cursor. M8D: firmware-enumerated display choices and safe preference
@@ -153,8 +153,7 @@ Commands: `./scripts/container.sh make -j4 iso test-installer test-desktop
  test-graphics`, `./scripts/container.sh python3 tests/install.py --sector 512`,
 new `tests/desktop_m8.py`, `tests/explorer_context.py`, `tests/display_m8.py`, and
 `bash scripts/checkpoint.sh` for the full existing suite, host sanitizers and
-clean committed-source reproduction. Integration results and source/image hashes
-will be added after these gates complete. M8 Fusion persistent installation and
+clean committed-source reproduction. Final integration results and source/image hashes are recorded below. M8 Fusion persistent installation and
 new desktop/resolution behavior require actual user testing; QEMU success alone
 does not close that acceptance criterion.
 
@@ -174,3 +173,124 @@ regression requires temporary recovery and zero writes instead. This deliberatel
 refuses automatic migration of marker-less legacy installations; their existing
 boot pair/backup remains usable. The source checkpoint was revised before final
 integration acceptance.
+
+## Final automated acceptance — 2026-10-24
+
+Source checkpoint: `475c3a737295748a0bd2000d57f664c3fb877e81`.
+Runtime source paths are byte-identical to `dfaa4f3`; the final commit corrects
+only the growth-test harness's obsolete three-boot assertion to five boots.
+The initial whole-suite run stopped at that assertion after all five actual
+boots succeeded. The failed growth group and all remaining gates were rerun;
+earlier passing coverage was retained against the unchanged binary. This is
+recorded in `evidence/m8/m8-validation-resume.json`, and the original assertion
+failure remains visible in the validation log. No runtime failure was hidden.
+
+All automated gates now pass:
+
+| Gate | Evidence/result |
+|---|---|
+| Full QEMU coverage | 109 distinct recorded QEMU command lines; original suite plus expanded installation and M8 cases |
+| Portable host checks | 20 programs; both actual ELF payloads verified |
+| Memory safety | GCC AddressSanitizer/UndefinedBehaviorSanitizer checks pass |
+| Native installation | Both 512/4096 sectors, EL1/GICv2 and EL2/GICv3; bridged NVMe; five boot steps per installation |
+| Interrupted installation | First-stage write failure/interruption/reconfirmation; second-stage failed save, cold continuation, missing/invalid marker with zero writes |
+| Desktop input | Virtio relative and USB absolute; selection, double-click, dragging, Enter, properties/menu dismissal and cursor restoration |
+| Icon persistence | Saved positions survive disk-only cold boot |
+| Explorer context actions | Folder opening, real properties/copy and existing-destination overwrite refusal |
+| Display preference | Six real boots cover trial, unconfirmed fallback, confirmation, retained mode and corrupt-record fallback |
+| Existing hardware/kernel | MMU/EL/IRQ/ELF/IPC/storage/USB refusal/disconnect/hub/nonzero-bus coverage preserved; controlled large-image installed boot passes |
+| Reproduction | All three ISOs byte-identical after a clean build from committed source |
+
+The package contains **187 actual QEMU PNGs**, **61 fresh metadata reports** and
+**371 hashed evidence files**. [Summary](evidence/m8/summary.json),
+[validation log](evidence/m8/validation.log), [sanitizers](evidence/m8/sanitizers.log),
+[reproduction](evidence/m8/checkpoint-reproduction.json),
+[evidence hashes](evidence/m8/files.sha256).
+
+Normal ISO: **[Download CHOS-ARM64-M8.iso](https://raw.githubusercontent.com/garythurman-boop/Test-CHOS/main/artifacts/milestone-8/CHOS-ARM64-M8.iso)**.
+[All image checksums](../artifacts/milestone-8/SHA256SUMS).
+
+| Image | Bytes | SHA-256 |
+|---|---:|---|
+| CHOS-ARM64-M8.iso | 17154048 | `8a903ab0ab868c79aa54cd3c1a23fa743ad2eef4ab28703ecb37c00b4928026d` |
+| CHOS-ARM64-M8-DIAGNOSTIC.iso | 17154048 | `ce0cbc9d401b365161cb1a9ac547752a4d2dda2266bc7f0f21d9c06fca72792f` |
+| CHOS-ARM64-M8-INPUT.iso | 17154048 | `0def67421ada8901cdd27710fcf52fdfa6c16fef928380bd25189953ae571fd7` |
+
+Normal ISO SHA-256 is `8a903ab0ab868c79aa54cd3c1a23fa743ad2eef4ab28703ecb37c00b4928026d`.
+The normal ISO is the installer; optional INPUT and DIAGNOSTIC images are read-only
+hardware/input tools. The M7I backup and original USB/input, interrupt, memory,
+ARM64 and CHFS source paths are unchanged. NVMe command/transfer/read/write/flush
+functions are unchanged; identity formatting/revalidation is the intended change.
+[Preservation check](evidence/m8/m8-preservation.json).
+
+Measured QEMU scope: kernel file 315,680 bytes, declared image memory 638,976 bytes,
+guarded stack reservation 73,728 bytes. The 512 MiB two-app test reports 11,680 KiB
+allocated from 489,568 KiB managed conventional RAM. This excludes other reserved
+firmware/device memory and is not total system memory consumption. Desktop
+readiness was 15.373 seconds including firmware, self-tests and Live selection.
+The bounded idle observation consumed 0.93 host vCPU-thread seconds over 10 seconds
+under TCG (9.3% of one host core), not a native Fusion guest CPU measurement.
+
+Actual framebuffer captures:
+
+![Installed-disk Royale configuration](evidence/m8/setup-configuration-512.png)
+
+![Blue first-stage installation](evidence/m8/setup-progress-512.png)
+
+![Desktop shortcut properties](evidence/m8/m8-icon-properties-virtio.png)
+
+![Confirmed boot-time resolution](evidence/m8/m8-display-confirmed.png)
+
+| Sub-milestone | Acceptance scope |
+|---|---|
+| M8A | Identity defect corrected and regression-tested; exact Fusion failure resolution awaits target retest |
+| M8B | Genuine two-phase installation and persistence verified under QEMU |
+| M8C | Implemented cursor/shortcut gestures/menus/layout persistence verified; optional file-object and cursor features remain |
+| M8D | Firmware-mode choices and safe reboot trial/confirmation verified under QEMU |
+| M8E | Incremental Royale/native-menu refinements; further small-window/interaction polish remains |
+| M8F | Automated gates, reproduction and packaging pass; manual Fusion acceptance remains open |
+
+## Source areas
+
+Boot firmware changes are in `boot/uefi/main.c`, `boot/uefi/efi.h`, `include/boot.h`
+and `include/display_mode.h`. Installer/storage changes are in `installer/service.c`,
+`installer/policy.c`, `installer/fat32.c`, `drivers/storage/nvme.c` and
+`drivers/storage/nvme_format.c`. Native presentation and interaction changes are
+in `applications/setup/main.c`, `applications/control-panel/main.c`,
+`applications/explorer/main.c`, `applications/desktop/main.c`, `desktop/desktop.c`,
+`desktop/window-manager/model.c` and `desktop/graphics/primitives.c`. ABI/header,
+Makefile, validation, sanitizer-compatible portable tests, real QEMU interaction
+scripts and documentation accompany those changes. `git show --stat` on the
+source checkpoint gives the complete file list.
+
+## Acceptance scope and remaining work
+
+The development build is not CHOS 0.1. QEMU evidence covers real native code and
+real persistent virtual-disk operations; it does not substitute for Fusion
+installation acceptance. The user-confirmed M7I Fusion input result is preserved.
+The actual Fusion install error may have another cause in addition to the
+reproduced serial-padding defect; a new precise error screen should identify it.
+
+Only the original arrow cursor and built-in application shortcuts are implemented.
+Arbitrary desktop file objects, grid snapping, additional cursor shapes, file
+associations and clipboard cut/paste are unfinished. Some narrow application
+layouts still clip controls; maximize the window when needed. The fixed US
+keyboard, fixed UTC offset and two themes are real; locale databases, DST rules,
+authenticated accounts and per-user permissions are absent. Runtime display
+switching, general FAT repair, larger CHFS capacity, USB3/replug recovery, SMP and
+networking remain future milestones. Firmware consumption of an explicitly
+requested display trial is an authorized pre-kernel ESP write; native diagnostic
+write guards apply after that boot stage. Optical diagnostic images do not carry
+such a writable preference file.
+
+Next: run the complete disposable-disk installation, disk-only graphical setup,
+persistent document, desktop gesture and resolution-trial sequence on the user's
+Fusion/M1 configuration. Record the precise ISO checksum and results. Resolve
+any target failures before declaring M8 fully accepted, then continue filesystem
+recovery/capacity and account-security work from the preserved original kernel.
+
+Installed boot currently uses `EFI/BOOT/BOOTAA64.EFI` on the GPT ESP; firmware
+Boot#### NVRAM registration is not implemented. QEMU automatically finds this
+path. If Fusion does not automatically boot the installed disk, capture that
+firmware result and select the file manually for diagnosis rather than erasing
+again. Automatic Fusion installed boot is a separate acceptance gate.

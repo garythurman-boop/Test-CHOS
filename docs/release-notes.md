@@ -1,3 +1,20 @@
+# M8 development — two-phase installation and Royale continuation
+
+Corrects inconsistent NVMe serial padding, adds precise identity/writable errors
+and keeps disk/session-bound ERASE-only authorization. Blue Setup now performs all
+disk preparation and copying; real disk-only boots resume persisted Royale
+configuration and Welcome. Missing/invalid continuation state enters temporary
+recovery. Desktop adds a visible original cursor, selection/double-click/dragging,
+saved layout and native menus. Display Properties exposes actual GOP modes with
+safe reboot trials, confirmation and fallback. Build 13 identifies M8 in About.
+
+Automated gates pass, including 109 distinct recorded QEMU command lines, 20 host
+programs, sanitizers and three byte-identical clean-source image reproductions.
+The user confirms M7I Fusion input; M8 persistent installation and new behavior
+still need actual Fusion testing. This is not CHOS 0.1. Marker-less legacy systems
+are not automatically migrated; retain their existing boot pair and backup.
+[Report, source, screenshots and known issues](milestone-8.md).
+
 # M7I — unified hub/report-HID/absolute-input candidate
 
 Normal Setup and automatic read-only input diagnostics now share one ISO. Original

@@ -22,3 +22,5 @@ remaining defects and measure target memory/CPU use. Authentication, account
 permissions, broader filesystem capacity/recovery, application associations,
 USB hotplug re-enumeration and additional cursor variants remain future work.
 Networking, SMP and accelerated graphics follow reliable boot/storage/input.
+
+M8F automated coverage and three clean-source ISO reproductions now pass. The versioned development images and actual framebuffer evidence are published with the M8 report; Fusion installation acceptance remains the next gate.

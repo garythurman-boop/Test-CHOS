@@ -7,9 +7,9 @@
 | 3: display/input/NVMe/CHFS persistent operations | QEMU GOP + Virtio PCI + NVMe tested; three cold storage boots |
 | 4: CHOS Desktop/window manager/taskbar/Start | Working core; Royale widgets and multi-window usage tested; dedicated Search/Help and wallpaper file loading remain |
 | 5: six native applications | Functional bounded native apps with installed persistence and shared widgets; see desktop.md |
-| 6: graphical installer/GPT/ESP/installed boot | Dedicated full-screen blue/Royale native setup, disk boot and persistent system volume; saved computer/theme/fixed clock offset implemented; account/password/layout and graphical mode configuration unfinished |
+| 6: graphical installer/GPT/ESP/installed boot | Dedicated full-screen blue/Royale native setup, disk boot and persistent system volume; saved computer/theme/fixed clock offset implemented; boot-time display trials now supported in M8; account/password/layout remain unfinished |
 | 7: VMware Fusion validation | User confirms M7I normal ISO, Setup, keyboard, mouse/trackpad and Live Desktop on Fusion/M1. Persistent Fusion installation fails at the identity/writable recheck; M8 correction needs target retest |
-| 8: two-phase installation / Royale continuation | M8 development candidate; native two-phase disk boot tested, integration in progress. CHOS 0.1 release acceptance remains open |
+| 8: two-phase installation / Royale continuation | M8 development checkpoint passes full automated coverage, sanitizers and clean-source ISO reproduction. Actual Fusion installation acceptance and CHOS 0.1 remain open |
 
 Current work: [Milestone 8](milestone-8.md). Known-good input backup: [M7I](milestone-7i.md).
 Preserved [M7H descriptor/HID diagnostics](milestone-7h.md).
@@ -102,3 +102,5 @@ live panel and bounded driver/port reports; both diagnostic modes reject writes
 and probe first/last 4 KiB reads. Actual controllers are xHCI `0a:00.0` and NVMe
 `12:00.0`; keyboard attachment/namespace behavior remains unverified after this fix.
 UHCI/EHCI support is not justified solely by PCI presence. See [driver limits](driver-diagnostics.md).
+
+M8 evidence: 109 distinct QEMU command lines, 20 host programs, 187 actual PNGs and three reproduced images. [Current report and limitations](milestone-8.md).

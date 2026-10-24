@@ -47,9 +47,10 @@ to disk. [First Fusion evaluation instructions](docs/fusion-first-boot.md).
 
 ## Download testing images
 
-- **[Current unified M7I Setup/Live Desktop ISO](artifacts/milestone-7i/CHOS-ARM64.iso)** — normal startup plus automatic read-only input-failure diagnostics.
+- **[Current M8 development Setup/Live Desktop ISO](https://raw.githubusercontent.com/garythurman-boop/Test-CHOS/main/artifacts/milestone-8/CHOS-ARM64-M8.iso)** — guarded two-phase installation, desktop interaction and resolution trials. [Report/screenshots](docs/milestone-8.md) · [Checksums](artifacts/milestone-8/SHA256SUMS).
+- **[Known-good M7I Setup/Live Desktop backup](artifacts/milestone-7i/CHOS-ARM64.iso)** — normal startup plus automatic read-only input-failure diagnostics.
 - [Optional always-on M7I input test ISO](artifacts/milestone-7i/CHOS-ARM64-M7I-INPUT.iso).
-- [Current full-page M7I diagnostic ISO](artifacts/milestone-7i/CHOS-ARM64-M7I-DIAGNOSTIC.iso).
+- [Preserved full-page M7I diagnostic ISO](artifacts/milestone-7i/CHOS-ARM64-M7I-DIAGNOSTIC.iso).
 - [Preserved noninteractive M7C diagnostic ISO](artifacts/milestone-7c/CHOS-ARM64-M7C.iso).
 - [Preserved M7C Setup/Live Desktop ISO](artifacts/milestone-7c/CHOS-ARM64.iso).
 - [Preserved M7A/7B boot/interrupt compatibility ISO](artifacts/milestone-7a-b/CHOS-ARM64.iso).
@@ -128,7 +129,8 @@ after toolchain installation. Tests start/stop their own QEMU processes.
 
 - [Acceptance criteria and evidence](docs/acceptance.md)
 - [Dedicated installation environment and safety](docs/setup-environment.md)
-- [Current M7I unified input candidate](docs/milestone-7i.md)
+- [Current M8 development checkpoint](docs/milestone-8.md)
+- [Preserved M7I input baseline](docs/milestone-7i.md)
 - [Preserved M7H USB descriptor/HID checkpoint](docs/milestone-7h.md)
 - [Preserved M7G xHCI layout/diagnostic checkpoint](docs/milestone-7g.md)
 - [Preserved M7F discovery/input/storage checkpoint](docs/milestone-7f.md)

@@ -1,0 +1,183 @@
+UEFI firmware (version 2025.02-8+deb13u1 built at 18:06:17 on Nov  8 2025)
+BdsDxe: loading Boot0001 "UEFI QEMU QEMU CD-ROM " from PciRoot(0x0)/Pci(0x2,0x0)/Scsi(0x0,0x0)
+BdsDxe: starting Boot0001 "UEFI QEMU QEMU CD-ROM " from PciRoot(0x0)/Pci(0x2,0x0)/Scsi(0x0,0x0)
+CHOS - ARM64 UEFI loader
+CHOS: firmware entry EL1
+CHOS: firmware Debian distribution of EDK II
+CHOS: firmware revision 00010000 UEFI 00020046
+CHOS: PCI 0000:00:00.0 ID 1b36:0008 CLASS 060000
+CHOS: PCI 0000:00:01.0 ID 1b36:000d CLASS 0c0330
+CHOS: PCI 0000:00:02.0 ID 1af4:1004 CLASS 010000
+CHOS: ACPI 2.x RSDP present
+CHOS: kernel loaded; leaving firmware
+CHOS diagnostic report v1; inventory read-only
+Debian distribution of EDK II
+Firmware revision: 0x10000
+UEFI revision: 0x20046
+Firmware entry EL: 1
+Current kernel EL: 1
+ACPI XSDT/checksums: PASS
+ACPI table count: 9
+ACPI mask APIC/GTDT/MCFG/FADT/SPCR: 0x1f
+Framebuffer width: 640
+Framebuffer height: 480
+Framebuffer stride: 640
+GOP pixel format: 1
+PCI retained: 3
+PCI firmware handles: 3
+PCI 0000:00:00.0 1b36:0008 class 060000
+Other PCI device
+PCI 0000:00:01.0 1b36:000d class 0c0330
+USB xHCI
+PCI 0000:00:02.0 1af4:1004 class 010000
+Storage unsupported
+Native serial: ACPI SPCR PL011 or unavailable
+GIC discovered version: 3
+MMU table pages: 530
+MMU table capacity: 1024
+MMU RAM descriptors: 79
+MMU highest physical end: 0xc0000000
+Kernel MMU: PASS
+Kernel file bytes: 315680
+Kernel memory bytes: 638976
+Bootstrap stack bytes: 65536
+Controlled file growth bytes: 0
+Controlled BSS growth bytes: 0
+Kernel image contract and growth checks: PASS
+Timer initialized PPI: 30
+Timer delivered ticks: 31
+GIC delivery and preemption: PASS
+NVMe PCI discovery
+Driver PCI segment/bus/devfn: 0x0
+Driver PCI device/vendor: 0x0
+Driver PCI config: 0x0
+Driver PCI discovery result: 4
+NVMe failure stage: 1
+NVMe last completion: 0x0
+NVME PCI CONTROLLER NOT FOUND
+xHCI driver selected
+Driver PCI segment/bus/devfn: 0x8
+Driver PCI device/vendor: 0xd1b36
+Driver PCI config: 0x4010008000
+Driver PCI discovery result: 0
+xHCI PCI command before: 0x0
+xHCI BAR0 low: 0x4004
+xHCI BAR0 high: 0x80
+xHCI MMIO base: 0x8000004000
+xHCI PCI command decode: 0x2
+xHCI CAPLENGTH/version: 0x1000040
+xHCI HCSPARAMS1: 0x8001040
+xHCI HCSPARAMS2: 0xf
+xHCI HCCPARAMS1: 0x87001
+xHCI DBOFF raw: 0x2000
+xHCI RTSOFF raw: 0x1000
+xHCI scratchpad buffers: 0
+xHCI root ports: 8
+xHCI USBCMD: 0x0
+xHCI USBSTS: 0x9
+xHCI PAGESIZE: 0x1
+xHCI CRCR: 0xbecd3241
+xHCI DCBAAP: 0xbecd3000
+xHCI CONFIG: 0x40
+xHCI extended capability: 0x2000402
+xHCI extended capability: 0x3000002
+xHCI halt: PASS
+xHCI reset/CNR: PASS
+xHCI USBCMD: 0x0
+xHCI USBSTS: 0x1
+xHCI PAGESIZE: 0x1
+xHCI CRCR: 0x0
+xHCI DCBAAP: 0x0
+xHCI CONFIG: 0x0
+xHCI four aligned DMA pages allocated: PASS
+xHCI PCI command DMA: 0x6
+xHCI USBCMD: 0x1
+xHCI USBSTS: 0x0
+xHCI PAGESIZE: 0x1
+xHCI CRCR: 0x4022b001
+xHCI DCBAAP: 0x40228000
+xHCI CONFIG: 0x40
+xHCI reset and polled event ring: PASS
+xHCI root port number: 1
+xHCI PORTSC before enumeration: 0x202a0
+xHCI root port number: 2
+xHCI PORTSC before enumeration: 0x202a0
+xHCI root port number: 3
+xHCI PORTSC before enumeration: 0x202a0
+xHCI root port number: 4
+xHCI PORTSC before enumeration: 0x202a0
+xHCI root port number: 5
+xHCI PORTSC before enumeration: 0x20ee1
+USB enumeration root port: 5
+USB route: 0x0
+USB parent hub slot: 0
+USB speed after reset: 3
+USB device VID: 0x627
+USB device PID: 0x1
+USB device class/subclass/protocol: 0x0
+USB device configurations: 1
+USB advertised config total length: 34
+USB advertised config value: 1
+USB advertised interface count: 1
+USB configuration total length: 34
+USB configuration value: 1
+USB configuration interfaces: 1
+USB interface number: 0
+USB interface alternate: 0
+USB interface endpoints: 1
+USB interface class/subclass/protocol: 0x30101
+USB HID descriptor length: 9
+USB HID subordinate descriptors: 1
+USB endpoint address: 0x81
+USB endpoint transfer type: 3
+USB endpoint max packet: 8
+USB endpoint interval: 7
+USB descriptor selection: PASS
+USB SET_CONFIGURATION: 1
+USB selected interface: 0
+USB selected alternate: 0
+USB HID protocol: 1
+USB HID interface: 0
+USB boot keyboard initialized: PASS
+xHCI root port number: 6
+xHCI PORTSC before enumeration: 0x20ee1
+USB enumeration root port: 6
+USB route: 0x0
+USB parent hub slot: 0
+USB speed after reset: 3
+USB device VID: 0x627
+USB device PID: 0x1
+USB device class/subclass/protocol: 0x0
+USB device configurations: 1
+USB advertised config total length: 34
+USB advertised config value: 1
+USB advertised interface count: 1
+USB configuration total length: 34
+USB configuration value: 1
+USB configuration interfaces: 1
+USB interface number: 0
+USB interface alternate: 0
+USB interface endpoints: 1
+USB interface class/subclass/protocol: 0x30102
+USB HID descriptor length: 9
+USB HID subordinate descriptors: 1
+USB endpoint address: 0x81
+USB endpoint transfer type: 3
+USB endpoint max packet: 4
+USB endpoint interval: 7
+USB descriptor selection: PASS
+USB SET_CONFIGURATION: 1
+USB selected interface: 0
+USB selected alternate: 0
+USB HID protocol: 2
+USB HID interface: 0
+USB boot mouse initialized: PASS
+xHCI root port number: 7
+xHCI PORTSC before enumeration: 0x202a0
+xHCI root port number: 8
+xHCI PORTSC before enumeration: 0x202a0
+USB connected root ports: 2
+USB operational boot HID devices: 2
+Input initialized devices: 2
+Core exception/EL0/IPC/protection tests: PASS
+Diagnostic mode: no installer, no filesystem writes
